@@ -1,0 +1,120 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="HOI4NavalModder.MainWindow"
+        Title="Naval Design Studio"
+        Width="1200" Height="800">
+
+    <Grid RowDefinitions="Auto,*" ColumnDefinitions="250,*">
+        <!-- トップバー -->
+        <Panel Grid.Row="0" Grid.ColumnSpan="2" Background="#2D2D30" Height="50">
+            <TextBlock Text="Naval Design Studio" 
+                       Foreground="White" 
+                       VerticalAlignment="Center" 
+                       Margin="20,0,0,0" 
+                       FontSize="18" 
+                       FontWeight="Bold"/>
+        </Panel>
+        
+        <!-- サイドバー -->
+        <StackPanel Grid.Row="1" Grid.Column="0" Background="#252526">
+            <TextBlock Text="モジュール" 
+                       Foreground="White" 
+                       Margin="15,20,0,20" 
+                       FontSize="16" 
+                       FontWeight="Bold"/>
+                       
+            <Button x:Name="EquipmentDesignButton" 
+                    Content="装備設計" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnEquipmentDesignButtonClick"
+            />
+                    
+            <Button x:Name="EquipmentImageButton" 
+                    Content="装備画像作成" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnEquipmentImageButtonClick"/>
+                    
+            <Button x:Name="ShipDesignButton" 
+                    Content="艦船設計" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnShipDesignButtonClick"/>
+                    
+            <Button x:Name="HullImageButton" 
+                    Content="船体画像作成" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnHullImageButtonClick"/>
+                    
+            <Button x:Name="FleetDeploymentButton" 
+                    Content="艦隊配備" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnFleetDeploymentButtonClick"/>
+                    
+            <Button x:Name="ShipNameButton" 
+                    Content="艦名表入力" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnShipNameButtonClick"/>
+                    
+            <Button x:Name="TranslationButton" 
+                    Content="翻訳ファイル" 
+                    HorizontalAlignment="Stretch" 
+                    HorizontalContentAlignment="Left"
+                    Background="#252526" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Padding="15,10,0,10" 
+                    Margin="0,2,0,2" 
+                    CornerRadius="0"
+                    Click="OnTranslationButtonClick"/>
+        </StackPanel>
+        
+        <!-- コンテンツエリア -->
+        <Panel x:Name="ContentPanel" Grid.Row="1" Grid.Column="1" Background="#1E1E1E">
+            <!-- コンテンツは動的に入れ替わります -->
+        </Panel>
+    </Grid>
+</Window>

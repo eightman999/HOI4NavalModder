@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="HOI4NavalModder.EquipmentDesignView">
+    <Grid RowDefinitions="Auto,*">
+        <!-- ヘッダーパネル -->
+        <Panel Grid.Row="0" Background="#2D2D30" Height="40">
+            <TextBlock Text="装備設計"
+                       Foreground="White"
+                       VerticalAlignment="Center"
+                       Margin="20,0,0,0"
+                       FontSize="16"/>
+        </Panel>
+        
+        <!-- コンテンツエリア -->
+        <StackPanel Grid.Row="1" Margin="20">
+            <TextBlock Text="装備の設計と性能調整ができます"
+                       Foreground="White"
+                       Margin="0,0,0,20"/>
+                       
+            <!-- ツールバー -->
+            <Panel Background="#333337" Height="40" Margin="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Margin="10,5,0,0">
+                    <Button Content="新規"
+                            Padding="10,5,10,5"
+                            Margin="0,0,5,0"
+                            Background="#3E3E42"
+                            Foreground="White"
+                            BorderThickness="0"/>
+                            
+                    <Button Content="保存"
+                            Padding="10,5,10,5"
+                            Margin="0,0,5,0"
+                            Background="#3E3E42"
+                            Foreground="White"
+                            BorderThickness="0"/>
+                </StackPanel>
+            </Panel>
+            
+            <!-- メインコンテンツエリア -->
+            <Border Background="#2D2D30"
+                    Height="500"
+                    BorderThickness="1"
+                    BorderBrush="#3F3F46">
+                <!-- ここにコンテンツを追加 -->
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>
