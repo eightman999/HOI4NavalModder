@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
@@ -13,6 +14,7 @@ using Avalonia.Platform.Storage;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Avalonia.Styling;
 
 namespace HOI4NavalModder
 {
@@ -489,10 +491,30 @@ namespace HOI4NavalModder
         }
     }
 
-    public class IDESettingsView : UserControl
+public class IDESettingsView : UserControl
     {
+        private ComboBox _themeComboBox;
+        private ComboBox _fontFamilyComboBox;
+        private NumericUpDown _fontSizeNumeric;
+        private RadioButton _equipmentFileIntegratedRadio;
+        private RadioButton _equipmentFileSplitRadio;
+        private RadioButton _languageJapaneseRadio;
+        private RadioButton _languageEnglishRadio;
+        
+        // 設定ファイルパス
+        private readonly string _configFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HOI4NavalModder",
+            "idesettings.json");
+            
+        // 設定を保持するクラス
+        private IDESettings _settings;
+        
         public IDESettingsView()
         {
+            // 設定の読み込み
+            LoadSettings();
+            
             var grid = new Grid
             {
                 RowDefinitions = new RowDefinitions("Auto,*")
@@ -516,17 +538,478 @@ namespace HOI4NavalModder
             headerPanel.Children.Add(headerText);
             Grid.SetRow(headerPanel, 0);
 
-            var contentPanel = ModuleHelper.CreateModuleContent("開発環境の設定ができます");
-            Grid.SetRow(contentPanel, 1);
+            // メインコンテンツ
+            var mainPanel = new StackPanel
+            {
+                Margin = new Thickness(20)
+            };
 
+            var descriptionText = new TextBlock
+            {
+                Text = "開発環境の設定ができます",
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+
+            // 外観設定セクション
+            var appearanceSection = CreateSectionHeader("外観設定");
+            mainPanel.Children.Add(appearanceSection);
+            
+            // テーマ設定
+            var themePanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(10, 10, 0, 10)
+            };
+            
+            var themeLabel = new TextBlock
+            {
+                Text = "テーマ:",
+                Width = 150,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = Brushes.White
+            };
+            
+            _themeComboBox = new ComboBox
+            {
+                Width = 200,
+                SelectedIndex = _settings.IsDarkTheme ? 0 : 1
+            };
+            _themeComboBox.Items.Add("ダークモード");
+            _themeComboBox.Items.Add("ライトモード");
+            _themeComboBox.SelectionChanged += OnThemeSelectionChanged;
+            
+            themePanel.Children.Add(themeLabel);
+            themePanel.Children.Add(_themeComboBox);
+            mainPanel.Children.Add(themePanel);
+            
+            // フォント設定
+            var fontPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(10, 10, 0, 10)
+            };
+            
+            var fontLabel = new TextBlock
+            {
+                Text = "フォント:",
+                Width = 150,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = Brushes.White
+            };
+            
+            _fontFamilyComboBox = new ComboBox
+            {
+                Width = 200
+            };
+            
+            // システムから利用可能なフォントを取得する試み
+            var availableFonts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            
+            try
+            {
+                // 方法1: TextDecorationCollection からフォント情報を取得
+                var fontNames = new List<string>();
+                var defaultTypeface = Avalonia.Media.Typeface.Default;
+                if (defaultTypeface.FontFamily != null)
+                {
+                    var fontFamily = defaultTypeface.FontFamily.Name;
+                    if (!string.IsNullOrEmpty(fontFamily))
+                    {
+                        availableFonts.Add(fontFamily);
+                    }
+                }
+                
+                // 方法2: SystemFonts を通じてフォント取得を試みる
+                try {
+                    var systemFonts = Avalonia.Media.FontManager.Current.SystemFonts;
+                    if (systemFonts != null)
+                    {
+                        foreach (var fontFamily in systemFonts)
+                        {
+                            if (!string.IsNullOrEmpty(fontFamily.Name))
+                            {
+                                availableFonts.Add(fontFamily.Name);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"SystemFonts でのフォント取得エラー: {ex.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"フォント一覧取得エラー: {ex.Message}");
+            }
+            
+            // 方法3: 一般的なフォントを追加（上記方法が失敗した場合のバックアップ）
+            if (availableFonts.Count == 0)
+            {
+                string[] commonFonts = {
+                    "Yu Gothic UI", "Meiryo UI", "MS Gothic", "MS PGothic", "MS UI Gothic", 
+                    "Yu Mincho", "MS Mincho", "Segoe UI", "Arial", "Times New Roman", 
+                    "Courier New", "Verdana", "Tahoma", "Consolas", "Calibri", "Yu Gothic",
+                    "Meiryo", "MS Mincho", "HGS明朝E", "HGP創英角ゴシックUB", "HGS教科書体",
+                    "HGP行書体", "メイリオ", "游ゴシック", "游明朝", "ＭＳ ゴシック", "ＭＳ 明朝",
+                    "ＭＳ Ｐゴシック", "ＭＳ Ｐ明朝", "Arial Unicode MS", "Microsoft Sans Serif"
+                };
+                
+                foreach (var font in commonFonts)
+                {
+                    try
+                    {
+                        // フォントが存在するか確認
+                        var fontFamily = new FontFamily(font);
+                        availableFonts.Add(font);
+                    }
+                    catch
+                    {
+                        // フォントが見つからない場合は無視
+                    }
+                }
+            }
+            
+            // フォントを追加
+            foreach (var font in availableFonts.OrderBy(f => f))
+            {
+                _fontFamilyComboBox.Items.Add(font);
+            }
+            
+            // 設定されたフォントが存在しない場合はデフォルトを選択
+            if (availableFonts.Contains(_settings.FontFamily))
+            {
+                _fontFamilyComboBox.SelectedItem = _settings.FontFamily;
+            }
+            else
+            {
+                // 代替フォントとして日本語対応フォントを探す
+                string[] preferredFonts = {"Yu Gothic UI", "Meiryo UI", "MS Gothic", "Segoe UI"};
+                string selectedFont = preferredFonts.FirstOrDefault(f => availableFonts.Contains(f)) ?? 
+                                    availableFonts.FirstOrDefault() ?? "Segoe UI";
+                
+                if (_fontFamilyComboBox.Items.Contains(selectedFont))
+                {
+                    _fontFamilyComboBox.SelectedItem = selectedFont;
+                }
+                else if (_fontFamilyComboBox.Items.Count > 0)
+                {
+                    _fontFamilyComboBox.SelectedIndex = 0;
+                    selectedFont = _fontFamilyComboBox.SelectedItem?.ToString() ?? "Segoe UI";
+                }
+                
+                _settings.FontFamily = selectedFont;
+            }
+            
+            _fontFamilyComboBox.SelectionChanged += OnFontFamilyChanged;
+            
+            fontPanel.Children.Add(fontLabel);
+            fontPanel.Children.Add(_fontFamilyComboBox);
+            mainPanel.Children.Add(fontPanel);
+            
+            // フォントサイズ設定
+            var fontSizePanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(10, 10, 0, 20)
+            };
+            
+            var fontSizeLabel = new TextBlock
+            {
+                Text = "フォントサイズ:",
+                Width = 150,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = Brushes.White
+            };
+            
+            _fontSizeNumeric = new NumericUpDown
+            {
+                Width = 200,
+                Minimum = 8,
+                Maximum = 24,
+                Increment = 1,
+                Value = (decimal?)_settings.FontSize,
+                FormatString = "0"
+            };
+            _fontSizeNumeric.ValueChanged += OnFontSizeChanged;
+            
+            fontSizePanel.Children.Add(fontSizeLabel);
+            fontSizePanel.Children.Add(_fontSizeNumeric);
+            mainPanel.Children.Add(fontSizePanel);
+            
+            // 書き出し設定セクション
+            var exportSection = CreateSectionHeader("書き出し設定");
+            mainPanel.Children.Add(exportSection);
+            
+            // 装備ファイル設定
+            var equipmentFilePanel = new StackPanel
+            {
+                Margin = new Thickness(10, 10, 0, 10)
+            };
+            
+            var equipmentFileLabel = new TextBlock
+            {
+                Text = "装備ファイル:",
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            
+            var equipmentFileOptions = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(20, 5, 0, 0)
+            };
+            
+            _equipmentFileIntegratedRadio = new RadioButton
+            {
+                Content = "統合",
+                GroupName = "EquipmentFile",
+                Margin = new Thickness(0, 0, 20, 0),
+                Foreground = Brushes.White,
+                IsChecked = _settings.IsEquipmentFileIntegrated
+            };
+            _equipmentFileIntegratedRadio.Checked += OnEquipmentFileOptionChanged;
+            
+            _equipmentFileSplitRadio = new RadioButton
+            {
+                Content = "分割",
+                GroupName = "EquipmentFile",
+                Foreground = Brushes.White,
+                IsChecked = !_settings.IsEquipmentFileIntegrated
+            };
+            _equipmentFileSplitRadio.Checked += OnEquipmentFileOptionChanged;
+            
+            equipmentFileOptions.Children.Add(_equipmentFileIntegratedRadio);
+            equipmentFileOptions.Children.Add(_equipmentFileSplitRadio);
+            
+            equipmentFilePanel.Children.Add(equipmentFileLabel);
+            equipmentFilePanel.Children.Add(equipmentFileOptions);
+            mainPanel.Children.Add(equipmentFilePanel);
+            
+            // 言語設定
+            var languagePanel = new StackPanel
+            {
+                Margin = new Thickness(10, 10, 0, 10)
+            };
+            
+            var languageLabel = new TextBlock
+            {
+                Text = "言語:",
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            
+            var languageOptions = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(20, 5, 0, 0)
+            };
+            
+            _languageJapaneseRadio = new RadioButton
+            {
+                Content = "日本語",
+                GroupName = "Language",
+                Margin = new Thickness(0, 0, 20, 0),
+                Foreground = Brushes.White,
+                IsChecked = _settings.IsJapanese
+            };
+            _languageJapaneseRadio.Checked += OnLanguageOptionChanged;
+            
+            _languageEnglishRadio = new RadioButton
+            {
+                Content = "英語",
+                GroupName = "Language",
+                Foreground = Brushes.White,
+                IsChecked = !_settings.IsJapanese
+            };
+            _languageEnglishRadio.Checked += OnLanguageOptionChanged;
+            
+            languageOptions.Children.Add(_languageJapaneseRadio);
+            languageOptions.Children.Add(_languageEnglishRadio);
+            
+            languagePanel.Children.Add(languageLabel);
+            languagePanel.Children.Add(languageOptions);
+            mainPanel.Children.Add(languagePanel);
+            
+            // 保存ボタン
+            var saveButton = new Button
+            {
+                Content = "設定を保存",
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(10, 20, 0, 0),
+                Padding = new Thickness(15, 8, 15, 8),
+                Background = new SolidColorBrush(Color.Parse("#0078D7")),
+                Foreground = Brushes.White
+            };
+            saveButton.Click += OnSaveButtonClick;
+            
+            mainPanel.Children.Add(saveButton);
+            
+            Grid.SetRow(mainPanel, 1);
             grid.Children.Add(headerPanel);
-            grid.Children.Add(contentPanel);
+            grid.Children.Add(mainPanel);
 
             Content = grid;
         }
+        
+        private Panel CreateSectionHeader(string title)
+        {
+            var panel = new Panel
+            {
+                Background = new SolidColorBrush(Color.Parse("#3E3E42")),
+                Height = 30,
+                Margin = new Thickness(0, 10, 0, 10)
+            };
+            
+            var titleText = new TextBlock
+            {
+                Text = title,
+                Foreground = Brushes.White,
+                FontWeight = FontWeight.Bold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(10, 0, 0, 0)
+            };
+            
+            panel.Children.Add(titleText);
+            return panel;
+        }
+        
+        private void LoadSettings()
+        {
+            try
+            {
+                var configDir = Path.GetDirectoryName(_configFilePath);
+                if (!Directory.Exists(configDir))
+                {
+                    Directory.CreateDirectory(configDir);
+                }
+
+                if (File.Exists(_configFilePath))
+                {
+                    var json = File.ReadAllText(_configFilePath);
+                    _settings = JsonSerializer.Deserialize<IDESettings>(json);
+                }
+                else
+                {
+                    // デフォルト設定
+                    _settings = new IDESettings
+                    {
+                        IsDarkTheme = true,
+                        FontFamily = "Yu Gothic UI",
+                        FontSize = 12,
+                        IsEquipmentFileIntegrated = true,
+                        IsJapanese = true
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"設定ファイルの読み込み中にエラーが発生しました: {ex.Message}");
+                
+                // エラー時はデフォルト設定
+                _settings = new IDESettings
+                {
+                    IsDarkTheme = true,
+                    FontFamily = "Yu Gothic UI",
+                    FontSize = 12,
+                    IsEquipmentFileIntegrated = true,
+                    IsJapanese = true
+                };
+            }
+        }
+        
+        private void SaveSettings()
+        {
+            try
+            {
+                var configDir = Path.GetDirectoryName(_configFilePath);
+                if (!Directory.Exists(configDir))
+                {
+                    Directory.CreateDirectory(configDir);
+                }
+
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                var json = JsonSerializer.Serialize(_settings, options);
+                File.WriteAllText(_configFilePath, json);
+                
+                ApplySettings();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"設定ファイルの保存中にエラーが発生しました: {ex.Message}");
+            }
+        }
+        
+        private void ApplySettings()
+        {
+            // アプリケーション全体に設定を反映する
+            var app = Application.Current;
+            if (app != null)
+            {
+                // テーマの適用
+                app.RequestedThemeVariant = _settings.IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
+                
+                // フォント設定の適用（実装は環境によって異なる場合があります）
+                if (app.Resources is ResourceDictionary resourceDictionary)
+                {
+                    resourceDictionary["DefaultFontFamily"] = new FontFamily(_settings.FontFamily);
+                    resourceDictionary["DefaultFontSize"] = _settings.FontSize;
+                }
+            }
+        }
+        
+        private void OnThemeSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_themeComboBox.SelectedIndex == 0)
+            {
+                _settings.IsDarkTheme = true;
+            }
+            else
+            {
+                _settings.IsDarkTheme = false;
+            }
+        }
+        
+        private void OnFontFamilyChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _settings.FontFamily = _fontFamilyComboBox.SelectedItem?.ToString() ?? "Yu Gothic UI";
+        }
+        
+        private void OnFontSizeChanged(object sender, NumericUpDownValueChangedEventArgs e)
+        {
+            _settings.FontSize = (double)_fontSizeNumeric.Value;
+        }
+        
+        private void OnEquipmentFileOptionChanged(object sender, RoutedEventArgs e)
+        {
+            _settings.IsEquipmentFileIntegrated = _equipmentFileIntegratedRadio.IsChecked ?? true;
+        }
+        
+        private void OnLanguageOptionChanged(object sender, RoutedEventArgs e)
+        {
+            _settings.IsJapanese = _languageJapaneseRadio.IsChecked ?? true;
+        }
+        
+        private void OnSaveButtonClick(object sender, RoutedEventArgs e)
+        {
+            SaveSettings();
+        }
     }
-
-
+    
+    // IDE設定を保持するクラス
+    public class IDESettings
+    {
+        public bool IsDarkTheme { get; set; } = true;
+        public string FontFamily { get; set; } = "Yu Gothic UI";
+        public double FontSize { get; set; } = 12;
+        public bool IsEquipmentFileIntegrated { get; set; } = true;
+        public bool IsJapanese { get; set; } = true;
+    }
  public class ModSettingsView : UserControl
 {
     private ObservableCollection<ModInfo> _modList = new ObservableCollection<ModInfo>();
@@ -636,6 +1119,11 @@ namespace HOI4NavalModder
 
         _modListBox.ItemTemplate = new FuncDataTemplate<ModInfo>((item, scope) =>
         {
+            if (item == null)
+            {
+                return new TextBlock { Text = "No data available", Foreground = Brushes.White };
+            }
+
             var panel = new DockPanel
             {
                 LastChildFill = true,

@@ -5,8 +5,8 @@
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="HOI4NavalModder.MainWindow"
         Title="Naval Design Studio"
-        Width="1200" Height="800">
-
+        Width="1200" Height="800"
+        Icon="avares://HOI4NavalModder/Assets/Icons/Icon.ico">
     <Grid RowDefinitions="Auto,*" ColumnDefinitions="250,*">
         <!-- トップバー -->
         <Panel Grid.Row="0" Grid.ColumnSpan="2" Background="#2D2D30" Height="50">

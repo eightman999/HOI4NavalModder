@@ -20,10 +20,17 @@
         </PackageReference>
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
-
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
     <ItemGroup>
       <Compile Update="equipment_design_view.cs">
         <DependentUpon>equipment_design_view.axaml</DependentUpon>
       </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Assets\Icons\aaa.ico" />
+      <Resource Include="Assets\Icons\Icon.ico" />
     </ItemGroup>
 </Project>
