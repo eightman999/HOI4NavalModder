@@ -33,7 +33,9 @@ namespace HOI4NavalModder
         private Canvas _markersCanvas;
         private ToolTip _provinceTooltip;
         private TextBlock _tooltipTextBlock;
-        
+        // 座標からプロヴィンスへのマッピングを追加
+        private Dictionary<Point, ProvinceInfo> _coordinateProvinceMapping = new Dictionary<Point, ProvinceInfo>();
+        private bool _isProvinceMapInitialized = false;
         // 情報パネル
         private StackPanel _infoPanel;
         private TextBlock _infoTextBlock;
@@ -418,6 +420,9 @@ namespace HOI4NavalModder
                     }
                     
                     _infoTextBlock.Text = $"{_provinceData.Count} プロヴィンスを読み込みました";
+                    
+                    // マップ読み込み後に座標→プロヴィンスのマッピングを初期化
+                    await InitializeProvinceCoordinateMapping();
                 }
                 else
                 {
@@ -429,6 +434,215 @@ namespace HOI4NavalModder
                 _infoTextBlock.Text = $"プロヴィンス定義読み込みエラー: {ex.Message}";
             }
         }
+
+        // 座標→プロヴィンスのマッピングを初期化する新しいメソッド
+        private async Task InitializeProvinceCoordinateMapping()
+        {
+            // 非同期処理として実行 (UIをブロックしないため)
+            await Task.Run(() => {
+                try
+                {
+                    _infoTextBlock.Text = "プロヴィンスマップを解析中...";
+                    _coordinateProvinceMapping.Clear();
+                    
+                    // マップ画像の全ピクセルをスキャン
+                    int width = _mapImage.PixelSize.Width;
+                    int height = _mapImage.PixelSize.Height;
+                    
+                    // 処理時間短縮のため間引いてサンプリング (10ピクセルごとに1ピクセル)
+                    // 実際の実装ではパフォーマンスに応じて調整
+                    const int samplingRate = 10;
+                    
+                    for (int y = 0; y < height; y += samplingRate)
+                    {
+                        for (int x = 0; x < width; x += samplingRate)
+                        {
+                            Color pixelColor = GetPixelColorDirect(_mapImage, x, y);
+                            
+                            if (_provinceData.TryGetValue(pixelColor, out var province))
+                            {
+                                _coordinateProvinceMapping[new Point(x, y)] = province;
+                            }
+                        }
+                    }
+                    
+                    _isProvinceMapInitialized = true;
+                    
+                    Dispatcher.UIThread.Post(() => {
+                        _infoTextBlock.Text = $"{_coordinateProvinceMapping.Count} 座標ポイントをマッピングしました";
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.UIThread.Post(() => {
+                        _infoTextBlock.Text = $"プロヴィンスマッピングエラー: {ex.Message}";
+                    });
+                }
+            });
+        }
+        
+        // 直接ビットマップからピクセル色を取得する内部メソッド (マッピング初期化用)
+        private Color GetPixelColorDirect(Bitmap bitmap, int x, int y)
+        {
+            // 元のGetPixelColorメソッドの実装をここで使用
+            // 範囲チェック
+            if (x < 0 || y < 0 || x >= bitmap.PixelSize.Width || y >= bitmap.PixelSize.Height)
+            {
+                return Colors.Black; // 範囲外の場合は黒を返す
+            }
+
+            try
+            {
+                // 24ビットRGBの場合は3バイト/ピクセル
+                byte[] pixelData = new byte[4]; // 4バイト確保（4バイト境界にアラインするため）
+                
+                // 1x1サイズの一時的な書き込み可能ビットマップを作成
+                using (var tempBitmap = new WriteableBitmap(
+                    new PixelSize(1, 1),
+                    new Vector(96, 96),
+                    PixelFormat.Rgb32,// 24ビットRGB形式
+                    AlphaFormat.Opaque)) // アルファなし
+                {
+                    // 書き込み可能ビットマップをロック
+                    using (var context = tempBitmap.Lock())
+                    {
+                        // 指定した座標の1x1領域を対象のビットマップからコピー
+                        bitmap.CopyPixels(
+                            new Avalonia.PixelRect(x, y, 1, 1),
+                            context.Address,
+                            context.RowBytes,
+                            0);
+
+                        // メモリからピクセルデータを安全にコピー
+                        System.Runtime.InteropServices.Marshal.Copy(context.Address, pixelData, 0, 3); // 3バイトだけコピー
+                    }
+                }
+                
+                // RGB形式からColorオブジェクトを作成（アルファは255で固定）
+                return Color.FromRgb(
+                    pixelData[0],  // Red
+                    pixelData[1],  // Green
+                    pixelData[2]   // Blue
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ピクセル色取得エラー: {ex.Message}");
+                return Colors.Magenta; // エラーの場合は目立つ色を返す
+            }
+        }
+
+        // マップ上の座標からプロヴィンス情報を取得する新しいメソッド
+        private ProvinceInfo GetProvinceAtPosition(double x, double y)
+        {
+            if (!_isProvinceMapInitialized || _mapImage == null)
+                return null;
+                
+            // 実際の座標に変換
+            int mapX = (int)(x / _zoomFactor);
+            int mapY = (int)(y / _zoomFactor);
+            
+            // 範囲チェック
+            if (mapX < 0 || mapY < 0 || mapX >= _mapImage.PixelSize.Width || mapY >= _mapImage.PixelSize.Height)
+                return null;
+                
+            // 最も近い登録済み座標ポイントを探す
+            const int searchRadius = 15; // 探索半径 (パフォーマンスに応じて調整)
+            ProvinceInfo nearestProvince = null;
+            double minDistance = double.MaxValue;
+            
+            foreach (var entry in _coordinateProvinceMapping)
+            {
+                var point = entry.Key;
+                var province = entry.Value;
+                
+                double distance = Math.Sqrt(Math.Pow(point.X - mapX, 2) + Math.Pow(point.Y - mapY, 2));
+                
+                if (distance < searchRadius && distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearestProvince = province;
+                }
+            }
+            
+            // 最も近いプロヴィンスが見つかった場合、または直接座標が登録されている場合
+            if (nearestProvince != null)
+            {
+                return nearestProvince;
+            }
+            
+            // 見つからなかった場合、特殊ケースとして直接色を取得
+            if (_mapImage != null)
+            {
+                // 最後の手段として直接ピクセル色を取得
+                Color pixelColor = GetPixelColorDirect(_mapImage, mapX, mapY);
+                
+                if (_provinceData.TryGetValue(pixelColor, out var province))
+                {
+                    // この座標も今後のためにマッピングに追加
+                    _coordinateProvinceMapping[new Point(mapX, mapY)] = province;
+                    return province;
+                }
+            }
+            
+            return null;
+        }
+
+        // マップ上でのマウス移動時 - 修正版
+        private void OnMapPointerMoved(object sender, PointerEventArgs e)
+        {
+            if (_mapImage == null) return;
+            
+            var position = e.GetPosition(_mapImageControl);
+            
+            // 新しいメソッドを使用してプロヴィンス情報を取得
+            var province = GetProvinceAtPosition(position.X, position.Y);
+            
+            if (province != null)
+            {
+                _tooltipTextBlock.Text = province.ToString();
+                // ToolTipを設定する
+                ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
+            }
+            else
+            {
+                // 実際の座標をツールチップに表示
+                int mapX = (int)(position.X / _zoomFactor);
+                int mapY = (int)(position.Y / _zoomFactor);
+                
+                _tooltipTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
+                ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
+            }
+        }
+        
+        // マップ上でのクリック時 - 修正版
+        private void OnMapPointerPressed(object sender, PointerPressedEventArgs e)
+        {
+            if (_mapImage == null) return;
+            
+            var position = e.GetPosition(_mapImageControl);
+            
+            // 新しいメソッドを使用してプロヴィンス情報を取得
+            var province = GetProvinceAtPosition(position.X, position.Y);
+            
+            if (province != null)
+            {
+                _selectedProvince = province;
+                _infoTextBlock.Text = province.ToString();
+            }
+            else
+            {
+                _selectedProvince = null;
+                
+                // 実際の座標を情報パネルに表示
+                int mapX = (int)(position.X / _zoomFactor);
+                int mapY = (int)(position.Y / _zoomFactor);
+                
+                _infoTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
+            }
+        }
+    
+
         public async Task LoadNavalBaseMarkers(string modPath, string vanillaPath)
         {
             try
@@ -639,115 +853,8 @@ namespace HOI4NavalModder
                 _infoTextBlock.Text = $"マップ更新エラー: {ex.Message}";
             }
         }
-
-        // ピクセルカラー取得 - 24ビットRGBビットマップ用
-        private Color GetPixelColor(Bitmap bitmap, int x, int y)
-        {
-            // 範囲チェック
-            if (x < 0 || y < 0 || x >= bitmap.PixelSize.Width || y >= bitmap.PixelSize.Height)
-            {
-                return Colors.Black; // 範囲外の場合は黒を返す
-            }
-
-            try
-            {
-                // 24ビットRGBの場合は3バイト/ピクセル
-                byte[] pixelData = new byte[4]; // 4バイト確保（4バイト境界にアラインするため）
-                
-                // 1x1サイズの一時的な書き込み可能ビットマップを作成
-                using (var tempBitmap = new WriteableBitmap(
-                    new PixelSize(1, 1),
-                    new Vector(96, 96),
-                    PixelFormat.Rgb32,// 24ビットRGB形式
-                    AlphaFormat.Opaque)) // アルファなし
-                {
-                    // 書き込み可能ビットマップをロック
-                    using (var context = tempBitmap.Lock())
-                    {
-                        // 指定した座標の1x1領域を対象のビットマップからコピー
-                        bitmap.CopyPixels(
-                            new Avalonia.PixelRect(x, y, 1, 1),
-                            context.Address,
-                            context.RowBytes,
-                            0);
-
-                        // メモリからピクセルデータを安全にコピー
-                        System.Runtime.InteropServices.Marshal.Copy(context.Address, pixelData, 0, 3); // 3バイトだけコピー
-                    }
-                }
-                
-                // RGB形式からColorオブジェクトを作成（アルファは255で固定）
-                return Color.FromRgb(
-                    pixelData[0],  // Red
-                    pixelData[1],  // Green
-                    pixelData[2]   // Blue
-                );
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ピクセル色取得エラー: {ex.Message}");
-                return Colors.Magenta; // エラーの場合は目立つ色を返す
-            }
-        }
-        // マップ上でのマウス移動時
-        private void OnMapPointerMoved(object sender, PointerEventArgs e)
-        {
-            if (_mapImage == null) return;
-            
-            var position = e.GetPosition(_mapImageControl);
-            
-            int x = (int)(position.X / _zoomFactor);
-            int y = (int)(position.Y / _zoomFactor);
-            
-            if (x >= 0 && y >= 0 && x < _mapImage.PixelSize.Width && y < _mapImage.PixelSize.Height)
-            {
-                Color pixelColor = GetPixelColor(_mapImage, x, y);
-                
-                if (_provinceData.TryGetValue(pixelColor, out var province))
-                {
-                    _tooltipTextBlock.Text = province.ToString();
-                    // ToolTipを設定する
-                    ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
-                }
-                else
-                {
-                    _tooltipTextBlock.Text = $"不明なプロヴィンス\n色: R:{pixelColor.R} G:{pixelColor.G} B:{pixelColor.B}";
-                    ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
-                }
-            }
-            else
-            {
-                // ToolTipをクリア
-                ToolTip.SetTip(_mapImageControl, null);
-            }
-        }
         
-        // マップ上でのクリック時
-        private void OnMapPointerPressed(object sender, PointerPressedEventArgs e)
-        {
-            if (_mapImage == null) return;
-            
-            var position = e.GetPosition(_mapImageControl);
-            
-            int x = (int)(position.X / _zoomFactor);
-            int y = (int)(position.Y / _zoomFactor);
-            
-            if (x >= 0 && y >= 0 && x < _mapImage.PixelSize.Width && y < _mapImage.PixelSize.Height)
-            {
-                Color pixelColor = GetPixelColor(_mapImage, x, y);
-                
-                if (_provinceData.TryGetValue(pixelColor, out var province))
-                {
-                    _selectedProvince = province;
-                    _infoTextBlock.Text = province.ToString();
-                }
-                else
-                {
-                    _selectedProvince = null;
-                    _infoTextBlock.Text = $"不明なプロヴィンス\n色: R:{pixelColor.R} G:{pixelColor.G} B:{pixelColor.B}";
-                }
-            }
-        }
+
         
         // マウスホイールでのズーム
         private void OnMapPointerWheelChanged(object sender, PointerWheelEventArgs e)
