@@ -415,9 +415,13 @@ namespace HOI4NavalModder
             {
                 _loadingProgressBar.IsVisible = true;
                 _statusTextBlock.Text = "マップデータを読み込み中...";
-                
+        
+                // マップ初期化を非同期で実行
                 await _mapViewer.Initialize(_vanillaPath, _activeMod);
-                
+        
+                // マップ初期化後、艦隊の位置をマップに反映
+                UpdateFleetMarkersOnMap();
+        
                 _statusTextBlock.Text = "マップデータの読み込みが完了しました";
             }
             catch (Exception ex)
@@ -429,7 +433,16 @@ namespace HOI4NavalModder
                 _loadingProgressBar.IsVisible = false;
             }
         }
-        
+        private void UpdateFleetMarkersOnMap()
+        {
+            // 実装例：このメソッドは将来的にマップ上に艦隊の位置をマーキングするために使用
+            if (_mapViewer != null && _fleetsList.Count > 0)
+            {
+                // マップに艦隊の位置を表示するロジックを追加
+                // 例：foreach (var fleet in _fleetsList) { _mapViewer.AddFleetMarker(fleet.ProvinceId, fleet.Name); }
+            }
+        }
+
         private void LoadFleetData()
         {
             try
@@ -512,5 +525,6 @@ namespace HOI4NavalModder
                 _statusTextBlock.Text = $"{selectedFleet.Name} を削除しました";
             }
         }
+     
     }
 }
