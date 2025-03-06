@@ -13,11 +13,11 @@ using Avalonia.Layout;
 using Avalonia.Platform;
 // 不足している名前空間を追加
 using Avalonia.Controls.Primitives;
-using HOI4NavalModder; // ToolTip用
+using Avalonia.Controls;
+using HOI4NavalModder; // NavalBase等のクラス参照用
 
 namespace HOI4NavalModder
 {
-
     public class MapViewer : UserControl
     {
         private Dictionary<int, NavalBase> _navalBaseMarkers = new Dictionary<int, NavalBase>();
@@ -30,6 +30,7 @@ namespace HOI4NavalModder
         private WriteableBitmap _zoomableMap;
         private Image _mapImageControl;
         private ScrollViewer _mapScrollViewer;
+        private Canvas _markersCanvas;
         private ToolTip _provinceTooltip;
         private TextBlock _tooltipTextBlock;
         
@@ -199,6 +200,12 @@ namespace HOI4NavalModder
                 Background = Brushes.Black
             };
             
+            // マーカー用のキャンバスを作成
+            _markersCanvas = new Canvas
+            {
+                IsHitTestVisible = false // マウスイベントを下層に通過させる
+            };
+            
             // マップ画像コントロール
             _mapImageControl = new Image
             {
@@ -215,16 +222,22 @@ namespace HOI4NavalModder
                 Padding = new Thickness(5)
             };
             
-            // ToolTipの設定修正
+            // ToolTipインスタンスの作成
             _provinceTooltip = new ToolTip
             {
                 Content = _tooltipTextBlock
-                // Placementプロパティを削除 - 必要ない場合もある
             };
             
-            ToolTip.SetTip(_mapImageControl, _provinceTooltip);
-            // IsOpenプロパティには直接アクセスせず、ShowやHideメソッドを使用
-            // _provinceTooltip.IsOpen = false;
+            // Panel を使用して Image と Canvas を重ねる
+            var mapPanel = new Panel();
+            mapPanel.Children.Add(_mapImageControl);
+            mapPanel.Children.Add(_markersCanvas);
+            
+            _mapScrollViewer.Content = mapPanel;
+            
+            // ツールチップを設定
+            // Avaloniaの適切なToolTipヘルパーメソッドを使用
+            ToolTip.SetTip(_mapImageControl, _provinceTooltip.Content);
             _provinceTooltip.IsVisible = false;
             
             // マウスイベントの設定
@@ -232,7 +245,6 @@ namespace HOI4NavalModder
             _mapImageControl.PointerPressed += OnMapPointerPressed;
             _mapImageControl.PointerWheelChanged += OnMapPointerWheelChanged;
             
-            _mapScrollViewer.Content = _mapImageControl;
             Grid.SetColumn(_mapScrollViewer, 0);
             
             // 情報パネル
@@ -438,15 +450,10 @@ namespace HOI4NavalModder
                 int validMarkers = 0;
                 foreach (var navalBase in navalBases)
                 {
-                    // プロヴィンスIDが有効で、マップ上に存在する場合だけ追加
-                    if (navalBase.ProvinceId > 0)
+                    // プロヴィンスIDが有効で、Stateファイルとbuildings.txtから
+                    // 得られた位置情報が設定されている場合だけ追加
+                    if (navalBase.ProvinceId > 0 && navalBase.HasCustomPosition)
                     {
-                        // カスタム位置情報がない場合はプロヴィンスの中心を使用
-                        if (!navalBase.HasCustomPosition && _provinceData.Values.Any(p => p.Id == navalBase.ProvinceId))
-                        {
-                            navalBase.SetScreenPosition(GetProvinceCenter(_provinceData.Values.First(p => p.Id == navalBase.ProvinceId)));
-                        }
-                
                         // マーカーを追加
                         AddNavalBaseMarker(navalBase);
                         validMarkers++;
@@ -460,6 +467,8 @@ namespace HOI4NavalModder
                 _infoTextBlock.Text = $"港湾施設読み込みエラー: {ex.Message}";
             }
         }
+
+        // GetProvinceCenter メソッドは削除
 
         // 港湾施設マーカーの追加
         private void AddNavalBaseMarker(NavalBase navalBase)
@@ -485,8 +494,8 @@ namespace HOI4NavalModder
                     Background = background,
                     BorderBrush = border,
                     BorderThickness = new Thickness(2),
-                    // ToolTipオブジェクトを設定
-                    ToolTip = navalBase.ToString()
+                    // ツールチップを設定
+                    // ToolTip = new ToolTip { Content = navalBase.ToString() }
                 };
         
                 // マーカーをCanvasに追加
@@ -517,7 +526,7 @@ namespace HOI4NavalModder
                 existingMarker.MarkerElement.BorderBrush = border;
         
                 // ツールチップを更新
-                existingMarker.MarkerElement.ToolTip = navalBase.ToString();
+                // existingMarker.MarkerElement.ToolTip = new ToolTip { Content = navalBase.ToString() };
         
                 // データを更新
                 existingMarker.Level = navalBase.Level;
@@ -595,10 +604,10 @@ namespace HOI4NavalModder
 
             double horizontalOffset = _mapScrollViewer.Offset.X;
             double verticalOffset = _mapScrollViewer.Offset.Y;
-            // 艦隊マーカー位置を更新
-    
+            
             // 港湾施設マーカー位置を更新
             UpdateNavalBaseMarkerPositions();
+            
             // 画像をリサイズして表示する方法に変更
             // ズーム処理は別のアプローチを使用
             try
@@ -616,6 +625,10 @@ namespace HOI4NavalModder
                 _mapImageControl.Width = width;
                 _mapImageControl.Height = height;
                 
+                // マーカーキャンバスのサイズも更新
+                _markersCanvas.Width = width;
+                _markersCanvas.Height = height;
+                
                 Dispatcher.UIThread.Post(() =>
                 {
                     _mapScrollViewer.Offset = new Vector(horizontalOffset * _zoomFactor, verticalOffset * _zoomFactor);
@@ -627,7 +640,7 @@ namespace HOI4NavalModder
             }
         }
 
-        // ピクセルカラー取得 - unsafe の代わりに別のアプローチを使用
+        // ピクセルカラー取得 - 24ビットRGBビットマップ用
         private Color GetPixelColor(Bitmap bitmap, int x, int y)
         {
             // 範囲チェック
@@ -636,27 +649,46 @@ namespace HOI4NavalModder
                 return Colors.Black; // 範囲外の場合は黒を返す
             }
 
-            // ピクセル色を取得するための別の方法
-            // Avalonia.Mediaの機能を使用するか、または直接アクセスできない場合は
-            // ピクセルデータをコピーして処理する方法を検討
-            
-            // 注: これは実際のデータを取得しない代替実装です
-            // 実際のアプリケーションではビットマップのピクセルデータにアクセスする
-            // 適切なメソッドを実装する必要があります
-            
-            // プロヴィンスの色はプロヴィンスIDから決定するので、
-            // サンプルデータから近似値を返す
-            foreach (var province in _provinceData.Values)
+            try
             {
-                if (province.Id % 100 == (x + y) % 100)
+                // 24ビットRGBの場合は3バイト/ピクセル
+                byte[] pixelData = new byte[4]; // 4バイト確保（4バイト境界にアラインするため）
+                
+                // 1x1サイズの一時的な書き込み可能ビットマップを作成
+                using (var tempBitmap = new WriteableBitmap(
+                    new PixelSize(1, 1),
+                    new Vector(96, 96),
+                    PixelFormat.Rgb32,// 24ビットRGB形式
+                    AlphaFormat.Opaque)) // アルファなし
                 {
-                    return province.Color;
+                    // 書き込み可能ビットマップをロック
+                    using (var context = tempBitmap.Lock())
+                    {
+                        // 指定した座標の1x1領域を対象のビットマップからコピー
+                        bitmap.CopyPixels(
+                            new Avalonia.PixelRect(x, y, 1, 1),
+                            context.Address,
+                            context.RowBytes,
+                            0);
+
+                        // メモリからピクセルデータを安全にコピー
+                        System.Runtime.InteropServices.Marshal.Copy(context.Address, pixelData, 0, 3); // 3バイトだけコピー
+                    }
                 }
+                
+                // RGB形式からColorオブジェクトを作成（アルファは255で固定）
+                return Color.FromRgb(
+                    pixelData[0],  // Red
+                    pixelData[1],  // Green
+                    pixelData[2]   // Blue
+                );
             }
-            
-            return Colors.Gray; // デフォルト値
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ピクセル色取得エラー: {ex.Message}");
+                return Colors.Magenta; // エラーの場合は目立つ色を返す
+            }
         }
-        
         // マップ上でのマウス移動時
         private void OnMapPointerMoved(object sender, PointerEventArgs e)
         {
