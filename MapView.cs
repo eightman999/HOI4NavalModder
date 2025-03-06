@@ -187,11 +187,7 @@ namespace HOI4NavalModder
             
             Grid.SetRow(controlPanel, 0);
             
-            // マップ表示コンテナ
-            var mapContainer = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions("*,300")
-            };
+
             
             // マップスクロールビュー - ScrollBarVisibilityの修正
             _mapScrollViewer = new ScrollViewer
@@ -215,7 +211,21 @@ namespace HOI4NavalModder
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
             };
-            
+            var mapContainer = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("*,250") // 情報パネルの幅を300から250に縮小
+            };
+    
+            // マップスクロールビューアの設定を修正
+            _mapScrollViewer = new ScrollViewer
+            {
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Padding = new Thickness(0),
+                Background = Brushes.Black,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
             // ツールチップの設定
             _tooltipTextBlock = new TextBlock
             {
@@ -290,7 +300,23 @@ namespace HOI4NavalModder
             
             mainGrid.Children.Add(controlPanel);
             mainGrid.Children.Add(mapContainer);
-            
+            // 利用可能なスペースを埋めるようにスクロールビューアを設定
+            _mapScrollViewer.SetValue(Grid.ColumnProperty, 0);
+            _mapScrollViewer.SetValue(Grid.RowProperty, 0);
+    
+            // [既存コードの残り]
+    
+            // ウィンドウが利用可能なスペースを最大化するよう保証
+            Width = 1200;  // 必要に応じてデフォルトの幅を増加
+            Height = 800;  // 必要に応じてデフォルトの高さを増加
+    
+            // マップスクロールビューアが伸縮して利用可能なスペースを埋めるよう設定
+            _mapScrollViewer.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _mapScrollViewer.VerticalAlignment = VerticalAlignment.Stretch;
+    
+            // 最小サイズを設定して、コンテンツが適切にスクロールできるよう保証
+            _mapScrollViewer.MinWidth = 600;
+            _mapScrollViewer.MinHeight = 400;
             Content = mainGrid;
         }
         
@@ -589,32 +615,44 @@ namespace HOI4NavalModder
         }
 
         // マップ上でのマウス移動時 - 修正版
+// 修正点2: マウスホバー時のプロヴィンスツールチップ表示の改善
         private void OnMapPointerMoved(object sender, PointerEventArgs e)
         {
             if (_mapImage == null) return;
-            
+    
             var position = e.GetPosition(_mapImageControl);
-            
-            // 新しいメソッドを使用してプロヴィンス情報を取得
+    
+            // カーソル位置のプロヴィンス情報を取得
             var province = GetProvinceAtPosition(position.X, position.Y);
-            
+    
             if (province != null)
             {
+                // ツールチップの内容を作成
                 _tooltipTextBlock.Text = province.ToString();
-                // ToolTipを設定する
+        
+                // ツールチップが表示され、適切に設定されていることを確認
+                _provinceTooltip.Content = _tooltipTextBlock;
+                _provinceTooltip.IsVisible = true;
+        
+                // ツールチップの配置を更新
+                // _provinceTooltip.VerticalOffset = position.X + 15;
+                // _provinceTooltip.VerticalOffset = position.Y + 15;
+        
+                // マップ画像コントロールにツールチップを設定
                 ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
+                ToolTip.SetIsOpen(_mapImageControl, true);
             }
             else
             {
-                // 実際の座標をツールチップに表示
+                // 不明なエリアの座標を表示
                 int mapX = (int)(position.X / _zoomFactor);
                 int mapY = (int)(position.Y / _zoomFactor);
-                
+        
                 _tooltipTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
                 ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
+                ToolTip.SetIsOpen(_mapImageControl, true);
             }
         }
-        
         // マップ上でのクリック時 - 修正版
         private void OnMapPointerPressed(object sender, PointerPressedEventArgs e)
         {
@@ -807,6 +845,7 @@ namespace HOI4NavalModder
         }
         
         // マップイメージ更新 - unsafe コードを使わない実装に変更
+        // 修正点1: ズームを適切に処理するためにUpdateMapImageメソッドを修正
         private void UpdateMapImage()
         {
             if (_mapImage == null) return;
@@ -816,36 +855,40 @@ namespace HOI4NavalModder
 
             if (width <= 0 || height <= 0) return;
 
+            // 更新前に現在のスクロール位置を保存
             double horizontalOffset = _mapScrollViewer.Offset.X;
             double verticalOffset = _mapScrollViewer.Offset.Y;
-            
-            // 港湾施設マーカー位置を更新
+    
+            // 港湾施設マーカーの位置を更新
             UpdateNavalBaseMarkerPositions();
-            
-            // 画像をリサイズして表示する方法に変更
-            // ズーム処理は別のアプローチを使用
+    
             try
             {
-                // 新しいビットマップを作成
-                var resizedBitmap = new WriteableBitmap(
-                    new PixelSize(width, height),
-                    new Vector(96, 96),
-                    PixelFormat.Bgra8888,
-                    AlphaFormat.Premul);
-
-                // 画像処理ライブラリを使用してリサイズするか、
-                // 単純にイメージコントロールのストレッチプロパティを使用
+                // ビットマップをリサイズする代わりにScaleTransformを使用してズームを適用
+                var scaleTransform = new ScaleTransform(_zoomFactor, _zoomFactor);
+                _mapImageControl.RenderTransform = scaleTransform;
+        
+                // リサイズせずに元の画像をソースとして設定
                 _mapImageControl.Source = _mapImage;
+        
+                // ズームされた寸法に合わせて画像コンテナのサイズを更新
                 _mapImageControl.Width = width;
                 _mapImageControl.Height = height;
-                
+        
                 // マーカーキャンバスのサイズも更新
                 _markersCanvas.Width = width;
                 _markersCanvas.Height = height;
-                
+        
+                // ズーム係数に合わせてスクロール位置を復元
+                // これによりズーム時に表示の中心を維持
                 Dispatcher.UIThread.Post(() =>
                 {
-                    _mapScrollViewer.Offset = new Vector(horizontalOffset * _zoomFactor, verticalOffset * _zoomFactor);
+                    // 新しいスクロール位置を計算
+                    double newX = horizontalOffset;
+                    double newY = verticalOffset;
+            
+                    // ズームイン時、中心点を維持するよう試みる
+                    _mapScrollViewer.Offset = new Vector(newX, newY);
                 }, DispatcherPriority.Render);
             }
             catch (Exception ex)
@@ -853,7 +896,7 @@ namespace HOI4NavalModder
                 _infoTextBlock.Text = $"マップ更新エラー: {ex.Message}";
             }
         }
-        
+
 
         
         // マウスホイールでのズーム
