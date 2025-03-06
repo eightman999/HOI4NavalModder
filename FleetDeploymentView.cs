@@ -761,8 +761,21 @@ namespace HOI4NavalModder
             // 国家配備設定ダイアログを表示
             _statusTextBlock.Text = $"{country.Name ?? country.Tag} の配備設定を編集中...";
             
-            // ここに国家配備設定ダイアログの表示ロジックを実装
-            // ...
+              
+            // 新たな艦隊配備マップビューを表示
+            var mapView = new FleetDeploymentMapView(
+                country.Tag, 
+                country.Name ?? country.Tag, 
+                country.FlagImage, 
+                _activeMod, 
+                _vanillaPath);
+                
+            // ダイアログとして表示
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel != null)
+            {
+                mapView.ShowDialog((Window)topLevel);
+            }
         }
     }
     
