@@ -3,6 +3,7 @@
   <component name="AvaloniaProject">
     <option name="projectPerEditor">
       <map>
+        <entry key="App.axaml" value="HOI4NavalModder.csproj" />
         <entry key="MainWindow.axaml" value="HOI4NavalModder.csproj" />
         <entry key="equipment_design_view.axaml" value="HOI4NavalModder.csproj" />
       </map>

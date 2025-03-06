@@ -14,7 +14,9 @@ using Avalonia.Platform.Storage;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Avalonia.Styling;
+using Avalonia.Threading;
 
 namespace HOI4NavalModder
 {
@@ -380,43 +382,8 @@ namespace HOI4NavalModder
         }
     }
 
-    public class FleetDeploymentView : UserControl
-    {
-        public FleetDeploymentView()
-        {
-            var grid = new Grid
-            {
-                RowDefinitions = new RowDefinitions("Auto,*")
-            };
 
-            var headerPanel = new Panel
-            {
-                Background = new SolidColorBrush(Color.Parse("#2D2D30")),
-                Height = 40
-            };
-
-            var headerText = new TextBlock
-            {
-                Text = "艦隊配備",
-                Foreground = Brushes.White,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                Margin = new Thickness(20, 0, 0, 0),
-                FontSize = 16
-            };
-
-            headerPanel.Children.Add(headerText);
-            Grid.SetRow(headerPanel, 0);
-
-            var contentPanel = ModuleHelper.CreateModuleContent("艦隊の編成と配備を行います");
-            Grid.SetRow(contentPanel, 1);
-
-            grid.Children.Add(headerPanel);
-            grid.Children.Add(contentPanel);
-
-            Content = grid;
-        }
-    }
-
+    
     public class ShipNameView : UserControl
     {
         public ShipNameView()
