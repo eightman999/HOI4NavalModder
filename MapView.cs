@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,10 +12,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.Layout;
 using Avalonia.Platform;
-// 不足している名前空間を追加
 using Avalonia.Controls.Primitives;
-using Avalonia.Controls;
-using HOI4NavalModder; // NavalBase等のクラス参照用
+using Avalonia.Interactivity;
 
 namespace HOI4NavalModder
 {
@@ -33,9 +32,11 @@ namespace HOI4NavalModder
         private Canvas _markersCanvas;
         private ToolTip _provinceTooltip;
         private TextBlock _tooltipTextBlock;
-        // 座標からプロヴィンスへのマッピングを追加
-        private Dictionary<Point, ProvinceInfo> _coordinateProvinceMapping = new Dictionary<Point, ProvinceInfo>();
+        // 座標からプロヴィンスへのマッピング
+        private Dictionary<Point, int> _pixelProvinceMapping = new Dictionary<Point, int>();
         private bool _isProvinceMapInitialized = false;
+        // 高速アクセス用の色検索マップ
+        private Dictionary<(byte R, byte G, byte B), ProvinceInfo> _colorLookupMap;
         // 情報パネル
         private StackPanel _infoPanel;
         private TextBlock _infoTextBlock;
@@ -111,6 +112,9 @@ namespace HOI4NavalModder
         public MapViewer()
         {
             InitializeComponent();
+            
+            // キャッシュマネージャーの初期化
+            _cacheManager = new MapCacheManager();
         }
         
         private void InitializeComponent()
@@ -187,8 +191,6 @@ namespace HOI4NavalModder
             
             Grid.SetRow(controlPanel, 0);
             
-
-            
             // マップスクロールビュー - ScrollBarVisibilityの修正
             _mapScrollViewer = new ScrollViewer
             {
@@ -213,7 +215,7 @@ namespace HOI4NavalModder
             };
             var mapContainer = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitions("*,250") // 情報パネルの幅を300から250に縮小
+                ColumnDefinitions = new ColumnDefinitions("*,250") // 情報パネルの幅を250に設定
             };
     
             // マップスクロールビューアの設定を修正
@@ -248,8 +250,7 @@ namespace HOI4NavalModder
             _mapScrollViewer.Content = mapPanel;
             
             // ツールチップを設定
-            // Avaloniaの適切なToolTipヘルパーメソッドを使用
-            ToolTip.SetTip(_mapImageControl, _provinceTooltip.Content);
+            ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
             _provinceTooltip.IsVisible = false;
             
             // マウスイベントの設定
@@ -300,15 +301,14 @@ namespace HOI4NavalModder
             
             mainGrid.Children.Add(controlPanel);
             mainGrid.Children.Add(mapContainer);
+            
             // 利用可能なスペースを埋めるようにスクロールビューアを設定
             _mapScrollViewer.SetValue(Grid.ColumnProperty, 0);
             _mapScrollViewer.SetValue(Grid.RowProperty, 0);
     
-            // [既存コードの残り]
-    
             // ウィンドウが利用可能なスペースを最大化するよう保証
-            Width = 1200;  // 必要に応じてデフォルトの幅を増加
-            Height = 800;  // 必要に応じてデフォルトの高さを増加
+            Width = 1200;
+            Height = 800;
     
             // マップスクロールビューアが伸縮して利用可能なスペースを埋めるよう設定
             _mapScrollViewer.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -320,14 +320,11 @@ namespace HOI4NavalModder
             Content = mainGrid;
         }
         
-        // 初期化処理
+        // 初期化処理 - キャッシュを利用するように更新
         public async Task Initialize(string vanillaPath, string modPath)
         {
             try
             {
-                // キャッシュマネージャーの初期化
-                _cacheManager = new MapCacheManager();
-        
                 // MOD名を取得
                 _modName = Path.GetFileName(modPath);
         
@@ -371,30 +368,52 @@ namespace HOI4NavalModder
                     // マップ画像の初期表示
                     UpdateMapImage();
             
-                    // キャッシュが有効ならキャッシュから読み込み、無効なら新たに読み込む
+                    // キャッシュが有効ならキャッシュから読み込み
                     if (isCacheValid)
                     {
                         _infoTextBlock.Text = "キャッシュからプロヴィンスデータを読み込み中...";
                 
-                        var cachedProvinceData = await _cacheManager.LoadProvinceDataFromCache(cachePath);
-                        if (cachedProvinceData != null && cachedProvinceData.Count > 0)
+                        var (provinceData, pixelMap) = await _cacheManager.LoadProvinceDataFromCache(cachePath);
+                        if (provinceData != null && provinceData.Count > 0)
                         {
-                            _provinceData = cachedProvinceData;
-                            _infoTextBlock.Text = $"キャッシュから {_provinceData.Count} プロヴィンスを読み込みました";
-                            return;
+                            _provinceData = provinceData;
+                            
+                            // ピクセルマップもロード
+                            if (pixelMap != null && pixelMap.Count > 0)
+                            {
+                                _pixelProvinceMapping = pixelMap;
+                                _isProvinceMapInitialized = true;
+                                InitializeColorMap();
+                                
+                                _infoTextBlock.Text = $"キャッシュから {_provinceData.Count} プロヴィンスと " +
+                                                    $"{_pixelProvinceMapping.Count} ピクセルマッピングを読み込みました";
+                                return;
+                            }
+                            else
+                            {
+                                // 色マップを初期化
+                                InitializeColorMap();
+                                
+                                // ピクセルマップがなければ最適化アルゴリズムで生成
+                                await InitializeOptimizedPixelMapping();
+                            }
                         }
                     }
-            
-                    // キャッシュが無効または存在しない場合は通常の読み込み
-                    _infoTextBlock.Text = "プロヴィンスデータを読み込み中...";
-                    await LoadProvinceDefinitions();
-            
-                    // 読み込みが成功したらキャッシュを作成
-                    if (_provinceData.Count > 0)
+                    else
                     {
-                        _infoTextBlock.Text = "キャッシュを作成中...";
-                        await _cacheManager.CreateCache(cachePath, _provincesMapPath, _provincesDefinitionPath, _provinceData);
-                        _infoTextBlock.Text = $"{_provinceData.Count} プロヴィンスを読み込み、キャッシュしました";
+                        // キャッシュが無効または存在しない場合は通常の読み込み
+                        _infoTextBlock.Text = "プロヴィンスデータを読み込み中...";
+                        await LoadProvinceDefinitions();
+                        
+                        // 読み込みが成功したらキャッシュを作成
+                        if (_provinceData.Count > 0)
+                        {
+                            _infoTextBlock.Text = "キャッシュを作成中...";
+                            await _cacheManager.CreateCache(cachePath, _provincesMapPath, _provincesDefinitionPath, 
+                                                        _provinceData, _pixelProvinceMapping);
+                            _infoTextBlock.Text = $"{_provinceData.Count} プロヴィンスと " +
+                                               $"{_pixelProvinceMapping.Count} ピクセルマッピングを読み込み、キャッシュしました";
+                        }
                     }
                 }
                 else
@@ -407,6 +426,7 @@ namespace HOI4NavalModder
                 _infoTextBlock.Text = $"マップ初期化エラー: {ex.Message}";
             }
         }
+        
         // プロヴィンス定義ファイル読み込み
         private async Task LoadProvinceDefinitions()
         {
@@ -418,37 +438,58 @@ namespace HOI4NavalModder
                     
                     _provinceData.Clear();
                     
-                    foreach (var line in lines.Skip(1)) // ヘッダー行をスキップ
-                    {
-                        string[] parts = line.Split(';');
-                        
-                        if (parts.Length >= 7)
+                    // 並列処理で定義ファイルを処理
+                    var tempProvinceData = new ConcurrentDictionary<Color, ProvinceInfo>();
+                    
+                    await Task.Run(() => {
+                        Parallel.ForEach(lines.Skip(1), line => // ヘッダー行をスキップ
                         {
-                            int id = int.Parse(parts[0]);
-                            int r = int.Parse(parts[1]);
-                            int g = int.Parse(parts[2]);
-                            int b = int.Parse(parts[3]);
-                            
-                            var color = Color.FromRgb((byte)r, (byte)g, (byte)b);
-                            
-                            var province = new ProvinceInfo
+                            try
                             {
-                                Id = id,
-                                Color = color,
-                                Type = parts[4], // sea/lake/land
-                                IsCoastal = parts[5] == "1", // 1 = coastal
-                                Terrain = parts.Length > 6 ? parts[6] : "不明",
-                                Continent = parts.Length > 7 ? parts[7] : "不明"
-                            };
-                            
-                            _provinceData[color] = province;
-                        }
+                                string[] parts = line.Split(';');
+                                
+                                if (parts.Length >= 7)
+                                {
+                                    int id = int.Parse(parts[0]);
+                                    int r = int.Parse(parts[1]);
+                                    int g = int.Parse(parts[2]);
+                                    int b = int.Parse(parts[3]);
+                                    
+                                    var color = Color.FromRgb((byte)r, (byte)g, (byte)b);
+                                    
+                                    var province = new ProvinceInfo
+                                    {
+                                        Id = id,
+                                        Color = color,
+                                        Type = parts[4], // sea/lake/land
+                                        IsCoastal = parts[5] == "1", // 1 = coastal
+                                        Terrain = parts.Length > 6 ? parts[6] : "不明",
+                                        Continent = parts.Length > 7 ? parts[7] : "不明"
+                                    };
+                                    
+                                    tempProvinceData.TryAdd(color, province);
+                                }
+                            }
+                            catch
+                            {
+                                // 無効な行はスキップ
+                            }
+                        });
+                    });
+                    
+                    // 並列処理結果をメインのディクショナリにコピー
+                    foreach (var entry in tempProvinceData)
+                    {
+                        _provinceData[entry.Key] = entry.Value;
                     }
+                    
+                    // 色検索マップを初期化
+                    InitializeColorMap();
                     
                     _infoTextBlock.Text = $"{_provinceData.Count} プロヴィンスを読み込みました";
                     
-                    // マップ読み込み後に座標→プロヴィンスのマッピングを初期化
-                    await InitializeProvinceCoordinateMapping();
+                    // 最適化されたピクセルマッピングを構築
+                    await InitializeOptimizedPixelMapping();
                 }
                 else
                 {
@@ -461,56 +502,139 @@ namespace HOI4NavalModder
             }
         }
 
-        // 座標→プロヴィンスのマッピングを初期化する新しいメソッド
-        private async Task InitializeProvinceCoordinateMapping()
+        // 最適化されたピクセルマッピング初期化
+        private async Task InitializeOptimizedPixelMapping()
         {
-            // 非同期処理として実行 (UIをブロックしないため)
-            await Task.Run(() => {
+            if (_mapImage == null || _provinceData.Count == 0)
+            {
+                _infoTextBlock.Text = "マップまたはプロヴィンスデータが読み込まれていません";
+                return;
+            }
+            
+            _infoTextBlock.Text = "ピクセルマッピングを最適化して生成中...";
+            
+            await Task.Run(() =>
+            {
                 try
                 {
-                    _infoTextBlock.Text = "プロヴィンスマップを解析中...";
-                    _coordinateProvinceMapping.Clear();
+                    // Color → ProvinceID のマッピングを作成
+                    Dictionary<(byte R, byte G, byte B), int> colorToIdMap = new Dictionary<(byte R, byte G, byte B), int>();
                     
-                    // マップ画像の全ピクセルをスキャン
-                    int width = _mapImage.PixelSize.Width;
-                    int height = _mapImage.PixelSize.Height;
-                    
-                    // 処理時間短縮のため間引いてサンプリング (10ピクセルごとに1ピクセル)
-                    // 実際の実装ではパフォーマンスに応じて調整
-                    const int samplingRate = 10;
-                    
-                    for (int y = 0; y < height; y += samplingRate)
+                    foreach (var entry in _provinceData)
                     {
-                        for (int x = 0; x < width; x += samplingRate)
+                        Color color = entry.Key;
+                        int id = entry.Value.Id;
+                        colorToIdMap[(color.R, color.G, color.B)] = id;
+                    }
+                    
+                    // サンプリングレート（大きなマップは間引く）
+                    int mapSize = Math.Max(_mapImage.PixelSize.Width, _mapImage.PixelSize.Height);
+                    int samplingRate;
+                    
+                    if (mapSize > 4000) samplingRate = 8;      // 非常に大きいマップ
+                    else if (mapSize > 2000) samplingRate = 5; // 大きいマップ
+                    else if (mapSize > 1000) samplingRate = 3; // 中サイズマップ
+                    else samplingRate = 2;                     // 小さいマップ
+                    
+                    // 並列処理用の結果コレクション
+                    var resultMapping = new ConcurrentDictionary<Point, int>();
+                    
+                    // 効率的なピクセルデータ処理
+                    using (var writeableBitmap = new WriteableBitmap(
+                        new PixelSize(_mapImage.PixelSize.Width, _mapImage.PixelSize.Height),
+                        new Vector(96, 96),
+                        PixelFormat.Bgra8888,
+                        AlphaFormat.Unpremul))
+                    {
+                        using (var fbLock = writeableBitmap.Lock())
                         {
-                            Color pixelColor = GetPixelColorDirect(_mapImage, x, y);
+                            // マップ画像からピクセルデータをコピー
+                            _mapImage.CopyPixels(
+                                new PixelRect(0, 0, _mapImage.PixelSize.Width, _mapImage.PixelSize.Height),
+                                fbLock.Address,
+                                fbLock.RowBytes * _mapImage.PixelSize.Height,
+                                PixelFormat.Bgra8888);
                             
-                            if (_provinceData.TryGetValue(pixelColor, out var province))
+                            unsafe
                             {
-                                _coordinateProvinceMapping[new Point(x, y)] = province;
+                                // 並列処理でピクセルを処理
+                                Parallel.For(0, _mapImage.PixelSize.Height, y =>
+                                {
+                                    if (y % samplingRate != 0) return; // 間引き
+                                    
+                                    byte* scanline = (byte*)fbLock.Address + y * fbLock.RowBytes;
+                                    
+                                    for (int x = 0; x < _mapImage.PixelSize.Width; x += samplingRate) // 間引き
+                                    {
+                                        int pixelOffset = x * 4; // 4バイト/ピクセル (BGRA)
+                                        
+                                        byte b = scanline[pixelOffset];
+                                        byte g = scanline[pixelOffset + 1];
+                                        byte r = scanline[pixelOffset + 2];
+                                        // byte a = scanline[pixelOffset + 3]; // アルファは使用しない
+                                        
+                                        // 完全一致を検索
+                                        if (colorToIdMap.TryGetValue((r, g, b), out int id))
+                                        {
+                                            resultMapping[new Point(x, y)] = id;
+                                        }
+                                        else
+                                        {
+                                            // 許容範囲内の近似色を検索（必要な場合）
+                                            const int tolerance = 3;
+                                            bool found = false;
+                                            
+                                            foreach (var entry in colorToIdMap.Take(100)) // パフォーマンス向上のため最初の100色のみチェック
+                                            {
+                                                var c = entry.Key;
+                                                if (Math.Abs(c.R - r) <= tolerance &&
+                                                    Math.Abs(c.G - g) <= tolerance &&
+                                                    Math.Abs(c.B - b) <= tolerance)
+                                                {
+                                                    resultMapping[new Point(x, y)] = entry.Value;
+                                                    found = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
                             }
                         }
                     }
                     
+                    // 結果をクラスのフィールドに設定
+                    _pixelProvinceMapping = new Dictionary<Point, int>(resultMapping);
                     _isProvinceMapInitialized = true;
                     
                     Dispatcher.UIThread.Post(() => {
-                        _infoTextBlock.Text = $"{_coordinateProvinceMapping.Count} 座標ポイントをマッピングしました";
+                        _infoTextBlock.Text = $"{_pixelProvinceMapping.Count} ピクセルのマッピングを生成しました";
                     });
                 }
                 catch (Exception ex)
                 {
                     Dispatcher.UIThread.Post(() => {
-                        _infoTextBlock.Text = $"プロヴィンスマッピングエラー: {ex.Message}";
+                        _infoTextBlock.Text = $"ピクセルマッピングエラー: {ex.Message}";
                     });
                 }
             });
         }
         
-        // 直接ビットマップからピクセル色を取得する内部メソッド (マッピング初期化用)
+        // 高速アクセス用の色検索マップを初期化
+        private void InitializeColorMap()
+        {
+            _colorLookupMap = new Dictionary<(byte R, byte G, byte B), ProvinceInfo>();
+            
+            foreach (var entry in _provinceData)
+            {
+                Color color = entry.Key;
+                _colorLookupMap[(color.R, color.G, color.B)] = entry.Value;
+            }
+        }
+        
+        // 直接ビットマップからピクセル色を取得
         private Color GetPixelColorDirect(Bitmap bitmap, int x, int y)
         {
-            // 元のGetPixelColorメソッドの実装をここで使用
             // 範囲チェック
             if (x < 0 || y < 0 || x >= bitmap.PixelSize.Width || y >= bitmap.PixelSize.Height)
             {
@@ -519,37 +643,36 @@ namespace HOI4NavalModder
 
             try
             {
-                // 24ビットRGBの場合は3バイト/ピクセル
-                byte[] pixelData = new byte[4]; // 4バイト確保（4バイト境界にアラインするため）
-                
-                // 1x1サイズの一時的な書き込み可能ビットマップを作成
+                // サイズ1x1の新しいWriteableBitmapを作成
                 using (var tempBitmap = new WriteableBitmap(
                     new PixelSize(1, 1),
                     new Vector(96, 96),
-                    PixelFormat.Rgb32,// 24ビットRGB形式
-                    AlphaFormat.Opaque)) // アルファなし
+                    PixelFormat.Bgra8888, // AvaloninaでのRGBAフォーマット
+                    AlphaFormat.Unpremul))
                 {
                     // 書き込み可能ビットマップをロック
                     using (var context = tempBitmap.Lock())
                     {
                         // 指定した座標の1x1領域を対象のビットマップからコピー
                         bitmap.CopyPixels(
-                            new Avalonia.PixelRect(x, y, 1, 1),
+                            new PixelRect(x, y, 1, 1),
                             context.Address,
                             context.RowBytes,
-                            0);
+                            PixelFormat.Bgra8888);
 
-                        // メモリからピクセルデータを安全にコピー
-                        System.Runtime.InteropServices.Marshal.Copy(context.Address, pixelData, 0, 3); // 3バイトだけコピー
+                        // ピクセルデータを読み取り
+                        byte[] pixelData = new byte[4]; // BGRA形式
+                        System.Runtime.InteropServices.Marshal.Copy(context.Address, pixelData, 0, 4);
+
+                        // BGRA形式の順番でピクセルデータが格納されている
+                        return Color.FromArgb(
+                            pixelData[3], // Alpha
+                            pixelData[2], // Red   (BGRA順なので2番目)
+                            pixelData[1], // Green (BGRA順なので1番目)
+                            pixelData[0]  // Blue  (BGRA順なので0番目)
+                        );
                     }
                 }
-                
-                // RGB形式からColorオブジェクトを作成（アルファは255で固定）
-                return Color.FromRgb(
-                    pixelData[0],  // Red
-                    pixelData[1],  // Green
-                    pixelData[2]   // Blue
-                );
             }
             catch (Exception ex)
             {
@@ -557,129 +680,157 @@ namespace HOI4NavalModder
                 return Colors.Magenta; // エラーの場合は目立つ色を返す
             }
         }
-
         // マップ上の座標からプロヴィンス情報を取得する新しいメソッド
-        private ProvinceInfo GetProvinceAtPosition(double x, double y)
+private ProvinceInfo GetProvinceAtPosition(double x, double y)
+{
+    if (!_isProvinceMapInitialized || _mapImage == null)
+        return null;
+            
+    // 実際の座標に変換
+    int mapX = (int)(x / _zoomFactor);
+    int mapY = (int)(y / _zoomFactor);
+    
+    // 範囲チェック
+    if (mapX < 0 || mapY < 0 || mapX >= _mapImage.PixelSize.Width || mapY >= _mapImage.PixelSize.Height)
+        return null;
+    
+    // 1. キャッシュされたピクセル→プロヴィンスIDをチェック（最も高速）
+    if (_pixelProvinceMapping.TryGetValue(new Point(mapX, mapY), out int exactId))
+    {
+        var province = _provinceData.Values.FirstOrDefault(p => p.Id == exactId);
+        if (province != null)
+            return province;
+    }
+    
+    // 2. 直接ピクセルの色を取得
+    Color pixelColor = GetPixelColorDirect(_mapImage, mapX, mapY);
+            
+    // 3. 高速な色ルックアップマップで検索
+    var colorKey = (pixelColor.R, pixelColor.G, pixelColor.B);
+    if (_colorLookupMap.TryGetValue(colorKey, out var provinceByExactColor))
+    {
+        // キャッシュに追加して次回高速化
+        _pixelProvinceMapping[new Point(mapX, mapY)] = provinceByExactColor.Id;
+        return provinceByExactColor;
+    }
+    
+    // 4. 近接する座標を検索
+    const int searchRadius = 3;
+    for (int dy = -searchRadius; dy <= searchRadius; dy++)
+    {
+        for (int dx = -searchRadius; dx <= searchRadius; dx++)
         {
-            if (!_isProvinceMapInitialized || _mapImage == null)
-                return null;
-                
-            // 実際の座標に変換
-            int mapX = (int)(x / _zoomFactor);
-            int mapY = (int)(y / _zoomFactor);
+            if (dx == 0 && dy == 0) continue; // 中心点は既にチェック済み
             
-            // 範囲チェック
-            if (mapX < 0 || mapY < 0 || mapX >= _mapImage.PixelSize.Width || mapY >= _mapImage.PixelSize.Height)
-                return null;
-                
-            // 最も近い登録済み座標ポイントを探す
-            const int searchRadius = 15; // 探索半径 (パフォーマンスに応じて調整)
-            ProvinceInfo nearestProvince = null;
-            double minDistance = double.MaxValue;
-            
-            foreach (var entry in _coordinateProvinceMapping)
+            var nearbyPoint = new Point(mapX + dx, mapY + dy);
+            if (_pixelProvinceMapping.TryGetValue(nearbyPoint, out int nearbyId))
             {
-                var point = entry.Key;
-                var province = entry.Value;
-                
-                double distance = Math.Sqrt(Math.Pow(point.X - mapX, 2) + Math.Pow(point.Y - mapY, 2));
-                
-                if (distance < searchRadius && distance < minDistance)
+                var province = _provinceData.Values.FirstOrDefault(p => p.Id == nearbyId);
+                if (province != null)
                 {
-                    minDistance = distance;
-                    nearestProvince = province;
-                }
-            }
-            
-            // 最も近いプロヴィンスが見つかった場合、または直接座標が登録されている場合
-            if (nearestProvince != null)
-            {
-                return nearestProvince;
-            }
-            
-            // 見つからなかった場合、特殊ケースとして直接色を取得
-            if (_mapImage != null)
-            {
-                // 最後の手段として直接ピクセル色を取得
-                Color pixelColor = GetPixelColorDirect(_mapImage, mapX, mapY);
-                
-                if (_provinceData.TryGetValue(pixelColor, out var province))
-                {
-                    // この座標も今後のためにマッピングに追加
-                    _coordinateProvinceMapping[new Point(mapX, mapY)] = province;
+                    // 見つかった座標を今後のためにキャッシュ
+                    _pixelProvinceMapping[new Point(mapX, mapY)] = nearbyId;
                     return province;
                 }
             }
-            
-            return null;
         }
+    }
+    
+    // 5. 色の近似値を検索（許容範囲内の色）
+    const int colorTolerance = 3;
+    ProvinceInfo bestMatch = null;
+    int minColorDistance = int.MaxValue;
+    
+    foreach (var entry in _colorLookupMap)
+    {
+        var storedColor = entry.Key;
+        var province = entry.Value;
+        
+        // RGB色空間でのユークリッド距離
+        int dr = storedColor.R - pixelColor.R;
+        int dg = storedColor.G - pixelColor.G;
+        int db = storedColor.B - pixelColor.B;
+        int distance = dr*dr + dg*dg + db*db; // 平方根なしで十分
+        
+        if (distance < minColorDistance)
+        {
+            minColorDistance = distance;
+            bestMatch = province;
+        }
+    }
+    
+    // 許容範囲内で最も近い色のプロヴィンスを返す
+    if (minColorDistance <= colorTolerance*colorTolerance*3 && bestMatch != null)
+    {
+        // 今後のためにキャッシュに追加
+        _pixelProvinceMapping[new Point(mapX, mapY)] = bestMatch.Id;
+        return bestMatch;
+    }
+    
+    return null;
+}
 
-        // マップ上でのマウス移動時 - 修正版
-// 修正点2: マウスホバー時のプロヴィンスツールチップ表示の改善
-        private void OnMapPointerMoved(object sender, PointerEventArgs e)
-        {
-            if (_mapImage == null) return;
+// マウスホバー時のプロヴィンスツールチップ表示
+private void OnMapPointerMoved(object sender, PointerEventArgs e)
+{
+    if (_mapImage == null) return;
+
+    var position = e.GetPosition(_mapImageControl);
+
+    // カーソル位置のプロヴィンス情報を取得
+    var province = GetProvinceAtPosition(position.X, position.Y);
+
+    if (province != null)
+    {
+        // ツールチップの内容を作成
+        _tooltipTextBlock.Text = province.ToString();
+
+        // ツールチップが表示され、適切に設定されていることを確認
+        _provinceTooltip.Content = _tooltipTextBlock;
+        _provinceTooltip.IsVisible = true;
+
+        // マップ画像コントロールにツールチップを設定
+        ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
+        ToolTip.SetIsOpen(_mapImageControl, true);
+    }
+    else
+    {
+        // 不明なエリアの座標を表示
+        int mapX = (int)(position.X / _zoomFactor);
+        int mapY = (int)(position.Y / _zoomFactor);
+
+        _tooltipTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
+        ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
+        ToolTip.SetIsOpen(_mapImageControl, true);
+    }
+}
+
+// マップ上でのクリック時
+private void OnMapPointerPressed(object sender, PointerPressedEventArgs e)
+{
+    if (_mapImage == null) return;
     
-            var position = e.GetPosition(_mapImageControl);
+    var position = e.GetPosition(_mapImageControl);
     
-            // カーソル位置のプロヴィンス情報を取得
-            var province = GetProvinceAtPosition(position.X, position.Y);
+    // プロヴィンス情報を取得
+    var province = GetProvinceAtPosition(position.X, position.Y);
     
-            if (province != null)
-            {
-                // ツールチップの内容を作成
-                _tooltipTextBlock.Text = province.ToString();
+    if (province != null)
+    {
+        _selectedProvince = province;
+        _infoTextBlock.Text = province.ToString();
+    }
+    else
+    {
+        _selectedProvince = null;
         
-                // ツールチップが表示され、適切に設定されていることを確認
-                _provinceTooltip.Content = _tooltipTextBlock;
-                _provinceTooltip.IsVisible = true;
+        // 実際の座標を情報パネルに表示
+        int mapX = (int)(position.X / _zoomFactor);
+        int mapY = (int)(position.Y / _zoomFactor);
         
-                // ツールチップの配置を更新
-                // _provinceTooltip.VerticalOffset = position.X + 15;
-                // _provinceTooltip.VerticalOffset = position.Y + 15;
-        
-                // マップ画像コントロールにツールチップを設定
-                ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
-                ToolTip.SetIsOpen(_mapImageControl, true);
-            }
-            else
-            {
-                // 不明なエリアの座標を表示
-                int mapX = (int)(position.X / _zoomFactor);
-                int mapY = (int)(position.Y / _zoomFactor);
-        
-                _tooltipTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
-                ToolTip.SetTip(_mapImageControl, _tooltipTextBlock);
-                ToolTip.SetIsOpen(_mapImageControl, true);
-            }
-        }
-        // マップ上でのクリック時 - 修正版
-        private void OnMapPointerPressed(object sender, PointerPressedEventArgs e)
-        {
-            if (_mapImage == null) return;
-            
-            var position = e.GetPosition(_mapImageControl);
-            
-            // 新しいメソッドを使用してプロヴィンス情報を取得
-            var province = GetProvinceAtPosition(position.X, position.Y);
-            
-            if (province != null)
-            {
-                _selectedProvince = province;
-                _infoTextBlock.Text = province.ToString();
-            }
-            else
-            {
-                _selectedProvince = null;
-                
-                // 実際の座標を情報パネルに表示
-                int mapX = (int)(position.X / _zoomFactor);
-                int mapY = (int)(position.Y / _zoomFactor);
-                
-                _infoTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
-            }
-        }
-    
+        _infoTextBlock.Text = $"不明なプロヴィンス\n座標: X:{mapX} Y:{mapY}";
+    }
+}
 
         public async Task LoadNavalBaseMarkers(string modPath, string vanillaPath)
         {
@@ -945,17 +1096,17 @@ namespace HOI4NavalModder
         }
         
         // ズームボタンイベントハンドラ
-        private void OnZoomInClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void OnZoomInClick(object sender, RoutedEventArgs e)
         {
             ZoomIn();
         }
         
-        private void OnZoomOutClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void OnZoomOutClick(object sender, RoutedEventArgs e)
         {
             ZoomOut();
         }
         
-        private void OnZoomResetClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void OnZoomResetClick(object sender, RoutedEventArgs e)
         {
             ZoomReset();
         }

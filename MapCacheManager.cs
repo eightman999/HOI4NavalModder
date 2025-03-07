@@ -1,192 +1,219 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
+using Avalonia;
+using Color = Avalonia.Media.Color;
 
 namespace HOI4NavalModder
 {
-    // マップキャッシュマネージャークラス
     public class MapCacheManager
     {
-        private const string CACHE_FOLDER = "MapCache";
-        private const string PROVINCE_CACHE_FILE = "province_data.json";
-        private const string STATE_CACHE_FILE = "state_data.json";
-        private const string MAP_INFO_FILE = "map_info.json";
+        // キャッシュのバージョン（互換性のため）
+        private const int CACHE_VERSION = 1;
         
-        private readonly string _cacheBasePath;
+        // キャッシュディレクトリパス
+        private readonly string _cacheDirPath;
         
-        public MapCacheManager(string appDataPath = null)
+        public MapCacheManager()
         {
-            // アプリケーションデータパスが指定されていなければ、ユーザーのローカルAppDataフォルダを使用
-            if (string.IsNullOrEmpty(appDataPath))
-            {
-                _cacheBasePath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "HOI4NavalModder",
-                    CACHE_FOLDER);
-            }
-            else
-            {
-                _cacheBasePath = Path.Combine(appDataPath, CACHE_FOLDER);
-            }
+            // アプリケーションのキャッシュディレクトリを設定
+            _cacheDirPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "HOI4NavalModder",
+                "cache",
+                "maps");
             
             // キャッシュディレクトリが存在しない場合は作成
-            if (!Directory.Exists(_cacheBasePath))
+            if (!Directory.Exists(_cacheDirPath))
             {
-                Directory.CreateDirectory(_cacheBasePath);
+                Directory.CreateDirectory(_cacheDirPath);
             }
         }
         
-        // マップ情報のキャッシュパスを生成（MOD名やバージョンでユニークに）
+        // モッド名とゲームバージョンに基づいたキャッシュファイルパスを取得
         public string GetCachePath(string modName, string gameVersion)
         {
-            // 無効な文字を置換
-            modName = string.IsNullOrEmpty(modName) ? "vanilla" : CleanPathString(modName);
-            gameVersion = string.IsNullOrEmpty(gameVersion) ? "unknown" : CleanPathString(gameVersion);
+            // 無効な文字を除去
+            string safeName = string.Join("_", modName.Split(Path.GetInvalidFileNameChars()));
             
-            return Path.Combine(_cacheBasePath, $"{modName}_{gameVersion}");
+            return Path.Combine(_cacheDirPath, $"{safeName}_{gameVersion}_map_cache.json");
         }
         
-        // パス文字列をクリーンアップ
-        private string CleanPathString(string input)
-        {
-            // パスに使用できない文字を置き換え
-            return string.Join("_", input.Split(Path.GetInvalidFileNameChars()));
-        }
-        
-        // キャッシュが有効かチェック
-        public bool IsCacheValid(string cachePath, string provincesMapPath, string definitionPath)
-        {
-            // キャッシュディレクトリが存在しない場合
-            if (!Directory.Exists(cachePath))
-            {
-                return false;
-            }
-            
-            // マップ情報ファイルパス
-            string mapInfoPath = Path.Combine(cachePath, MAP_INFO_FILE);
-            
-            // マップ情報ファイルが存在しない場合
-            if (!File.Exists(mapInfoPath))
-            {
-                return false;
-            }
-            
-            try
-            {
-                // マップ情報を読み込み
-                string mapInfoJson = File.ReadAllText(mapInfoPath);
-                var mapInfo = JsonSerializer.Deserialize<MapInfo>(mapInfoJson);
-                
-                // 元ファイルの最終更新日時が変わっていないかチェック
-                if (mapInfo == null) return false;
-                
-                var provincesMapLastWrite = new FileInfo(provincesMapPath).LastWriteTime;
-                var definitionLastWrite = new FileInfo(definitionPath).LastWriteTime;
-                
-                return provincesMapLastWrite <= mapInfo.ProvincesMapLastModified &&
-                       definitionLastWrite <= mapInfo.DefinitionLastModified;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-        
-        // 新しいキャッシュを作成
-        public async Task CreateCache(
-            string cachePath, 
-            string provincesMapPath, 
-            string definitionPath,
-            Dictionary<Color, MapViewer.ProvinceInfo> provinceData)
+        // キャッシュが有効かどうかをチェック（ソースファイルが更新されていないか）
+        public bool IsCacheValid(string cachePath, string provincesMapPath, string provincesDefinitionPath)
         {
             try
             {
-                // キャッシュディレクトリがなければ作成
-                if (!Directory.Exists(cachePath))
-                {
-                    Directory.CreateDirectory(cachePath);
-                }
+                if (!File.Exists(cachePath)) return false;
                 
-                // マップ情報を保存
-                var mapInfo = new MapInfo
-                {
-                    ProvincesMapLastModified = new FileInfo(provincesMapPath).LastWriteTime,
-                    DefinitionLastModified = new FileInfo(definitionPath).LastWriteTime,
-                    CreatedDate = DateTime.Now,
-                    ProvinceCount = provinceData.Count
-                };
+                // キャッシュファイルのメタデータを読み込み
+                var metadataPath = cachePath + ".meta";
+                if (!File.Exists(metadataPath)) return false;
                 
-                string mapInfoJson = JsonSerializer.Serialize(mapInfo, new JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(Path.Combine(cachePath, MAP_INFO_FILE), mapInfoJson);
+                var metadata = JsonSerializer.Deserialize<CacheMetadata>(File.ReadAllText(metadataPath));
                 
-                // プロヴィンスデータを保存
-                var provinceCache = provinceData.Values.ToList();
-                string provinceCacheJson = JsonSerializer.Serialize(provinceCache, new JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(Path.Combine(cachePath, PROVINCE_CACHE_FILE), provinceCacheJson);
+                // バージョンチェック
+                if (metadata.Version != CACHE_VERSION) return false;
                 
-                // プロヴィンスマップの縮小版を保存（オプション）
-                // この実装はオプションです。マップ画像自体をキャッシュする場合に使用します。
-                /*
-                using (var originalMap = new Bitmap(provincesMapPath))
-                {
-                    // 縮小版を作成（例：1/4サイズ）
-                    int thumbWidth = originalMap.PixelSize.Width / 4;
-                    int thumbHeight = originalMap.PixelSize.Height / 4;
-                    
-                    // 縮小処理（Avaloniaで直接リサイズする方法がないため、別の方法が必要）
-                    // 実際の実装ではイメージ処理ライブラリを使用することをお勧めします
-                }
-                */
+                // ソースファイルのハッシュを計算
+                string provincesMapHash = CalculateFileHash(provincesMapPath);
+                string provincesDefinitionHash = CalculateFileHash(provincesDefinitionPath);
+                
+                // ハッシュが一致するかどうかをチェック
+                return provincesMapHash == metadata.ProvincesMapHash &&
+                       provincesDefinitionHash == metadata.ProvincesDefinitionHash;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"キャッシュ作成エラー: {ex.Message}");
-                throw;
+                Console.WriteLine($"キャッシュ検証エラー: {ex.Message}");
+                return false;
             }
         }
         
         // キャッシュからプロヴィンスデータを読み込み
-        public async Task<Dictionary<Color, MapViewer.ProvinceInfo>> LoadProvinceDataFromCache(string cachePath)
+public async Task<(Dictionary<Color, MapViewer.ProvinceInfo> ProvinceData, Dictionary<Point, int> PixelMap)> 
+    LoadProvinceDataFromCache(string cachePath)
+{
+    try
+    {
+        string json = await File.ReadAllTextAsync(cachePath);
+        
+        // ProvinceInfoリストを読み込み
+        var serializedData = JsonSerializer.Deserialize<List<SerializedProvinceInfo>>(json);
+        
+        // 色をキーとしたDictionaryに変換
+        var provinceData = new Dictionary<Color, MapViewer.ProvinceInfo>();
+        
+        foreach (var serInfo in serializedData)
         {
-            try
+            var color = Color.FromRgb(serInfo.R, serInfo.G, serInfo.B);
+            
+            var province = new MapViewer.ProvinceInfo
             {
-                string provinceCacheFilePath = Path.Combine(cachePath, PROVINCE_CACHE_FILE);
-                
-                if (!File.Exists(provinceCacheFilePath))
-                {
-                    return null;
-                }
-                
-                string provinceCacheJson = await File.ReadAllTextAsync(provinceCacheFilePath);
-                var provinceList = JsonSerializer.Deserialize<List<MapViewer.ProvinceInfo>>(provinceCacheJson);
-                
-                if (provinceList == null)
-                {
-                    return null;
-                }
-                
-                // Dictionary形式に変換して返す
-                return provinceList.ToDictionary(p => p.Color);
+                Id = serInfo.Id,
+                Color = color,
+                Type = serInfo.Type,
+                IsCoastal = serInfo.IsCoastal,
+                Terrain = serInfo.Terrain,
+                Continent = serInfo.Continent,
+                StateId = serInfo.StateId
+            };
+            
+            // 隣接プロヴィンスがあれば追加
+            if (serInfo.AdjacentProvinces != null)
+            {
+                province.AdjacentProvinces = new List<int>(serInfo.AdjacentProvinces);
             }
-            catch (Exception ex)
+            
+            provinceData[color] = province;
+        }
+        
+        // ピクセルマッピングをロード
+        var pixelMapPath = cachePath + ".pixels";
+        Dictionary<Point, int> pixelMap = new Dictionary<Point, int>();
+        
+        if (File.Exists(pixelMapPath))
+        {
+            string pixelJson = await File.ReadAllTextAsync(pixelMapPath);
+            var pixelData = JsonSerializer.Deserialize<List<SerializedPixelMapping>>(pixelJson);
+            
+            foreach (var pixel in pixelData)
             {
-                Console.WriteLine($"キャッシュ読み込みエラー: {ex.Message}");
-                return null;
+                pixelMap[new Point(pixel.X, pixel.Y)] = pixel.ProvinceId;
             }
         }
         
-        // マップ情報クラス
-        public class MapInfo
+        return (provinceData, pixelMap);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"キャッシュ読み込みエラー: {ex.Message}");
+        return (null, null);
+    }
+}    
+        // プロヴィンスデータをキャッシュに保存
+        public async Task CreateCache(string cachePath, string provincesMapPath, string provincesDefinitionPath, 
+            Dictionary<Color, MapViewer.ProvinceInfo> provinceData, Dictionary<Point, int> pixelMap)
         {
-            public DateTime ProvincesMapLastModified { get; set; }
-            public DateTime DefinitionLastModified { get; set; }
-            public DateTime CreatedDate { get; set; }
-            public int ProvinceCount { get; set; }
+            try
+            {
+                // 既存のProvinceDataのシリアライズ処理
+        
+                // ピクセルマッピングのシリアライズ
+                var pixelData = new List<SerializedPixelMapping>();
+        
+                foreach (var entry in pixelMap)
+                {
+                    var point = entry.Key;
+                    var provinceId = entry.Value;
+            
+                    pixelData.Add(new SerializedPixelMapping
+                    {
+                        X = (int)point.X,
+                        Y = (int)point.Y,
+                        ProvinceId = provinceId
+                    });
+                }
+        
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = false // サイズ削減のため改行なし
+                };
+        
+                var pixelJson = JsonSerializer.Serialize(pixelData, options);
+                await File.WriteAllTextAsync(cachePath + ".pixels", pixelJson);
+        
+                // 既存のメタデータの保存処理
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ピクセルマップキャッシュ作成エラー: {ex.Message}");
+            }
+        }
+        // ファイルのハッシュ値を計算（ファイル変更の検出用）
+        private string CalculateFileHash(string filePath)
+        {
+            using (var md5 = MD5.Create())
+            using (var stream = File.OpenRead(filePath))
+            {
+                byte[] hash = md5.ComputeHash(stream);
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
+        
+        // キャッシュのメタデータ（検証用）
+        private class CacheMetadata
+        {
+            public int Version { get; set; }
+            public DateTime CreatedAt { get; set; }
+            public string ProvincesMapHash { get; set; }
+            public string ProvincesDefinitionHash { get; set; }
+        }
+        
+        // シリアライズ可能なプロヴィンス情報
+        private class SerializedProvinceInfo
+        {
+            public int Id { get; set; }
+            public byte R { get; set; }
+            public byte G { get; set; }
+            public byte B { get; set; }
+            public string Type { get; set; }
+            public bool IsCoastal { get; set; }
+            public string Terrain { get; set; }
+            public string Continent { get; set; }
+            public List<int> AdjacentProvinces { get; set; }
+            public int StateId { get; set; }
+        }
+        private class SerializedPixelMapping 
+        {
+            public int X { get; set; }
+            public int Y { get; set; }
+            public int ProvinceId { get; set; }
         }
     }
+    
 }

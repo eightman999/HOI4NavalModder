@@ -760,6 +760,7 @@ namespace HOI4NavalModder
         {
             // 国家配備設定ダイアログを表示
             _statusTextBlock.Text = $"{country.Name ?? country.Tag} の配備設定を編集中...";
+            Console.WriteLine($"配備設定: {country.Tag}");
             
               
             // 新たな艦隊配備マップビューを表示
