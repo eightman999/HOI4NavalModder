@@ -764,7 +764,7 @@ namespace HOI4NavalModder
             
               
             // 新たな艦隊配備マップビューを表示
-            var mapView = new FleetDeploymentMapView(
+            var mapView = new FleetDeploymentWindow(
                 country.Tag, 
                 country.Name ?? country.Tag, 
                 country.FlagImage, 
