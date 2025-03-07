@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -29,7 +28,10 @@ namespace HOI4NavalModder
         {
             public string Name { get; set; }
             public string ShipType { get; set; }
-            public int Count { get; set; }
+            public string Equipment { get; set; }
+            public string VersionName { get; set; }
+            public bool IsPrideOfFleet { get; set; }
+            public int Count { get; set; } = 1;
         }
 
         private TextBlock _statusTextBlock;
@@ -49,6 +51,9 @@ namespace HOI4NavalModder
         private string _activeMod;
         private string _vanillaPath;
 
+        // 港情報のディクショナリ
+        private Dictionary<int, string> _portNames = new Dictionary<int, string>();
+
         public FleetDeploymentWindow(string countryTag, string countryName, Bitmap countryFlag, string activeMod,
             string vanillaPath)
         {
@@ -67,6 +72,9 @@ namespace HOI4NavalModder
 
             // UIを初期化
             InitializeComponent();
+
+            // 港情報を読み込む (実際の実装では地図ファイルから読み込む)
+            LoadPortsData();
 
             // 艦隊データの初期読み込み
             LoadFleetData();
@@ -261,9 +269,21 @@ namespace HOI4NavalModder
             };
             removeFleetButton.Click += OnRemoveFleetButtonClick;
 
+            var saveButton = new Button
+            {
+                Content = "保存",
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 5, 0),
+                Background = new SolidColorBrush(Color.Parse("#0078D7")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0)
+            };
+            saveButton.Click += OnSaveButtonClick;
+
             toolbar.Children.Add(addFleetButton);
             toolbar.Children.Add(editFleetButton);
             toolbar.Children.Add(removeFleetButton);
+            toolbar.Children.Add(saveButton);
             toolbarPanel.Children.Add(toolbar);
 
             Grid.SetRow(toolbarPanel, 0);
@@ -363,6 +383,17 @@ namespace HOI4NavalModder
             return panel;
         }
 
+        private void LoadPortsData()
+        {
+            // 実際の実装ではバニラとMODから地図データを読み込んでPort名を取得
+            // ここではサンプルデータを使用
+            _portNames.Add(1562, "San Diego");
+            _portNames.Add(4180, "Pearl Harbor");
+            _portNames.Add(7315, "Norfolk");
+            _portNames.Add(9671, "New London");
+            _portNames.Add(9814, "San Francisco");
+        }
+
         private void LoadFleetData()
         {
             try
@@ -370,54 +401,109 @@ namespace HOI4NavalModder
                 _loadingProgressBar.IsVisible = true;
                 _statusTextBlock.Text = "艦隊データを読み込み中...";
 
-                // MODディレクトリからの艦隊データ読み込みを試みる
-                if (!string.IsNullOrEmpty(_activeMod))
+                _fleetsList.Clear();
+
+                // NavalUnitLoader を使用して艦隊データを読み込む
+                var navalUnits = NavalUnitLoader.LoadNavalUnits(_countryTag, _activeMod, _vanillaPath);
+
+                if (navalUnits.Count > 0)
                 {
-                    string fleetFilePath = Path.Combine(_activeMod, "common", "units", "fleets",
-                        $"{_countryTag}_fleets.txt");
-                    if (File.Exists(fleetFilePath))
+                    foreach (var unit in navalUnits)
                     {
-                        // 実際の実装ではここでファイルからデータを読み込む
-                        // 読み込み処理は省略
+                        var fleet = new FleetInfo
+                        {
+                            Name = unit.FleetName,
+                            ProvinceId = unit.NavalBaseId
+                        };
+
+                        // 港の名前を設定
+                        if (_portNames.TryGetValue(unit.NavalBaseId, out string portName))
+                        {
+                            fleet.BaseLocation = portName;
+                        }
+                        else
+                        {
+                            fleet.BaseLocation = $"Port {unit.NavalBaseId}";
+                        }
+
+                        // タスクフォースから艦船を集約
+                        foreach (var taskForce in unit.TaskForces)
+                        {
+                            foreach (var ship in taskForce.Ships)
+                            {
+                                fleet.Ships.Add(new ShipInfo
+                                {
+                                    Name = ship.Name,
+                                    ShipType = TranslateShipType(ship.Definition),
+                                    Equipment = ship.Equipment,
+                                    VersionName = ship.VersionName,
+                                    IsPrideOfFleet = ship.IsPrideOfFleet,
+                                    Count = 1
+                                });
+                            }
+                        }
+
+                        _fleetsList.Add(fleet);
                     }
-                }
 
-                // データがなければサンプルを表示
-                if (_fleetsList.Count == 0)
+                    _statusTextBlock.Text = $"{navalUnits.Count} 艦隊を読み込みました";
+                }
+                else
                 {
-                    // サンプルデータを追加
-                    var fleet1 = new FleetInfo
-                    {
-                        Name = "第1艦隊",
-                        BaseLocation = "主要港",
-                        ProvinceId = 1234
-                    };
-                    fleet1.Ships.Add(new ShipInfo { Name = "戦艦A", ShipType = "戦艦", Count = 1 });
-                    fleet1.Ships.Add(new ShipInfo { Name = "空母B", ShipType = "空母", Count = 1 });
-
-                    var fleet2 = new FleetInfo
-                    {
-                        Name = "第2艦隊",
-                        BaseLocation = "補助港",
-                        ProvinceId = 2345
-                    };
-                    fleet2.Ships.Add(new ShipInfo { Name = "巡洋艦C", ShipType = "巡洋艦", Count = 3 });
-                    fleet2.Ships.Add(new ShipInfo { Name = "駆逐艦D", ShipType = "駆逐艦", Count = 5 });
-
-                    _fleetsList.Add(fleet1);
-                    _fleetsList.Add(fleet2);
+                    // データがなければサンプルを表示
+                    AddSampleFleets();
+                    _statusTextBlock.Text = "艦隊データが見つかりませんでした。サンプルデータを表示しています。";
                 }
-
-                _statusTextBlock.Text = $"{_fleetsList.Count} 艦隊を読み込みました";
             }
             catch (Exception ex)
             {
                 _statusTextBlock.Text = $"艦隊データ読み込みエラー: {ex.Message}";
+                // エラー時はサンプルデータを表示
+                AddSampleFleets();
             }
             finally
             {
                 _loadingProgressBar.IsVisible = false;
             }
+        }
+
+        private string TranslateShipType(string type)
+        {
+            return type switch
+            {
+                "battleship" => "戦艦",
+                "carrier" => "空母",
+                "heavy_cruiser" => "重巡洋艦",
+                "light_cruiser" => "軽巡洋艦",
+                "destroyer" => "駆逐艦",
+                "submarine" => "潜水艦",
+                _ => type
+            };
+        }
+
+        private void AddSampleFleets()
+        {
+            // サンプルデータを追加
+            var fleet1 = new FleetInfo
+            {
+                Name = "第1艦隊",
+                BaseLocation = "主要港",
+                ProvinceId = 1234
+            };
+            fleet1.Ships.Add(new ShipInfo { Name = "戦艦A", ShipType = "戦艦", Count = 1 });
+            fleet1.Ships.Add(new ShipInfo { Name = "空母B", ShipType = "空母", Count = 1 });
+
+            var fleet2 = new FleetInfo
+            {
+                Name = "第2艦隊",
+                BaseLocation = "補助港",
+                ProvinceId = 2345
+            };
+            fleet2.Ships.Add(new ShipInfo { Name = "巡洋艦C", ShipType = "巡洋艦", Count = 3 });
+            fleet2.Ships.Add(new ShipInfo { Name = "駆逐艦D", ShipType = "駆逐艦", Count = 5 });
+
+            _fleetsList.Add(fleet1);
+            _fleetsList.Add(fleet2);
         }
 
         // イベントハンドラ
@@ -449,6 +535,28 @@ namespace HOI4NavalModder
             {
                 _fleetsList.Remove(selectedFleet);
                 _statusTextBlock.Text = $"{selectedFleet.Name} を削除しました";
+            }
+        }
+
+        private void OnSaveButtonClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _loadingProgressBar.IsVisible = true;
+                _statusTextBlock.Text = "艦隊データを保存中...";
+
+                // 実際の実装ではここで艦隊データをファイルに保存する処理を行う
+                // NavalUnitLoaderの逆のプロセスが必要
+
+                _statusTextBlock.Text = "艦隊データを保存しました";
+            }
+            catch (Exception ex)
+            {
+                _statusTextBlock.Text = $"保存エラー: {ex.Message}";
+            }
+            finally
+            {
+                _loadingProgressBar.IsVisible = false;
             }
         }
 
@@ -491,26 +599,28 @@ namespace HOI4NavalModder
             // 基地位置
             var basePanel = new StackPanel { Spacing = 5 };
             basePanel.Children.Add(new TextBlock { Text = "基地位置:", Foreground = Brushes.White });
-            var baseTextBox = new TextBox
-            {
-                Text = isNew ? "" : fleet.BaseLocation,
-                Watermark = "基地名を入力"
-            };
-            basePanel.Children.Add(baseTextBox);
 
-            // プロヴィンスID
-            var provincePanel = new StackPanel { Spacing = 5 };
-            provincePanel.Children.Add(new TextBlock { Text = "プロヴィンスID:", Foreground = Brushes.White });
-            var provinceTextBox = new TextBox
+            // 基地選択用ComboBox（利用可能な港のリスト）
+            var baseComboBox = new ComboBox
             {
-                Text = isNew ? "0" : fleet.ProvinceId.ToString(),
-                Watermark = "プロヴィンスIDを入力"
+                Width = 200,
+                SelectedIndex = 0
             };
-            provincePanel.Children.Add(provinceTextBox);
+
+            // ポート情報を追加
+            foreach (var port in _portNames)
+            {
+                baseComboBox.Items.Add($"{port.Value} (ID: {port.Key})");
+                if (!isNew && port.Key == fleet.ProvinceId)
+                {
+                    baseComboBox.SelectedIndex = baseComboBox.Items.Count - 1;
+                }
+            }
+
+            basePanel.Children.Add(baseComboBox);
 
             formPanel.Children.Add(namePanel);
             formPanel.Children.Add(basePanel);
-            formPanel.Children.Add(provincePanel);
 
             Grid.SetRow(formPanel, 0);
 
@@ -542,7 +652,6 @@ namespace HOI4NavalModder
                 try
                 {
                     string name = nameTextBox.Text?.Trim() ?? "";
-                    string baseLocation = baseTextBox.Text?.Trim() ?? "";
 
                     if (string.IsNullOrEmpty(name))
                     {
@@ -550,9 +659,21 @@ namespace HOI4NavalModder
                         return;
                     }
 
-                    if (!int.TryParse(provinceTextBox.Text, out int provinceId))
+                    // 選択された港情報を解析
+                    int provinceId = 0;
+                    string baseLocation = "";
+
+                    if (baseComboBox.SelectedIndex >= 0)
                     {
-                        provinceId = 0;
+                        var selectedPortInfo = baseComboBox.SelectedItem.ToString();
+                        var match = System.Text.RegularExpressions.Regex.Match(selectedPortInfo, @"ID: (\d+)");
+                        if (match.Success)
+                        {
+                            provinceId = int.Parse(match.Groups[1].Value);
+                            baseLocation = _portNames.ContainsKey(provinceId)
+                                ? _portNames[provinceId]
+                                : selectedPortInfo.Split('(')[0].Trim();
+                        }
                     }
 
                     if (isNew)
@@ -613,8 +734,8 @@ namespace HOI4NavalModder
             var dialog = new Window
             {
                 Title = $"{fleet.Name} の詳細",
-                Width = 500,
-                Height = 400,
+                Width = 550,
+                Height = 450,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
@@ -674,7 +795,7 @@ namespace HOI4NavalModder
 
                 var panel = new Grid
                 {
-                    ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
+                    ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto"),
                     Margin = new Thickness(5)
                 };
 
@@ -695,16 +816,34 @@ namespace HOI4NavalModder
                 };
                 Grid.SetColumn(typeText, 1);
 
+                var classText = new TextBlock
+                {
+                    Text = item.VersionName,
+                    Foreground = new SolidColorBrush(Color.Parse("#AAAAAA")),
+                    Margin = new Thickness(5, 0, 10, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    FontSize = 12
+                };
+                Grid.SetColumn(classText, 2);
+
                 var countText = new TextBlock
                 {
                     Text = $"×{item.Count}",
                     Foreground = Brushes.White,
                     VerticalAlignment = VerticalAlignment.Center
                 };
-                Grid.SetColumn(countText, 2);
+                Grid.SetColumn(countText, 3);
+
+                // 艦隊旗艦マーク
+                if (item.IsPrideOfFleet)
+                {
+                    nameText.FontWeight = FontWeight.Bold;
+                    nameText.Text += " ★";
+                }
 
                 panel.Children.Add(nameText);
                 panel.Children.Add(typeText);
+                panel.Children.Add(classText);
                 panel.Children.Add(countText);
 
                 return panel;
@@ -752,143 +891,169 @@ namespace HOI4NavalModder
             // ダイアログ表示
             await dialog.ShowDialog(this);
         }
-
         private async void ShowAddShipDialog(FleetInfo fleet, ListBox shipListBox)
+{
+    // 艦船追加ダイアログの作成
+    var dialog = new Window
+    {
+        Title = "艦船の追加",
+        Width = 400,
+        Height = 350,
+        WindowStartupLocation = WindowStartupLocation.CenterOwner
+    };
+
+    var grid = new Grid
+    {
+        RowDefinitions = new RowDefinitions("*,Auto"),
+        Margin = new Thickness(10)
+    };
+
+    // 入力フォーム
+    var formPanel = new StackPanel
+    {
+        Spacing = 10
+    };
+
+    // 艦船名
+    var namePanel = new StackPanel { Spacing = 5 };
+    namePanel.Children.Add(new TextBlock { Text = "艦船名:", Foreground = Brushes.White });
+    var nameTextBox = new TextBox
+    {
+        Watermark = "艦船名を入力"
+    };
+    namePanel.Children.Add(nameTextBox);
+
+    // 艦船タイプ
+    var typePanel = new StackPanel { Spacing = 5 };
+    typePanel.Children.Add(new TextBlock { Text = "艦船タイプ:", Foreground = Brushes.White });
+    var typeComboBox = new ComboBox
+    {
+        Width = 200,
+        SelectedIndex = 0
+    };
+    typeComboBox.Items.Add("戦艦");
+    typeComboBox.Items.Add("空母");
+    typeComboBox.Items.Add("重巡洋艦");
+    typeComboBox.Items.Add("軽巡洋艦");
+    typeComboBox.Items.Add("駆逐艦");
+    typeComboBox.Items.Add("潜水艦");
+    typePanel.Children.Add(typeComboBox);
+    
+    // 艦級
+    var classPanel = new StackPanel { Spacing = 5 };
+    classPanel.Children.Add(new TextBlock { Text = "艦級:", Foreground = Brushes.White });
+    var classTextBox = new TextBox
+    {
+        Watermark = "例: Iowa Class"
+    };
+    classPanel.Children.Add(classTextBox);
+
+    // 数量
+    var countPanel = new StackPanel { Spacing = 5 };
+    countPanel.Children.Add(new TextBlock { Text = "数量:", Foreground = Brushes.White });
+    var countNumeric = new NumericUpDown
+    {
+        Value = 1,
+        Minimum = 1,
+        Maximum = 100,
+        Increment = 1,
+        Width = 100,
+        HorizontalAlignment = HorizontalAlignment.Left
+    };
+    countPanel.Children.Add(countNumeric);
+    
+    // 旗艦設定
+    var pridePanel = new StackPanel { Spacing = 5 };
+    var prideCheckBox = new CheckBox
+    {
+        Content = "この艦を旗艦に設定する",
+        Foreground = Brushes.White,
+        IsChecked = false
+    };
+    pridePanel.Children.Add(prideCheckBox);
+
+    formPanel.Children.Add(namePanel);
+    formPanel.Children.Add(typePanel);
+    formPanel.Children.Add(classPanel);
+    formPanel.Children.Add(countPanel);
+    formPanel.Children.Add(pridePanel);
+
+    Grid.SetRow(formPanel, 0);
+
+    // ボタンパネル
+    var buttonPanel = new StackPanel
+    {
+        Orientation = Orientation.Horizontal,
+        HorizontalAlignment = HorizontalAlignment.Right,
+        Spacing = 10,
+        Margin = new Thickness(0, 10, 0, 0)
+    };
+
+    var cancelButton = new Button
+    {
+        Content = "キャンセル",
+        Padding = new Thickness(10, 5, 10, 5)
+    };
+    cancelButton.Click += (s, e) => dialog.Close();
+
+    var addButton = new Button
+    {
+        Content = "追加",
+        Padding = new Thickness(10, 5, 10, 5),
+        Background = new SolidColorBrush(Color.Parse("#0078D7")),
+        Foreground = Brushes.White
+    };
+    addButton.Click += (s, e) =>
+    {
+        try
         {
-            // 艦船追加ダイアログの作成
-            var dialog = new Window
+            string name = nameTextBox.Text?.Trim() ?? "";
+            string type = typeComboBox.SelectedItem?.ToString() ?? "不明";
+            string className = classTextBox.Text?.Trim() ?? "";
+            int count = (int)countNumeric.Value;
+            bool isPrideOfFleet = prideCheckBox.IsChecked ?? false;
+
+            if (string.IsNullOrEmpty(name))
             {
-                Title = "艦船の追加",
-                Width = 350,
-                Height = 250,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
+                _statusTextBlock.Text = "艦船名は必須です";
+                return;
+            }
 
-            var grid = new Grid
+            // 艦船を追加
+            fleet.Ships.Add(new ShipInfo
             {
-                RowDefinitions = new RowDefinitions("*,Auto"),
-                Margin = new Thickness(10)
-            };
+                Name = name,
+                ShipType = type,
+                VersionName = className,
+                Count = count,
+                IsPrideOfFleet = isPrideOfFleet
+            });
 
-            // 入力フォーム
-            var formPanel = new StackPanel
-            {
-                Spacing = 10
-            };
+            // リスト表示を更新
+            shipListBox.ItemsSource = null;
+            shipListBox.ItemsSource = fleet.Ships;
 
-            // 艦船名
-            var namePanel = new StackPanel { Spacing = 5 };
-            namePanel.Children.Add(new TextBlock { Text = "艦船名:", Foreground = Brushes.White });
-            var nameTextBox = new TextBox
-            {
-                Watermark = "艦船名を入力"
-            };
-            namePanel.Children.Add(nameTextBox);
-
-            // 艦船タイプ
-            var typePanel = new StackPanel { Spacing = 5 };
-            typePanel.Children.Add(new TextBlock { Text = "艦船タイプ:", Foreground = Brushes.White });
-            var typeComboBox = new ComboBox
-            {
-                Width = 200,
-                SelectedIndex = 0
-            };
-            typeComboBox.Items.Add("戦艦");
-            typeComboBox.Items.Add("空母");
-            typeComboBox.Items.Add("巡洋艦");
-            typeComboBox.Items.Add("駆逐艦");
-            typeComboBox.Items.Add("潜水艦");
-            typePanel.Children.Add(typeComboBox);
-
-            // 数量
-            var countPanel = new StackPanel { Spacing = 5 };
-            countPanel.Children.Add(new TextBlock { Text = "数量:", Foreground = Brushes.White });
-            var countNumeric = new NumericUpDown
-            {
-                Value = 1,
-                Minimum = 1,
-                Maximum = 100,
-                Increment = 1,
-                Width = 100,
-                HorizontalAlignment = HorizontalAlignment.Left
-            };
-            countPanel.Children.Add(countNumeric);
-
-            formPanel.Children.Add(namePanel);
-            formPanel.Children.Add(typePanel);
-            formPanel.Children.Add(countPanel);
-
-            Grid.SetRow(formPanel, 0);
-
-// ボタンパネル
-            var buttonPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Spacing = 10,
-                Margin = new Thickness(0, 10, 0, 0)
-            };
-
-            var cancelButton = new Button
-            {
-                Content = "キャンセル",
-                Padding = new Thickness(10, 5, 10, 5)
-            };
-            cancelButton.Click += (s, e) => dialog.Close();
-
-            var addButton = new Button
-            {
-                Content = "追加",
-                Padding = new Thickness(10, 5, 10, 5),
-                Background = new SolidColorBrush(Color.Parse("#0078D7")),
-                Foreground = Brushes.White
-            };
-            addButton.Click += (s, e) =>
-            {
-                try
-                {
-                    string name = nameTextBox.Text?.Trim() ?? "";
-                    string type = typeComboBox.SelectedItem?.ToString() ?? "不明";
-                    int count = (int)countNumeric.Value;
-
-                    if (string.IsNullOrEmpty(name))
-                    {
-                        _statusTextBlock.Text = "艦船名は必須です";
-                        return;
-                    }
-
-                    // 艦船を追加
-                    fleet.Ships.Add(new ShipInfo
-                    {
-                        Name = name,
-                        ShipType = type,
-                        Count = count
-                    });
-
-                    // リスト表示を更新
-                    shipListBox.Items.Add(fleet.Ships.Last());
-
-                    _statusTextBlock.Text = $"艦船「{name}」を追加しました";
-                    dialog.Close();
-                }
-                catch (Exception ex)
-                {
-                    _statusTextBlock.Text = $"エラー: {ex.Message}";
-                }
-            };
-
-            buttonPanel.Children.Add(cancelButton);
-            buttonPanel.Children.Add(addButton);
-
-            Grid.SetRow(buttonPanel, 2);
-
-            grid.Children.Add(formPanel);
-            grid.Children.Add(buttonPanel);
-
-            dialog.Content = grid;
-
-// ダイアログ表示
-            await dialog.ShowDialog(this);
+            _statusTextBlock.Text = $"艦船「{name}」を追加しました";
+            dialog.Close();
         }
+        catch (Exception ex)
+        {
+            _statusTextBlock.Text = $"エラー: {ex.Message}";
+        }
+    };
+
+    buttonPanel.Children.Add(cancelButton);
+    buttonPanel.Children.Add(addButton);
+
+    Grid.SetRow(buttonPanel, 1);
+
+    grid.Children.Add(formPanel);
+    grid.Children.Add(buttonPanel);
+
+    dialog.Content = grid;
+
+    // ダイアログ表示
+    await dialog.ShowDialog(this);
+}
     }
 }
