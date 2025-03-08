@@ -206,6 +206,33 @@ namespace HOI4NavalModder
                 Console.WriteLine($"テーブル作成中にエラーが発生しました: {ex.Message}");
                 throw;
             }
+            try
+            {
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    // 既存のテーブル作成コード...
+
+                    // Guns_raw_datasテーブルの作成
+                    using (var command = new SQLiteCommand(connection))
+                    {
+                        command.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS guns_raw_datas (
+                        ID TEXT PRIMARY KEY,
+                        json_data TEXT NOT NULL
+                    );";
+                        command.ExecuteNonQuery();
+                    }
+
+                    Console.WriteLine("データベーステーブルを作成しました。");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"テーブル作成中にエラーが発生しました: {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -729,6 +756,232 @@ namespace HOI4NavalModder
                 Console.WriteLine($"データベース接続中にエラーが発生しました: {ex.Message}");
                 return false;
             }
+        }
+        // Add these methods to your existing DatabaseManager class
+
+
+       
+        /// <summary>
+        /// 砲の生データをJSON形式で保存する（計算前の入力値のみ）
+        /// </summary>
+        /// <param name="gunId">砲のID</param>
+        /// <param name="rawGunData">砲の生データ</param>
+        /// <returns>保存に成功したかどうか</returns>
+        public bool SaveRawGunData(string gunId, Dictionary<string, object> rawGunData)
+        {
+            try
+            {
+                // データをJSON文字列に変換
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+                string jsonData = System.Text.Json.JsonSerializer.Serialize(rawGunData, options);
+
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    using (var command = new SQLiteCommand(connection))
+                    {
+                        command.CommandText = @"
+                    INSERT OR REPLACE INTO guns_raw_datas (ID, json_data)
+                    VALUES (@ID, @json_data);";
+
+                        command.Parameters.AddWithValue("@ID", gunId);
+                        command.Parameters.AddWithValue("@json_data", jsonData);
+
+                        int affected = command.ExecuteNonQuery();
+                        return affected > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"砲の生データ保存中にエラーが発生しました: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 砲の生データをデータベースから取得する
+        /// </summary>
+        /// <param name="gunId">砲のID</param>
+        /// <returns>砲の生データ</returns>
+        public Dictionary<string, object> GetRawGunData(string gunId)
+        {
+            try
+            {
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    using (var command = new SQLiteCommand(connection))
+                    {
+                        command.CommandText = "SELECT json_data FROM guns_raw_datas WHERE ID = @ID;";
+                        command.Parameters.AddWithValue("@ID", gunId);
+
+                        var result = command.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            string jsonData = result.ToString();
+                            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonData, 
+                                new System.Text.Json.JsonSerializerOptions { 
+                                    PropertyNameCaseInsensitive = true 
+                                });
+                        }
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"砲の生データ取得中にエラーが発生しました: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 装備の基本情報のみ取得する
+        /// </summary>
+        public List<NavalEquipment> GetBasicEquipmentInfo()
+        {
+            var equipmentList = new List<NavalEquipment>();
+
+            try
+            {
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    using (var command = new SQLiteCommand(connection))
+                    {
+                        // module_infoテーブルと他のテーブルを結合して基本情報を取得
+                        command.CommandText = @"
+                    SELECT 
+                        mi.ID, 
+                        mi.name, 
+                        mi.year, 
+                        mi.country,
+                        mi.gfx
+                    FROM 
+                        module_info mi
+                    ORDER BY 
+                        mi.name;";
+
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string id = reader["ID"].ToString();
+                                string gfx = reader["gfx"]?.ToString() ?? "";
+
+                                var equipment = new NavalEquipment
+                                {
+                                    Id = id,
+                                    Name = reader["name"].ToString(),
+                                    Category = GetCategoryFromGfx(gfx),
+                                    SubCategory = GetSubCategoryFromGfx(gfx),
+                                    Year = Convert.ToInt32(reader["year"]),
+                                    Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
+                                    Country = reader["country"]?.ToString() ?? "",
+                                    AdditionalProperties = new Dictionary<string, object>()
+                                };
+
+                                equipmentList.Add(equipment);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"基本装備情報の取得中にエラーが発生しました: {ex.Message}");
+            }
+
+            return equipmentList;
+        }
+
+// Helper methods needed by GetBasicEquipmentInfo
+// These would typically be in your EquipmentDesignView but are needed here for the query
+        private string GetCategoryFromGfx(string gfx)
+        {
+            if (string.IsNullOrEmpty(gfx))
+                return "SMOT"; // デフォルトはその他
+            
+            // gfxから適切なカテゴリを判断するロジック
+            if (gfx.StartsWith("gfx_smlg_")) return "SMLG";
+            if (gfx.StartsWith("gfx_smmg_")) return "SMMG";
+            if (gfx.StartsWith("gfx_smhg_")) return "SMHG";
+            if (gfx.StartsWith("gfx_smshg_")) return "SMSHG";
+            if (gfx.StartsWith("gfx_smtp_")) return "SMTP";
+            if (gfx.StartsWith("gfx_smstp_")) return "SMSTP";
+            if (gfx.StartsWith("gfx_smsp_")) return "SMSP";
+            if (gfx.StartsWith("gfx_smcr_")) return "SMCR";
+            if (gfx.StartsWith("gfx_smhc_")) return "SMHC";
+            if (gfx.StartsWith("gfx_smasp_")) return "SMASP";
+            if (gfx.StartsWith("gfx_smlsp_")) return "SMLSP";
+            if (gfx.StartsWith("gfx_smdcl_")) return "SMDCL";
+            if (gfx.StartsWith("gfx_smso_")) return "SMSO";
+            if (gfx.StartsWith("gfx_smlso_")) return "SMLSO";
+            if (gfx.StartsWith("gfx_smdc_")) return "SMDC";
+            if (gfx.StartsWith("gfx_smlr_")) return "SMLR";
+            if (gfx.StartsWith("gfx_smhr_")) return "SMHR";
+            if (gfx.StartsWith("gfx_smaa_")) return "SMAA";
+            if (gfx.StartsWith("gfx_smtr_")) return "SMTR";
+            if (gfx.StartsWith("gfx_smmbl_")) return "SMMBL";
+            if (gfx.StartsWith("gfx_smhbl_")) return "SMHBL";
+            if (gfx.StartsWith("gfx_smhaa_")) return "SMHAA";
+            if (gfx.StartsWith("gfx_smasm_")) return "SMASM";
+            if (gfx.StartsWith("gfx_smsam_")) return "SMSAM";
+            if (gfx.StartsWith("gfx_smhng_")) return "SMHNG";
+    
+            return "SMOT"; // デフォルトはその他
+        }
+
+        private string GetSubCategoryFromGfx(string gfx)
+        {
+            if (string.IsNullOrEmpty(gfx))
+                return "";
+            
+            // 砲カテゴリーの場合はサブカテゴリを設定
+            if (gfx.Contains("_single")) return "単装砲";
+            if (gfx.Contains("_double")) return "連装砲";
+            if (gfx.Contains("_triple")) return "三連装砲";
+            if (gfx.Contains("_quad")) return "四連装砲";
+    
+            return "";
+        }
+
+        private int GetTierFromYear(int year)
+        {
+            // 年に最も近いティアを返す
+            if (year <= 1890) return 0;
+            if (year <= 1895) return 1;
+            if (year <= 1900) return 2;
+            if (year <= 1905) return 3;
+            if (year <= 1910) return 4;
+            if (year <= 1915) return 5;
+            if (year <= 1920) return 6;
+            if (year <= 1925) return 7;
+            if (year <= 1930) return 8;
+            if (year <= 1935) return 9;
+            if (year <= 1940) return 10;
+            if (year <= 1945) return 11;
+            if (year <= 1950) return 12;
+            if (year <= 1955) return 13;
+            if (year <= 1960) return 14;
+            if (year <= 1965) return 15;
+            if (year <= 1970) return 16;
+            if (year <= 1975) return 17;
+            if (year <= 1980) return 18;
+            if (year <= 1985) return 19;
+            if (year <= 1990) return 20;
+            if (year <= 1995) return 21;
+            if (year <= 2000) return 22;
+    
+            return 23; // 2000年以降
         }
     }
 
