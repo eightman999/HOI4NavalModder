@@ -2,7 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:local="clr-namespace:HOI4NavalModder"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="HOI4NavalModder.EquipmentDesignView">
     <Grid RowDefinitions="Auto,*">
         <!-- ヘッダーパネル -->
@@ -15,37 +16,140 @@
         </Panel>
         
         <!-- コンテンツエリア -->
-        <StackPanel Grid.Row="1" Margin="20">
-            <TextBlock Text="装備の設計と性能調整ができます"
-                       Foreground="White"
-                       Margin="0,0,0,20"/>
-                       
-            <!-- ツールバー -->
-            <Panel Background="#333337" Height="40" Margin="0,0,0,1">
-                <StackPanel Orientation="Horizontal" Margin="10,5,0,0">
-                    <Button Content="新規"
-                            Padding="10,5,10,5"
-                            Margin="0,0,5,0"
-                            Background="#3E3E42"
+        <Grid Grid.Row="1" ColumnDefinitions="250,*">
+            <!-- 左側：フィルタパネル -->
+            <Border Grid.Column="0" Background="#252526" BorderThickness="0,0,1,0" BorderBrush="#3F3F46">
+                <StackPanel Margin="10">
+                    <TextBlock Text="フィルタ" Foreground="White" FontWeight="Bold" Margin="0,0,0,10"/>
+                    
+                    <!-- カテゴリフィルタ -->
+                    <Expander Header="カテゴリ" IsExpanded="True" Foreground="White" Background="#252526">
+                        <StackPanel Margin="10,5,0,5">
+                            <CheckBox Content="全て" IsChecked="True" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="小口径砲 (SMLG)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="中口径砲 (SMMG)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="大口径砲 (SMHG)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="超大口径砲 (SMSHG)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="魚雷 (SMTP)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="潜水艦魚雷 (SMSTP)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="水上機 (SMSP)" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="その他" Foreground="White" Margin="0,2"/>
+                        </StackPanel>
+                    </Expander>
+                    
+                    <!-- 開発年フィルタ -->
+                    <Expander Header="開発年" IsExpanded="True" Foreground="White" Background="#252526" Margin="0,10,0,0">
+                        <StackPanel Margin="10,5,0,5">
+                            <CheckBox Content="全て" IsChecked="True" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1890以前" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1890-1910" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1910-1930" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1930-1950" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1950-1970" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1970-1990" Foreground="White" Margin="0,2"/>
+                            <CheckBox Content="1990-2000" Foreground="White" Margin="0,2"/>
+                        </StackPanel>
+                    </Expander>
+                    
+                    <!-- 名前検索 -->
+                    <TextBlock Text="名前検索" Foreground="White" Margin="0,10,0,5"/>
+                    <TextBox Watermark="装備名を入力..." Margin="0,0,0,10"/>
+                    
+                    <Button Content="フィルタ適用" 
+                            HorizontalAlignment="Stretch" 
+                            HorizontalContentAlignment="Center"
+                            Background="#0078D7" 
                             Foreground="White"
-                            BorderThickness="0"/>
-                            
-                    <Button Content="保存"
-                            Padding="10,5,10,5"
-                            Margin="0,0,5,0"
-                            Background="#3E3E42"
-                            Foreground="White"
-                            BorderThickness="0"/>
+                            Padding="0,5"
+                            Margin="0,10,0,0"/>
                 </StackPanel>
-            </Panel>
-            
-            <!-- メインコンテンツエリア -->
-            <Border Background="#2D2D30"
-                    Height="500"
-                    BorderThickness="1"
-                    BorderBrush="#3F3F46">
-                <!-- ここにコンテンツを追加 -->
             </Border>
-        </StackPanel>
+            
+            <!-- 右側：メインコンテンツエリア -->
+            <Grid Grid.Column="1" RowDefinitions="Auto,*">
+                <!-- ツールバー -->
+                <Panel Grid.Row="0" Background="#333337" Height="40">
+                    <StackPanel Orientation="Horizontal" Margin="10,5,0,0">
+                        <Button x:Name="NewEquipmentButton" 
+                                Content="新規"
+                                Padding="10,5,10,5"
+                                Margin="0,0,5,0"
+                                Background="#3E3E42"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="OnNewEquipmentClick"/>
+                                
+                        <Button x:Name="EditEquipmentButton" 
+                                Content="編集"
+                                Padding="10,5,10,5"
+                                Margin="0,0,5,0"
+                                Background="#3E3E42"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="OnEditEquipmentClick"/>
+                                
+                        <Button x:Name="DeleteEquipmentButton" 
+                                Content="削除"
+                                Padding="10,5,10,5"
+                                Margin="0,0,5,0"
+                                Background="#3E3E42"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="OnDeleteEquipmentClick"/>
+                                
+                        <Button x:Name="DuplicateEquipmentButton" 
+                                Content="複製"
+                                Padding="10,5,10,5"
+                                Margin="0,0,5,0"
+                                Background="#3E3E42"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="OnDuplicateEquipmentClick"/>
+                                
+                        <Button x:Name="ExportButton" 
+                                Content="エクスポート"
+                                Padding="10,5,10,5"
+                                Margin="0,0,5,0"
+                                Background="#3E3E42"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="OnExportClick"/>
+                                
+                        <Button x:Name="ImportButton" 
+                                Content="インポート"
+                                Padding="10,5,10,5"
+                                Margin="0,0,5,0"
+                                Background="#3E3E42"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="OnImportClick"/>
+                    </StackPanel>
+                </Panel>
+                
+                <!-- XAML部分: DataGridの修正 -->
+                <!-- 装備リスト -->
+                <!-- 装備リスト -->
+                <DataGrid Grid.Row="1" 
+                          Background="#1E1E1E"
+                          BorderThickness="0"
+                          RowBackground="#2D2D30"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          AutoGenerateColumns="False"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          Foreground="White"
+                          x:Name="EquipmentDataGrid">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" x:DataType="local:NavalEquipment" Binding="{Binding Id}" Width="90"/>
+                        <DataGridTextColumn Header="名前" x:DataType="local:NavalEquipment" Binding="{Binding Name}" Width="200"/>
+                        <DataGridTextColumn Header="カテゴリ" x:DataType="local:NavalEquipment" Binding="{Binding Category}" Width="100"/>
+                        <DataGridTextColumn Header="サブカテゴリ" x:DataType="local:NavalEquipment" Binding="{Binding SubCategory}" Width="120"/>
+                        <DataGridTextColumn Header="開発年" x:DataType="local:NavalEquipment" Binding="{Binding Year}" Width="80"/>
+                        <DataGridTextColumn Header="開発国" x:DataType="local:NavalEquipment" Binding="{Binding Country}" Width="80"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

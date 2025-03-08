@@ -199,42 +199,7 @@ namespace HOI4NavalModder
     }
     
     // 各モジュールのViewクラス実装
-    public partial class EquipmentDesignView : UserControl
-    {
-        public EquipmentDesignView()
-        {
-            var grid = new Grid
-            {
-                RowDefinitions = new RowDefinitions("Auto,*")
-            };
 
-            var headerPanel = new Panel
-            {
-                Background = new SolidColorBrush(Color.Parse("#2D2D30")),
-                Height = 40
-            };
-
-            var headerText = new TextBlock
-            {
-                Text = "装備設計",
-                Foreground = Brushes.White,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                Margin = new Thickness(20, 0, 0, 0),
-                FontSize = 16
-            };
-
-            headerPanel.Children.Add(headerText);
-            Grid.SetRow(headerPanel, 0);
-
-            var contentPanel = ModuleHelper.CreateModuleContent("装備の設計と性能調整ができます");
-            Grid.SetRow(contentPanel, 1);
-
-            grid.Children.Add(headerPanel);
-            grid.Children.Add(contentPanel);
-
-            Content = grid;
-        }
-    }
 
     public class EquipmentIconView : UserControl
     {
