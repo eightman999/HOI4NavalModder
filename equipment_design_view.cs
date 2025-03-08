@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using Avalonia.Media;
 using System.Linq;
 using System.IO;
-using System.Text.Json;
 using Avalonia.VisualTree;
 
 namespace HOI4NavalModder
@@ -20,17 +19,18 @@ namespace HOI4NavalModder
         private Dictionary<string, NavalCategory> _categories = new Dictionary<string, NavalCategory>();
         private Dictionary<int, string> _tierYears = new Dictionary<int, string>();
         
-        private readonly string _equipmentDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "HOI4NavalModder",
-            "equipment_data.json");
-            
+        private DatabaseManager _dbManager;
+        
         public EquipmentDesignView()
         {
             InitializeComponent();
             
             // コントロールの取得
             _equipmentDataGrid = this.FindControl<DataGrid>("EquipmentDataGrid");
+            
+            // データベースマネージャーの初期化
+            _dbManager = new DatabaseManager();
+            _dbManager.InitializeDatabase();
             
             // カテゴリの初期化
             InitializeCategories();
@@ -115,27 +115,44 @@ namespace HOI4NavalModder
         {
             try
             {
-                var dataDir = Path.GetDirectoryName(_equipmentDataPath);
-                if (!Directory.Exists(dataDir))
+                // 既存のリストをクリア
+                _equipmentList.Clear();
+                
+                // データベースから全てのモジュール情報を取得
+                var modules = _dbManager.GetAllModules();
+                
+                foreach (var moduleInfo in modules)
                 {
-                    Directory.CreateDirectory(dataDir);
-                }
-
-                if (File.Exists(_equipmentDataPath))
-                {
-                    var json = File.ReadAllText(_equipmentDataPath);
-                    var equipmentData = JsonSerializer.Deserialize<List<NavalEquipment>>(json);
+                    // モジュールの詳細データを取得
+                    ModuleData moduleData = _dbManager.GetModuleData(moduleInfo.ID);
                     
-                    if (equipmentData != null)
+                    if (moduleData != null)
                     {
-                        _equipmentList.Clear();
-                        foreach (var equipment in equipmentData)
+                        // NavalEquipmentオブジェクトに変換
+                        var equipment = new NavalEquipment
                         {
-                            _equipmentList.Add(equipment);
-                        }
+                            Id = moduleData.Info.ID,
+                            Name = moduleData.Info.Name,
+                            Category = GetCategoryFromGfx(moduleData.Info.Gfx), // GfxからカテゴリーIDを取得
+                            SubCategory = GetSubCategoryFromGfx(moduleData.Info.Gfx), // 適切なサブカテゴリを設定
+                            Year = moduleData.Info.Year,
+                            Tier = GetTierFromYear(moduleData.Info.Year),
+                            Country = moduleData.Info.Country,
+                            Attack = GetAttackValue(moduleData.AddStats), // 適切な攻撃力値を設定
+                            Defense = GetDefenseValue(moduleData.AddStats), // 適切な防御力値を設定
+                            SpecialAbility = moduleData.Info.CriticalParts, // 特殊能力として重要部品情報を設定
+                            AdditionalProperties = new Dictionary<string, object>()
+                        };
+                        
+                        // 追加プロパティの設定
+                        PopulateAdditionalProperties(equipment, moduleData);
+                        
+                        // リストに追加
+                        _equipmentList.Add(equipment);
                     }
                 }
-                // 初回起動時はデータファイルが存在しないため、空のリストで開始
+                
+                Console.WriteLine($"データベースから{_equipmentList.Count}件の装備を読み込みました。");
             }
             catch (Exception ex)
             {
@@ -145,6 +162,182 @@ namespace HOI4NavalModder
             }
         }
         
+        // GfxからカテゴリIDを取得するヘルパーメソッド
+        private string GetCategoryFromGfx(string gfx)
+        {
+            if (string.IsNullOrEmpty(gfx))
+                return "SMOT"; // デフォルトはその他
+                
+            // gfxから適切なカテゴリを判断するロジック
+            // 例: "gfx_smlg_152mm"のような形式を想定
+            if (gfx.StartsWith("gfx_smlg_")) return "SMLG";
+            if (gfx.StartsWith("gfx_smmg_")) return "SMMG";
+            if (gfx.StartsWith("gfx_smhg_")) return "SMHG";
+            if (gfx.StartsWith("gfx_smshg_")) return "SMSHG";
+            if (gfx.StartsWith("gfx_smtp_")) return "SMTP";
+            if (gfx.StartsWith("gfx_smstp_")) return "SMSTP";
+            if (gfx.StartsWith("gfx_smsp_")) return "SMSP";
+            if (gfx.StartsWith("gfx_smcr_")) return "SMCR";
+            if (gfx.StartsWith("gfx_smhc_")) return "SMHC";
+            if (gfx.StartsWith("gfx_smasp_")) return "SMASP";
+            if (gfx.StartsWith("gfx_smlsp_")) return "SMLSP";
+            if (gfx.StartsWith("gfx_smdcl_")) return "SMDCL";
+            if (gfx.StartsWith("gfx_smso_")) return "SMSO";
+            if (gfx.StartsWith("gfx_smlso_")) return "SMLSO";
+            if (gfx.StartsWith("gfx_smdc_")) return "SMDC";
+            if (gfx.StartsWith("gfx_smlr_")) return "SMLR";
+            if (gfx.StartsWith("gfx_smhr_")) return "SMHR";
+            if (gfx.StartsWith("gfx_smaa_")) return "SMAA";
+            if (gfx.StartsWith("gfx_smtr_")) return "SMTR";
+            if (gfx.StartsWith("gfx_smmbl_")) return "SMMBL";
+            if (gfx.StartsWith("gfx_smhbl_")) return "SMHBL";
+            if (gfx.StartsWith("gfx_smhaa_")) return "SMHAA";
+            if (gfx.StartsWith("gfx_smasm_")) return "SMASM";
+            if (gfx.StartsWith("gfx_smsam_")) return "SMSAM";
+            if (gfx.StartsWith("gfx_smhng_")) return "SMHNG";
+            
+            return "SMOT"; // デフォルトはその他
+        }
+        
+        // GfxからサブカテゴリIDを取得するヘルパーメソッド
+        private string GetSubCategoryFromGfx(string gfx)
+        {
+            if (string.IsNullOrEmpty(gfx))
+                return "";
+                
+            // 砲カテゴリーの場合はサブカテゴリを設定
+            if (gfx.Contains("_single")) return "単装砲";
+            if (gfx.Contains("_double")) return "連装砲";
+            if (gfx.Contains("_triple")) return "三連装砲";
+            if (gfx.Contains("_quad")) return "四連装砲";
+            
+            return "";
+        }
+        
+        // 年からティアIDを取得するヘルパーメソッド
+        private int GetTierFromYear(int year)
+        {
+            // 年に最も近いティアを返す
+            if (year <= 1890) return 0;
+            if (year <= 1895) return 1;
+            if (year <= 1900) return 2;
+            if (year <= 1905) return 3;
+            if (year <= 1910) return 4;
+            if (year <= 1915) return 5;
+            if (year <= 1920) return 6;
+            if (year <= 1925) return 7;
+            if (year <= 1930) return 8;
+            if (year <= 1935) return 9;
+            if (year <= 1940) return 10;
+            if (year <= 1945) return 11;
+            if (year <= 1950) return 12;
+            if (year <= 1955) return 13;
+            if (year <= 1960) return 14;
+            if (year <= 1965) return 15;
+            if (year <= 1970) return 16;
+            if (year <= 1975) return 17;
+            if (year <= 1980) return 18;
+            if (year <= 1985) return 19;
+            if (year <= 1990) return 20;
+            if (year <= 1995) return 21;
+            if (year <= 2000) return 22;
+            
+            return 23; // 2000年以降
+        }
+        
+        // モジュールのカテゴリに応じた攻撃力を算出するヘルパーメソッド
+        private double GetAttackValue(ModuleStats stats)
+        {
+            // 各種攻撃力の中から最も高い値を採用
+            return Math.Max(
+                Math.Max(
+                    Math.Max(stats.LgAttack, stats.HgAttack),
+                    Math.Max(stats.TorpedoAttack, stats.AntiAirAttack)
+                ),
+                Math.Max(
+                    stats.SubAttack,
+                    stats.ShoreBombardment
+                )
+            );
+        }
+        
+        // モジュールの防御力を算出するヘルパーメソッド
+        private double GetDefenseValue(ModuleStats stats)
+        {
+            // 防御力として使用できる値がないため、回避力などを使用
+            return stats.Evasion;
+        }
+        
+        // 追加プロパティを設定するヘルパーメソッド
+        private void PopulateAdditionalProperties(NavalEquipment equipment, ModuleData moduleData)
+        {
+            // 基本情報
+            equipment.AdditionalProperties["Gfx"] = moduleData.Info.Gfx;
+            equipment.AdditionalProperties["Sfx"] = moduleData.Info.Sfx;
+            equipment.AdditionalProperties["Manpower"] = moduleData.Info.Manpower;
+            equipment.AdditionalProperties["CriticalParts"] = moduleData.Info.CriticalParts;
+            
+            // 加算ステータス
+            equipment.AdditionalProperties["BuildCostIc"] = moduleData.AddStats.BuildCostIc;
+            equipment.AdditionalProperties["NavalSpeed"] = moduleData.AddStats.NavalSpeed;
+            equipment.AdditionalProperties["FireRange"] = moduleData.AddStats.FireRange;
+            equipment.AdditionalProperties["LgArmorPiercing"] = moduleData.AddStats.LgArmorPiercing;
+            equipment.AdditionalProperties["LgAttack"] = moduleData.AddStats.LgAttack;
+            equipment.AdditionalProperties["HgArmorPiercing"] = moduleData.AddStats.HgArmorPiercing;
+            equipment.AdditionalProperties["HgAttack"] = moduleData.AddStats.HgAttack;
+            equipment.AdditionalProperties["TorpedoAttack"] = moduleData.AddStats.TorpedoAttack;
+            equipment.AdditionalProperties["AntiAirAttack"] = moduleData.AddStats.AntiAirAttack;
+            equipment.AdditionalProperties["ShoreBombardment"] = moduleData.AddStats.ShoreBombardment;
+            
+            // リソース
+            equipment.AdditionalProperties["Steel"] = moduleData.Resources.Steel;
+            equipment.AdditionalProperties["Chromium"] = moduleData.Resources.Chromium;
+            equipment.AdditionalProperties["Tungsten"] = moduleData.Resources.Tungsten;
+            equipment.AdditionalProperties["Oil"] = moduleData.Resources.Oil;
+            equipment.AdditionalProperties["Aluminium"] = moduleData.Resources.Aluminium;
+            equipment.AdditionalProperties["Rubber"] = moduleData.Resources.Rubber;
+            
+            // 砲に特有のプロパティ
+            if (equipment.Category.StartsWith("SML") || 
+                equipment.Category.StartsWith("SMM") ||
+                equipment.Category.StartsWith("SMH") ||
+                equipment.Category.StartsWith("SMS"))
+            {
+                // 既存のNavalEquipmentモデルには存在しないがデータベースから取得したい追加情報
+                if (moduleData.AddStats.FireRange > 0)
+                {
+                    equipment.AdditionalProperties["Range"] = moduleData.AddStats.FireRange;
+                }
+                
+                // 口径や砲身数などのプロパティを追加
+                if (moduleData.Info.CriticalParts.Contains("calibre"))
+                {
+                    try
+                    {
+                        // CriticalPartsから口径情報を抽出する例
+                        // "calibre:15.2cm"のような形式を想定
+                        var parts = moduleData.Info.CriticalParts.Split(',');
+                        foreach (var part in parts)
+                        {
+                            if (part.StartsWith("calibre:"))
+                            {
+                                var calibreInfo = part.Substring(8);
+                                equipment.AdditionalProperties["Calibre"] = calibreInfo;
+                            }
+                            
+                            // 他の重要部品情報も同様に抽出
+                        }
+                    }
+                    catch
+                    {
+                        // 解析エラー時は無視
+                    }
+                }
+            }
+        }
+        
+        // JSONファイルを使用する古い実装
+        /*
         private void SaveEquipmentData()
         {
             try
@@ -170,6 +363,83 @@ namespace HOI4NavalModder
                 Console.WriteLine($"装備データの保存中にエラーが発生しました: {ex.Message}");
             }
         }
+        */
+        
+        // データベースに装備データを保存するメソッド
+        private void SaveEquipmentData(NavalEquipment equipment)
+        {
+            try
+            {
+                // NavalEquipmentをModuleDataに変換
+                ModuleData moduleData = ConvertToModuleData(equipment);
+                
+                // データベースに保存
+                _dbManager.SaveModuleData(
+                    moduleData.Info,
+                    moduleData.AddStats,
+                    moduleData.MultiplyStats,
+                    moduleData.AddAverageStats,
+                    moduleData.Resources,
+                    moduleData.ConvertModules
+                );
+                
+                Console.WriteLine($"装備 {equipment.Id} をデータベースに保存しました");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"装備データの保存中にエラーが発生しました: {ex.Message}");
+            }
+        }
+        
+        // NavalEquipmentをModuleDataに変換するヘルパーメソッド
+        private ModuleData ConvertToModuleData(NavalEquipment equipment)
+        {
+            var moduleData = new ModuleData();
+            
+            // 基本情報
+            moduleData.Info = new ModuleInfo
+            {
+                ID = equipment.Id,
+                Name = equipment.Name,
+                Gfx = equipment.AdditionalProperties.ContainsKey("Gfx") ? equipment.AdditionalProperties["Gfx"].ToString() : $"gfx_{equipment.Category.ToLower()}_{equipment.Id.ToLower()}",
+                Sfx = equipment.AdditionalProperties.ContainsKey("Sfx") ? equipment.AdditionalProperties["Sfx"].ToString() : "",
+                Year = equipment.Year,
+                Manpower = equipment.AdditionalProperties.ContainsKey("Manpower") ? Convert.ToInt32(equipment.AdditionalProperties["Manpower"]) : 0,
+                Country = equipment.Country,
+                CriticalParts = equipment.SpecialAbility
+            };
+            
+            // 加算ステータス
+            moduleData.AddStats = new ModuleStats();
+            if (equipment.AdditionalProperties.ContainsKey("BuildCostIc")) moduleData.AddStats.BuildCostIc = Convert.ToDouble(equipment.AdditionalProperties["BuildCostIc"]);
+            if (equipment.AdditionalProperties.ContainsKey("NavalSpeed")) moduleData.AddStats.NavalSpeed = Convert.ToDouble(equipment.AdditionalProperties["NavalSpeed"]);
+            if (equipment.AdditionalProperties.ContainsKey("FireRange")) moduleData.AddStats.FireRange = Convert.ToDouble(equipment.AdditionalProperties["FireRange"]);
+            if (equipment.AdditionalProperties.ContainsKey("LgArmorPiercing")) moduleData.AddStats.LgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["LgArmorPiercing"]);
+            if (equipment.AdditionalProperties.ContainsKey("LgAttack")) moduleData.AddStats.LgAttack = Convert.ToDouble(equipment.AdditionalProperties["LgAttack"]);
+            if (equipment.AdditionalProperties.ContainsKey("HgArmorPiercing")) moduleData.AddStats.HgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["HgArmorPiercing"]);
+            if (equipment.AdditionalProperties.ContainsKey("HgAttack")) moduleData.AddStats.HgAttack = Convert.ToDouble(equipment.AdditionalProperties["HgAttack"]);
+            if (equipment.AdditionalProperties.ContainsKey("TorpedoAttack")) moduleData.AddStats.TorpedoAttack = Convert.ToDouble(equipment.AdditionalProperties["TorpedoAttack"]);
+            if (equipment.AdditionalProperties.ContainsKey("AntiAirAttack")) moduleData.AddStats.AntiAirAttack = Convert.ToDouble(equipment.AdditionalProperties["AntiAirAttack"]);
+            if (equipment.AdditionalProperties.ContainsKey("ShoreBombardment")) moduleData.AddStats.ShoreBombardment = Convert.ToDouble(equipment.AdditionalProperties["ShoreBombardment"]);
+            
+            // 乗算ステータスと平均加算ステータスは新規作成時は空のオブジェクトを使用
+            moduleData.MultiplyStats = new ModuleStats();
+            moduleData.AddAverageStats = new ModuleStats();
+            
+            // リソース
+            moduleData.Resources = new ModuleResources();
+            if (equipment.AdditionalProperties.ContainsKey("Steel")) moduleData.Resources.Steel = Convert.ToInt32(equipment.AdditionalProperties["Steel"]);
+            if (equipment.AdditionalProperties.ContainsKey("Chromium")) moduleData.Resources.Chromium = Convert.ToInt32(equipment.AdditionalProperties["Chromium"]);
+            if (equipment.AdditionalProperties.ContainsKey("Tungsten")) moduleData.Resources.Tungsten = Convert.ToInt32(equipment.AdditionalProperties["Tungsten"]);
+            if (equipment.AdditionalProperties.ContainsKey("Oil")) moduleData.Resources.Oil = Convert.ToInt32(equipment.AdditionalProperties["Oil"]);
+            if (equipment.AdditionalProperties.ContainsKey("Aluminium")) moduleData.Resources.Aluminium = Convert.ToInt32(equipment.AdditionalProperties["Aluminium"]);
+            if (equipment.AdditionalProperties.ContainsKey("Rubber")) moduleData.Resources.Rubber = Convert.ToInt32(equipment.AdditionalProperties["Rubber"]);
+            
+            // 変換モジュール情報は新規作成時は空のリストを使用
+            moduleData.ConvertModules = new List<ModuleConvert>();
+            
+            return moduleData;
+        }
         
         // ボタンイベントハンドラ
         public void OnNewEquipmentClick(object sender, RoutedEventArgs e)
@@ -190,8 +460,16 @@ namespace HOI4NavalModder
             if (_equipmentDataGrid.SelectedItem is NavalEquipment selectedEquipment)
             {
                 // ToDo: 確認ダイアログを表示
-                _equipmentList.Remove(selectedEquipment);
-                SaveEquipmentData();
+                
+                // データベースから削除
+                bool success = _dbManager.DeleteModule(selectedEquipment.Id);
+                
+                if (success)
+                {
+                    // UI上のリストからも削除
+                    _equipmentList.Remove(selectedEquipment);
+                    Console.WriteLine($"装備 {selectedEquipment.Id} を削除しました");
+                }
             }
         }
         
@@ -208,14 +486,18 @@ namespace HOI4NavalModder
                     SubCategory = selectedEquipment.SubCategory,
                     Year = selectedEquipment.Year,
                     Tier = selectedEquipment.Tier,
+                    Country = selectedEquipment.Country,
                     Attack = selectedEquipment.Attack,
                     Defense = selectedEquipment.Defense,
                     SpecialAbility = selectedEquipment.SpecialAbility,
                     AdditionalProperties = new Dictionary<string, object>(selectedEquipment.AdditionalProperties)
                 };
                 
+                // データベースに保存
+                SaveEquipmentData(newEquipment);
+                
+                // UIのリストに追加
                 _equipmentList.Add(newEquipment);
-                SaveEquipmentData();
                 
                 // 新しい装備を選択
                 _equipmentDataGrid.SelectedItem = newEquipment;
@@ -283,118 +565,86 @@ namespace HOI4NavalModder
             return 1900; // デフォルト値
         }
         
-        private async void OpenCategorySpecificEditor(NavalEquipment equipment)
+private async void OpenCategorySpecificEditor(NavalEquipment equipment)
+{
+    Window editorWindow = null;
+    
+    // カテゴリに応じた適切なエディタを選択
+    switch (equipment.Category)
+    {
+        case "SMLG": // 小口径砲
+        case "SMMG": // 中口径砲
+        case "SMHG": // 大口径砲
+        case "SMSHG": // 超大口径砲
+            editorWindow = new GunDesignView(equipment, _categories, _tierYears);
+            break;
+        case "SMTP": // 魚雷
+        case "SMSTP": // 潜水艦魚雷
+            //editorWindow = new SMTP_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMSP": // 水上機
+        case "SMCR": // 艦上偵察機
+        case "SMHC": // 回転翼機
+        case "SMASP": // 対潜哨戒機
+        case "SMLSP": // 大型飛行艇
+            //editorWindow = new SMSP_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMDCL": // 爆雷投射機
+        case "SMSO": // ソナー
+        case "SMLSO": // 大型ソナー
+        case "SMDC": // 爆雷
+            //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMLR": // 小型電探
+        case "SMHR": // 大型電探
+            //editorWindow = new SMLR_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMAA": // 対空砲
+        case "SMHAA": // 高射装置
+            //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMTR": // 機関
+            //editorWindow = new SMTR_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMMBL": // 増設バルジ(中型艦)
+        case "SMHBL": // 増設バルジ(大型艦)
+            //editorWindow = new SMMBL_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMASM": // 対艦ミサイル
+        case "SMSAM": // 対空ミサイル
+            //editorWindow = new SMASM_Design_View(equipment, _categories, _tierYears);
+            break;
+        case "SMHNG": // 格納庫
+            //ditorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
+            break;
+        default: // その他
+            //editorWindow = new SMOT_Design_View(equipment, _categories, _tierYears);
+            break;
+    }
+    
+    // エディタウィンドウを表示
+    if (editorWindow != null)
+    {
+        var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Window);
+        if (result != null)
         {
-            Window editorWindow = null;
+            // データベースに保存
+            SaveEquipmentData(result);
             
-            // カテゴリに応じた適切なエディタを選択
-            switch (equipment.Category)
+            // 既存の装備を編集した場合
+            if (_equipmentList.Any(e => e.Id == result.Id))
             {
-                case "SMLG": // 小口径砲
-                case "SMMG": // 中口径砲
-                case "SMHG": // 大口径砲
-                case "SMSHG": // 超大口径砲
-                    //editorWindow = new SMLG_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMTP": // 魚雷
-                case "SMSTP": // 潜水艦魚雷
-                    //editorWindow = new SMTP_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMSP": // 水上機
-                case "SMCR": // 艦上偵察機
-                case "SMHC": // 回転翼機
-                case "SMASP": // 対潜哨戒機
-                case "SMLSP": // 大型飛行艇
-                    //editorWindow = new SMSP_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMDCL": // 爆雷投射機
-                case "SMSO": // ソナー
-                case "SMLSO": // 大型ソナー
-                case "SMDC": // 爆雷
-                    //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMLR": // 小型電探
-                case "SMHR": // 大型電探
-                    //editorWindow = new SMLR_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMAA": // 対空砲
-                case "SMHAA": // 高射装置
-                    //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMTR": // 機関
-                    //editorWindow = new SMTR_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMMBL": // 増設バルジ(中型艦)
-                case "SMHBL": // 増設バルジ(大型艦)
-                    //editorWindow = new SMMBL_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMASM": // 対艦ミサイル
-                case "SMSAM": // 対空ミサイル
-                    //editorWindow = new SMASM_Design_View(equipment, _categories, _tierYears);
-                    break;
-                case "SMHNG": // 格納庫
-                    //ditorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
-                    break;
-                default: // その他
-                    //editorWindow = new SMOT_Design_View(equipment, _categories, _tierYears);
-                    break;
-            }
-            
-            // エディタウィンドウを表示
-            if (editorWindow != null)
-            {
-                var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Window);
-                if (result != null)
+                // リストの中の該当する装備を更新
+                int index = _equipmentList.IndexOf(_equipmentList.First(e => e.Id == result.Id));
+                if (index >= 0)
                 {
-                    // 既存の装備を編集した場合
-                    if (_equipmentList.Contains(equipment))
-                    {
-                        int index = _equipmentList.IndexOf(equipment);
-                        if (index >= 0)
-                        {
-                            _equipmentList[index] = result;
-                        }
-                    }
-                    else // 新規装備の場合
-                    {
-                        _equipmentList.Add(result);
-                    }
-                    
-                    // データを保存
-                    SaveEquipmentData();
+                    _equipmentList[index] = result;
                 }
             }
+            else // 新規装備の場合
+            {
+                _equipmentList.Add(result);
+            }
         }
-    }
-    
-    // 海軍装備クラス
-    public class NavalEquipment
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Category { get; set; }
-        public string SubCategory { get; set; }
-        public int Year { get; set; }
-        public int Tier { get; set; }
-        public string Country { get; set; } // 追加
-        public double Attack { get; set; }
-        public double Defense { get; set; }
-        public string SpecialAbility { get; set; }
-        public Dictionary<string, object> AdditionalProperties { get; set; } = new Dictionary<string, object>();
-    }
-    
-    // カテゴリクラス
-    public class NavalCategory
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public List<string> SubCategories { get; set; } = new List<string>();
-    }
-    
-    // カテゴリ選択結果
-    public class CategorySelectionResult
-    {
-        public string CategoryId { get; set; }
-        public int TierId { get; set; }
     }
 }
