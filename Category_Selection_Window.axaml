@@ -10,9 +10,16 @@
         CanResize="False">
     
     <Window.Styles>
-        <Style Selector="TextBlock">
+        <!-- <Style Selector="Grid"> -->
+        <!--     <Setter Property="UseLayoutRounding" Value="True" /> -->
+        <!-- </Style> -->
+        <!-- <Style Selector="StackPanel"> -->
+        <!--     <Setter Property="UseLayoutRounding" Value="True" /> -->
+        <!-- </Style> -->
+        <Style Selector="TextBlock" >
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Margin" Value="0,5,0,2"/>
+            <Setter Property="FontFamily" Value="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
         </Style>
         <Style Selector="ComboBox">
             <Setter Property="Margin" Value="0,0,0,15"/>
@@ -20,6 +27,7 @@
             <Setter Property="Background" Value="#333337"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="FontFamily" Value="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
         </Style>
         <Style Selector="Button">
             <Setter Property="Padding" Value="15,8"/>
@@ -28,6 +36,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#555555"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FontFamily" Value="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
         </Style>
     </Window.Styles>
     
@@ -43,10 +52,10 @@
                           Margin="0,0,0,20"/>
                 
                 <TextBlock Text="カテゴリ:"/>
-                <ComboBox x:Name="CategoryComboBox" HorizontalAlignment="Stretch"/>
+                <ComboBox x:Name="CategoryComboBox" HorizontalAlignment="Stretch" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
                 
                 <TextBlock Text="開発年:"/>
-                <ComboBox x:Name="YearComboBox" HorizontalAlignment="Stretch"/>
+                <ComboBox x:Name="YearComboBox" HorizontalAlignment="Stretch" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
             </StackPanel>
             
             <!-- フッターボタン -->

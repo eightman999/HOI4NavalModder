@@ -22,7 +22,7 @@ namespace HOI4NavalModder
 {
     public partial class MainWindow : Window
     {
-            
+        
         private Panel _contentPanel;
         private readonly Dictionary<string, UserControl> _pages = new Dictionary<string, UserControl>();
         private Button _activeButton;

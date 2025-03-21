@@ -7,6 +7,14 @@
         Title="Naval Design Studio"
         Width="1200" Height="800"
         Icon="avares://HOI4NavalModder/Assets/Icons/Icon.ico">
+    <!-- <Window.Styles> -->
+    <!--     <Style Selector="Grid"> -->
+    <!--         <Setter Property="UseLayoutRounding" Value="True" /> -->
+    <!--     </Style> -->
+    <!--     <Style Selector="StackPanel"> -->
+    <!--         <Setter Property="UseLayoutRounding" Value="True" /> -->
+    <!--     </Style> -->
+    <!-- </Window.Styles> -->
     <Grid RowDefinitions="Auto,*" ColumnDefinitions="250,*">
         <!-- トップバー -->
         <Panel Grid.Row="0" Grid.ColumnSpan="2" Background="#2D2D30" Height="50">

@@ -35,4 +35,9 @@
       <None Remove="Assets\Icons\aaa.ico" />
       <Resource Include="Assets\Icons\Icon.ico" />
     </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Assets\Fonts\*.otf" />
+        <EmbeddedResource Include="Assets\Fonts\*.ttf" />
+    </ItemGroup>
 </Project>

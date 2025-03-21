@@ -1,14 +1,21 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 
 namespace HOI4NavalModder;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        
+        RegisterFonts();
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -20,4 +27,40 @@ public partial class App : Application
 
         base.OnFrameworkInitializationCompleted();
     }
+
+    private void RegisterFonts()
+    {
+        try
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+        
+            // 埋め込みリソースから NotoSansJP-Regular.otf を取得
+            var fontStream = assembly.GetManifestResourceStream("HOI4NavalModder.Assets.Fonts.JF-Dot-jiskan24.ttf");
+        
+            if (fontStream != null)
+            {
+                // 一時ファイルに保存
+                var tempFile = Path.GetTempFileName() + ".otf";
+                using (var fileStream = File.Create(tempFile))
+                {
+                    fontStream.CopyTo(fileStream);
+                }
+            
+                // フォントを登録
+                var fontUri = new Uri(tempFile);
+                var fontFamily = new FontFamily(fontUri.AbsolutePath);
+            
+                Console.WriteLine("フォントを正常に読み込みました");
+            }
+            else
+            {
+                Console.WriteLine("埋め込みフォントリソースが見つかりません");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"フォント登録エラー: {ex.Message}");
+        }
+    }
+    
 }
