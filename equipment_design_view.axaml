@@ -13,7 +13,7 @@
                        VerticalAlignment="Center"
                        Margin="20,0,0,0"
                        FontSize="16"
-                       FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                       />
         </Panel>
         
         <!-- コンテンツエリア -->
@@ -21,10 +21,10 @@
             <!-- 左側：フィルタパネル -->
             <Border Grid.Column="0" Background="#252526" BorderThickness="0,0,1,0" BorderBrush="#3F3F46">
                 <StackPanel Margin="10">
-                    <TextBlock Text="フィルタ" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                    <TextBlock Text="フィルタ" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" />
                     
                     <!-- カテゴリフィルタ -->
-                    <Expander Header="カテゴリ" IsExpanded="True" Foreground="White" Background="#252526" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf" Margin="0,10,0,0">
+                    <Expander Header="カテゴリ" IsExpanded="True" Foreground="White" Background="#252526"  Margin="0,10,0,0">
                         <StackPanel Margin="10,5,0,5">
                             <CheckBox Content="全て" IsChecked="True" Foreground="White" Margin="0,2"/>
                             <CheckBox Content="小口径砲 (SMLG)" Foreground="White" Margin="0,2"/>
@@ -39,7 +39,7 @@
                     </Expander>
                     
                     <!-- 開発年フィルタ -->
-                    <Expander Header="開発年" IsExpanded="True" Foreground="White" Background="#252526" Margin="0,10,0,0" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf">
+                    <Expander Header="開発年" IsExpanded="True" Foreground="White" Background="#252526" Margin="0,10,0,0" >
                         <StackPanel Margin="10,5,0,5">
                             <CheckBox Content="全て" IsChecked="True" Foreground="White" Margin="0,2"/>
                             <CheckBox Content="1890以前" Foreground="White" Margin="0,2"/>
@@ -53,8 +53,8 @@
                     </Expander>
                     
                     <!-- 名前検索 -->
-                    <TextBlock Text="名前検索" Foreground="White" Margin="0,10,0,5" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
-                    <TextBox Watermark="装備名を入力..." Margin="0,0,0,10" FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                    <TextBlock Text="名前検索" Foreground="White" Margin="0,10,0,5" />
+                    <TextBox Watermark="装備名を入力..." Margin="0,0,0,10" />
                     
                     <Button Content="フィルタ適用" 
                             HorizontalAlignment="Stretch" 
@@ -63,7 +63,7 @@
                             Foreground="White"
                             Padding="0,5"
                             Margin="0,10,0,0"
-                            FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                            />
                 </StackPanel>
             </Border>
             
@@ -80,7 +80,7 @@
                                 Foreground="White"
                                 BorderThickness="0"
                                 Click="OnNewEquipmentClick"
-                                FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                                />
                                 
                         <Button x:Name="EditEquipmentButton" 
                                 Content="編集"
@@ -90,7 +90,7 @@
                                 Foreground="White"
                                 BorderThickness="0"
                                 Click="OnEditEquipmentClick"
-                                FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>                              
+                                />                              
                         <Button x:Name="DeleteEquipmentButton" 
                                 Content="削除"
                                 Padding="10,5,10,5"
@@ -99,7 +99,7 @@
                                 Foreground="White"
                                 BorderThickness="0"
                                 Click="OnDeleteEquipmentClick"
-                                FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                                />
                                 
                         <Button x:Name="DuplicateEquipmentButton" 
                                 Content="複製"
@@ -109,7 +109,7 @@
                                 Foreground="White"
                                 BorderThickness="0"
                                 Click="OnDuplicateEquipmentClick"
-                                FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                                />
                                 
                         <Button x:Name="ExportButton" 
                                 Content="エクスポート"
@@ -119,7 +119,7 @@
                                 Foreground="White"
                                 BorderThickness="0"
                                 Click="OnExportClick"
-                                FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                                />
                                 
                         <Button x:Name="ImportButton" 
                                 Content="インポート"
@@ -129,7 +129,7 @@
                                 Foreground="White"
                                 BorderThickness="0"
                                 Click="OnImportClick"
-                                FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf"/>
+                                />
                     </StackPanel>
                 </Panel>
                 
@@ -147,7 +147,7 @@
                           CanUserSortColumns="True"
                           Foreground="White"
                           x:Name="EquipmentDataGrid"
-                          FontFamily="Assets/Fonts/JF-Dot-jiskan24.ttf">
+                          >
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" x:DataType="local:NavalEquipment" Binding="{Binding Id}" Width="90"/>
                         <DataGridTextColumn Header="名前" x:DataType="local:NavalEquipment" Binding="{Binding Name}" Width="200"/>

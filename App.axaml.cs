@@ -16,6 +16,10 @@ public class App : Application
         AvaloniaXamlLoader.Load(this);
         
         RegisterFonts();
+        foreach (var fontFamily in FontManager.Current.SystemFonts)
+        {
+            Console.WriteLine($"利用可能なフォント: {fontFamily.Name}");
+        }
     }
 
     public override void OnFrameworkInitializationCompleted()
