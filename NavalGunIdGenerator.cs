@@ -131,5 +131,7 @@ namespace HOI4NavalModder
             // 砲身長 ÷ 口径 = 口径倍数
             return barrelLength / caliberInMeters;
         }
+
+       
     }
 }

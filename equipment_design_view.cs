@@ -9,12 +9,14 @@ using Avalonia.Media;
 using System.Linq;
 using System.IO;
 using Avalonia.VisualTree;
+using Avalonia.Controls.Templates;
+using Avalonia.Layout;
 
 namespace HOI4NavalModder
 {
     public partial class EquipmentDesignView : UserControl
     {
-        private DataGrid _equipmentDataGrid;
+        private ListBox _equipmentListBox;
         private ObservableCollection<NavalEquipment> _equipmentList = new ObservableCollection<NavalEquipment>();
         private Dictionary<string, NavalCategory> _categories = new Dictionary<string, NavalCategory>();
         private Dictionary<int, string> _tierYears = new Dictionary<int, string>();
@@ -26,7 +28,13 @@ namespace HOI4NavalModder
             InitializeComponent();
 
             // コントロールの取得
-            _equipmentDataGrid = this.FindControl<DataGrid>("EquipmentDataGrid");
+            _equipmentListBox = this.FindControl<ListBox>("EquipmentListBox");
+
+            if (_equipmentListBox == null)
+            {
+                Console.WriteLine("ListBoxが見つかりません。コード上で作成します。");
+                CreateEquipmentListBoxProgrammatically();
+            }
 
             // データベースマネージャーの初期化
             _dbManager = new DatabaseManager();
@@ -41,16 +49,165 @@ namespace HOI4NavalModder
             // データの読み込み
             LoadEquipmentData();
 
-            // データグリッドの設定
-            _equipmentDataGrid.ItemsSource = _equipmentList;
-            _equipmentDataGrid.DoubleTapped += OnEquipmentDoubleTapped;
+            // リストボックスの設定
+            if (_equipmentListBox != null)
+            {
+                _equipmentListBox.ItemsSource = _equipmentList;
+                _equipmentListBox.DoubleTapped += OnEquipmentDoubleTapped;
+                Console.WriteLine("ListBoxのItemsSourceを設定しました");
+            }
+        }
+
+        private void CreateEquipmentListBoxProgrammatically()
+        {
+            // UIを取得
+            var contentGrid = this.FindControl<Grid>("ContentGrid");
+            if (contentGrid == null)
+            {
+                Console.WriteLine("ContentGridが見つかりません");
+                return;
+            }
+
+            // リストボックスを作成
+            _equipmentListBox = new ListBox
+            {
+                Name = "EquipmentListBox",
+                Background = new SolidColorBrush(Color.Parse("#2D2D30")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0),
+                Margin = new Thickness(5),
+                SelectionMode = SelectionMode.Multiple
+            };
+
+            // リストボックスのテンプレートを設定
+            _equipmentListBox.ItemTemplate = new FuncDataTemplate<NavalEquipment>((item, scope) =>
+            {
+                if (item == null)
+                {
+                    return new TextBlock { Text = "データがありません", Foreground = Brushes.White };
+                }
+
+                var panel = new Grid
+                {
+                    ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+                    Margin = new Thickness(5)
+                };
+
+                // 装備情報パネル
+                var contentPanel = new StackPanel
+                {
+                    Orientation = Orientation.Vertical,
+                    Margin = new Thickness(0, 0, 10, 0)
+                };
+
+                // 装備名と基本情報
+                var headerPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10
+                };
+
+                var categoryBadge = new Border
+                {
+                    Background = new SolidColorBrush(Color.Parse("#1E90FF")),
+                    CornerRadius = new CornerRadius(3),
+                    Padding = new Thickness(5, 2, 5, 2),
+                    Margin = new Thickness(0, 0, 5, 0)
+                };
+
+                var categoryText = new TextBlock
+                {
+                    Text = item.Category,
+                    Foreground = Brushes.White,
+                    FontSize = 12
+                };
+                categoryBadge.Child = categoryText;
+
+                var equipmentNameText = new TextBlock
+                {
+                    Text = item.Name ?? "不明な装備",
+                    Foreground = Brushes.White,
+                    FontWeight = FontWeight.Bold,
+                    FontSize = 14
+                };
+
+                headerPanel.Children.Add(categoryBadge);
+                headerPanel.Children.Add(equipmentNameText);
+
+                // 装備IDと詳細情報
+                var detailsPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 5, 0, 0),
+                    Spacing = 15
+                };
+
+                var idText = new TextBlock
+                {
+                    Text = $"ID: {item.Id}",
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 12
+                };
+
+                var yearText = new TextBlock
+                {
+                    Text = $"開発年: {item.Year}",
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 12
+                };
+
+                var countryText = new TextBlock
+                {
+                    Text = $"開発国: {item.Country}",
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 12
+                };
+
+                detailsPanel.Children.Add(idText);
+                detailsPanel.Children.Add(yearText);
+                detailsPanel.Children.Add(countryText);
+
+                contentPanel.Children.Add(headerPanel);
+                contentPanel.Children.Add(detailsPanel);
+
+                // 編集ボタン
+                var editButton = new Button
+                {
+                    Content = "編集",
+                    Padding = new Thickness(8, 4, 8, 4),
+                    Background = new SolidColorBrush(Color.Parse("#1E90FF")),
+                    Foreground = Brushes.White,
+                    BorderThickness = new Thickness(0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                editButton.Click += (s, e) => OnEditButtonClick(item);
+                Grid.SetColumn(editButton, 2);
+
+                panel.Children.Add(contentPanel);
+                Grid.SetColumn(contentPanel, 1);
+                panel.Children.Add(editButton);
+
+                return panel;
+            });
+
+            // リストボックスをグリッドに追加
+            var mainContentGrid = contentGrid.Children.OfType<Grid>().FirstOrDefault(g => Grid.GetColumn(g) == 1);
+            if (mainContentGrid != null)
+            {
+                var row1Grid = mainContentGrid.Children.OfType<Grid>().FirstOrDefault(g => Grid.GetRow(g) == 1);
+                if (row1Grid != null)
+                {
+                    row1Grid.Children.Add(_equipmentListBox);
+                    Grid.SetRow(_equipmentListBox, 0);
+                    Console.WriteLine("ListBoxをUIに追加しました");
+                }
+            }
         }
 
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
         }
-
         private void InitializeCategories()
         {
             // カテゴリの定義
@@ -111,6 +268,7 @@ namespace HOI4NavalModder
             _tierYears.Add(23, "2000");
         }
 
+        
         private void LoadEquipmentData()
         {
             try
@@ -120,26 +278,33 @@ namespace HOI4NavalModder
 
                 // データベースから基本情報のみ取得
                 var equipmentList = _dbManager.GetBasicEquipmentInfo();
+                
+                Console.WriteLine($"データベースから{equipmentList.Count}件の装備データを読み込みました");
 
                 // 取得したデータをリストに追加
                 foreach (var equipment in equipmentList)
                 {
+                    Console.WriteLine($"装備追加: ID={equipment.Id}, Name={equipment.Name}");
                     _equipmentList.Add(equipment);
                 }
 
-                Console.WriteLine($"データベースから{_equipmentList.Count}件の装備基本情報を読み込みました。");
+                Console.WriteLine($"リスト内の装備数: {_equipmentList.Count}件");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"装備データの読み込み中にエラーが発生しました: {ex.Message}");
+                Console.WriteLine($"スタックトレース: {ex.StackTrace}");
                 // エラー時は空のリストを使用
                 _equipmentList.Clear();
             }
         }
 
-
-
-
+        private void OnEditButtonClick(NavalEquipment equipment)
+        {
+            // 装備の編集
+            OpenCategorySpecificEditor(equipment);
+        }
+        
         // データベースに装備データを保存するメソッド
         private void SaveEquipmentData(NavalEquipment equipment)
         {
@@ -249,7 +414,7 @@ namespace HOI4NavalModder
 
         public void OnEditEquipmentClick(object sender, RoutedEventArgs e)
         {
-            if (_equipmentDataGrid.SelectedItem is NavalEquipment selectedEquipment)
+            if (_equipmentListBox.SelectedItem is NavalEquipment selectedEquipment)
             {
                 OpenCategorySpecificEditor(selectedEquipment);
             }
@@ -257,7 +422,7 @@ namespace HOI4NavalModder
 
         public void OnDeleteEquipmentClick(object sender, RoutedEventArgs e)
         {
-            if (_equipmentDataGrid.SelectedItem is NavalEquipment selectedEquipment)
+            if (_equipmentListBox.SelectedItem is NavalEquipment selectedEquipment)
             {
                 // ToDo: 確認ダイアログを表示
 
@@ -275,7 +440,7 @@ namespace HOI4NavalModder
 
         public void OnDuplicateEquipmentClick(object sender, RoutedEventArgs e)
         {
-            if (_equipmentDataGrid.SelectedItem is NavalEquipment selectedEquipment)
+            if (_equipmentListBox.SelectedItem is NavalEquipment selectedEquipment)
             {
                 // 装備を複製
                 var newEquipment = new NavalEquipment
@@ -300,7 +465,7 @@ namespace HOI4NavalModder
                 _equipmentList.Add(newEquipment);
 
                 // 新しい装備を選択
-                _equipmentDataGrid.SelectedItem = newEquipment;
+                _equipmentListBox.SelectedItem = newEquipment;
             }
         }
 
@@ -318,7 +483,7 @@ namespace HOI4NavalModder
 
         private void OnEquipmentDoubleTapped(object sender, RoutedEventArgs e)
         {
-            if (_equipmentDataGrid.SelectedItem is NavalEquipment selectedEquipment)
+            if (_equipmentListBox.SelectedItem is NavalEquipment selectedEquipment)
             {
                 OpenCategorySpecificEditor(selectedEquipment);
             }

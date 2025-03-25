@@ -361,66 +361,70 @@ namespace HOI4NavalModder
             }
         }
 
-        private async void LoadCountryData()
+// In the LoadCountryData method of FleetDeploymentView.cs
+private async void LoadCountryData()
+{
+    _loadingProgressBar.IsVisible = true;
+    _refreshButton.IsEnabled = false;
+    _countriesList.Clear();
+    
+    // UIスレッドをブロックしないために非同期で実行
+    await Dispatcher.UIThread.InvokeAsync(async () => 
+    {
+        try
         {
-            _loadingProgressBar.IsVisible = true;
-            _refreshButton.IsEnabled = false;
-            _countriesList.Clear();
-            
-            // UIスレッドをブロックしないために非同期で実行
-            await Dispatcher.UIThread.InvokeAsync(async () => 
+            // MODパスのチェック - バニラパスがあれば国家データ読み込みを続行
+            if (string.IsNullOrEmpty(_activeMod) && string.IsNullOrEmpty(_vanillaPath))
             {
-                try
+                _statusTextBlock.Text = "MODパスまたはバニラパスが設定されていません。";
+                _loadingProgressBar.IsVisible = false;
+                _refreshButton.IsEnabled = true;
+                return;
+            }
+
+            List<string> countryTags = new List<string>();
+            Dictionary<string, string> tagDescriptions = new Dictionary<string, string>();
+            bool hasReplaceTags = false;
+
+            // MODのdescriptor.modを確認（replace_path設定の確認）
+            if (!string.IsNullOrEmpty(_activeMod))
+            {
+                string descriptorPath = Path.Combine(_activeMod, "descriptor.mod");
+                if (File.Exists(descriptorPath))
                 {
-                    // MODパスのチェック
-                    if (string.IsNullOrEmpty(_activeMod) && string.IsNullOrEmpty(_vanillaPath))
-                    {
-                        _statusTextBlock.Text = "MODパスまたはバニラパスが設定されていません。";
-                        return;
-                    }
+                    string[] descriptorLines = await File.ReadAllLinesAsync(descriptorPath);
+                    hasReplaceTags = descriptorLines.Any(line => 
+                        line.Contains("replace_path=\"common/country_tags\""));
+                }
+            }
 
-                    List<string> countryTags = new List<string>();
-                    Dictionary<string, string> tagDescriptions = new Dictionary<string, string>();
-                    bool hasReplaceTags = false;
-
-                    // MODのdescriptor.modを確認（replace_path設定の確認）
-                    if (!string.IsNullOrEmpty(_activeMod))
+            // 国家タグの収集 - MODから取得
+            if (!string.IsNullOrEmpty(_activeMod))
+            {
+                string modTagsPath = Path.Combine(_activeMod, "common", "country_tags");
+                if (Directory.Exists(modTagsPath))
+                {
+                    foreach (var file in Directory.GetFiles(modTagsPath, "*.txt"))
                     {
-                        string descriptorPath = Path.Combine(_activeMod, "descriptor.mod");
-                        if (File.Exists(descriptorPath))
-                        {
-                            string[] descriptorLines = await File.ReadAllLinesAsync(descriptorPath);
-                            hasReplaceTags = descriptorLines.Any(line => 
-                                line.Contains("replace_path=\"common/country_tags\""));
-                        }
+                        CollectCountryTags(file, countryTags, tagDescriptions);
                     }
+                }
+            }
 
-                    // 国家タグの収集
-                    if (!string.IsNullOrEmpty(_activeMod))
+            // バニラからも国家タグを取得 (MODが置き換えてない場合または_activeMod がない場合)
+            if ((!hasReplaceTags || string.IsNullOrEmpty(_activeMod)) && !string.IsNullOrEmpty(_vanillaPath))
+            {
+                string vanillaTagsPath = Path.Combine(_vanillaPath, "common", "country_tags");
+                if (Directory.Exists(vanillaTagsPath))
+                {
+                    foreach (var file in Directory.GetFiles(vanillaTagsPath, "*.txt"))
                     {
-                        // MODからの国家タグ取得
-                        string modTagsPath = Path.Combine(_activeMod, "common", "country_tags");
-                        if (Directory.Exists(modTagsPath))
-                        {
-                            foreach (var file in Directory.GetFiles(modTagsPath, "*.txt"))
-                            {
-                                CollectCountryTags(file, countryTags, tagDescriptions);
-                            }
-                        }
+                        CollectCountryTags(file, countryTags, tagDescriptions);
                     }
+                }
+            }
 
-                    // MODが国家タグを置き換えていない場合はバニラからも取得
-                    if (!hasReplaceTags && !string.IsNullOrEmpty(_vanillaPath))
-                    {
-                        string vanillaTagsPath = Path.Combine(_vanillaPath, "common", "country_tags");
-                        if (Directory.Exists(vanillaTagsPath))
-                        {
-                            foreach (var file in Directory.GetFiles(vanillaTagsPath, "*.txt"))
-                            {
-                                CollectCountryTags(file, countryTags, tagDescriptions);
-                            }
-                        }
-                    }
+            // 残りのコードは変更なし...
 
                     // 国名の取得
                     Dictionary<string, string> countryNames = new Dictionary<string, string>();

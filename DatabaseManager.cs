@@ -845,20 +845,20 @@ namespace HOI4NavalModder
         /// <summary>
         /// 装備の基本情報のみ取得する
         /// </summary>
-        public List<NavalEquipment> GetBasicEquipmentInfo()
+       public List<NavalEquipment> GetBasicEquipmentInfo()
+{
+    var equipmentList = new List<NavalEquipment>();
+
+    try
+    {
+        using (var connection = new SQLiteConnection(_connectionString))
         {
-            var equipmentList = new List<NavalEquipment>();
+            connection.Open();
+            Console.WriteLine("データベース接続成功");
 
-            try
+            using (var command = new SQLiteCommand(connection))
             {
-                using (var connection = new SQLiteConnection(_connectionString))
-                {
-                    connection.Open();
-
-                    using (var command = new SQLiteCommand(connection))
-                    {
-                        // module_infoテーブルと他のテーブルを結合して基本情報を取得
-                        command.CommandText = @"
+                command.CommandText = @"
                     SELECT 
                         mi.ID, 
                         mi.name, 
@@ -870,38 +870,44 @@ namespace HOI4NavalModder
                     ORDER BY 
                         mi.name;";
 
-                        using (var reader = command.ExecuteReader())
+                using (var reader = command.ExecuteReader())
+                {
+                    int count = 0;
+                    while (reader.Read())
+                    {
+                        count++;
+                        string id = reader["ID"].ToString();
+                        string gfx = reader["gfx"]?.ToString() ?? "";
+                        
+                        Console.WriteLine($"装備データ取得: ID={id}, Name={reader["name"]}");
+
+                        var equipment = new NavalEquipment
                         {
-                            while (reader.Read())
-                            {
-                                string id = reader["ID"].ToString();
-                                string gfx = reader["gfx"]?.ToString() ?? "";
+                            Id = id,
+                            Name = reader["name"].ToString(),
+                            Category = GetCategoryFromGfx(gfx),
+                            SubCategory = GetSubCategoryFromGfx(gfx),
+                            Year = Convert.ToInt32(reader["year"]),
+                            Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
+                            Country = reader["country"]?.ToString() ?? "",
+                            AdditionalProperties = new Dictionary<string, object>()
+                        };
 
-                                var equipment = new NavalEquipment
-                                {
-                                    Id = id,
-                                    Name = reader["name"].ToString(),
-                                    Category = GetCategoryFromGfx(gfx),
-                                    SubCategory = GetSubCategoryFromGfx(gfx),
-                                    Year = Convert.ToInt32(reader["year"]),
-                                    Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
-                                    Country = reader["country"]?.ToString() ?? "",
-                                    AdditionalProperties = new Dictionary<string, object>()
-                                };
-
-                                equipmentList.Add(equipment);
-                            }
-                        }
+                        equipmentList.Add(equipment);
                     }
+                    Console.WriteLine($"取得したデータ数: {count}件");
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"基本装備情報の取得中にエラーが発生しました: {ex.Message}");
-            }
-
-            return equipmentList;
         }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"基本装備情報の取得中にエラーが発生しました: {ex.Message}");
+        Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+    }
+
+    return equipmentList;
+}
 
 // Helper methods needed by GetBasicEquipmentInfo
 // These would typically be in your EquipmentDesignView but are needed here for the query

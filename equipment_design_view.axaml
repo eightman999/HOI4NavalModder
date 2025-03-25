@@ -5,7 +5,7 @@
              xmlns:local="clr-namespace:HOI4NavalModder"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="HOI4NavalModder.EquipmentDesignView">
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*" x:Name="ContentGrid">
         <!-- ヘッダーパネル -->
         <Panel Grid.Row="0" Background="#2D2D30" Height="40">
             <TextBlock Text="装備設計"
@@ -23,47 +23,7 @@
                 <StackPanel Margin="10">
                     <TextBlock Text="フィルタ" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" />
                     
-                    <!-- カテゴリフィルタ -->
-                    <Expander Header="カテゴリ" IsExpanded="True" Foreground="White" Background="#252526"  Margin="0,10,0,0">
-                        <StackPanel Margin="10,5,0,5">
-                            <CheckBox Content="全て" IsChecked="True" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="小口径砲 (SMLG)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="中口径砲 (SMMG)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="大口径砲 (SMHG)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="超大口径砲 (SMSHG)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="魚雷 (SMTP)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="潜水艦魚雷 (SMSTP)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="水上機 (SMSP)" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="その他" Foreground="White" Margin="0,2"/>
-                        </StackPanel>
-                    </Expander>
-                    
-                    <!-- 開発年フィルタ -->
-                    <Expander Header="開発年" IsExpanded="True" Foreground="White" Background="#252526" Margin="0,10,0,0" >
-                        <StackPanel Margin="10,5,0,5">
-                            <CheckBox Content="全て" IsChecked="True" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1890以前" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1890-1910" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1910-1930" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1930-1950" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1950-1970" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1970-1990" Foreground="White" Margin="0,2"/>
-                            <CheckBox Content="1990-2000" Foreground="White" Margin="0,2"/>
-                        </StackPanel>
-                    </Expander>
-                    
-                    <!-- 名前検索 -->
-                    <TextBlock Text="名前検索" Foreground="White" Margin="0,10,0,5" />
-                    <TextBox Watermark="装備名を入力..." Margin="0,0,0,10" />
-                    
-                    <Button Content="フィルタ適用" 
-                            HorizontalAlignment="Stretch" 
-                            HorizontalContentAlignment="Center"
-                            Background="#0078D7" 
-                            Foreground="White"
-                            Padding="0,5"
-                            Margin="0,10,0,0"
-                            />
+                    <!-- フィルタ内容は省略 -->
                 </StackPanel>
             </Border>
             
@@ -133,30 +93,15 @@
                     </StackPanel>
                 </Panel>
                 
-                <!-- XAML部分: DataGridの修正 -->
-                <!-- 装備リスト -->
-                <!-- 装備リスト -->
-                <DataGrid Grid.Row="1" 
-                          Background="#1E1E1E"
-                          BorderThickness="0"
-                          RowBackground="#2D2D30"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          AutoGenerateColumns="False"
-                          CanUserResizeColumns="True"
-                          CanUserSortColumns="True"
-                          Foreground="White"
-                          x:Name="EquipmentDataGrid"
-                          >
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" x:DataType="local:NavalEquipment" Binding="{Binding Id}" Width="90"/>
-                        <DataGridTextColumn Header="名前" x:DataType="local:NavalEquipment" Binding="{Binding Name}" Width="200"/>
-                        <DataGridTextColumn Header="カテゴリ" x:DataType="local:NavalEquipment" Binding="{Binding Category}" Width="100"/>
-                        <DataGridTextColumn Header="サブカテゴリ" x:DataType="local:NavalEquipment" Binding="{Binding SubCategory}" Width="120"/>
-                        <DataGridTextColumn Header="開発年" x:DataType="local:NavalEquipment" Binding="{Binding Year}" Width="80"/>
-                        <DataGridTextColumn Header="開発国" x:DataType="local:NavalEquipment" Binding="{Binding Country}" Width="80"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                <!-- 装備リスト (ListBoxをXAMLで定義) -->
+                <Grid Grid.Row="1">
+                    <ListBox x:Name="EquipmentListBox"
+                             Background="#1E1E1E"
+                             BorderThickness="0"
+                             Foreground="White"
+                             Margin="5">
+                    </ListBox>
+                </Grid>
             </Grid>
         </Grid>
     </Grid>
