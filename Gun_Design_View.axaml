@@ -1,4 +1,5 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+﻿<!-- 基本情報セクションに追加するチェックボックスと砲身長入力 -->
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -10,16 +11,9 @@
         CanResize="True">
 
     <Window.Styles>
-        <!-- <Style Selector="Grid"> -->
-        <!--     <Setter Property="UseLayoutRounding" Value="True" /> -->
-        <!-- </Style> -->
-        <!-- <Style Selector="StackPanel"> -->
-        <!--     <Setter Property="UseLayoutRounding" Value="True" /> -->
-        <!-- </Style> -->
         <Style Selector="TextBlock">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="Margin" Value="0,5,0,2" />
-            
         </Style>
         <Style Selector="TextBox">
             <Setter Property="Margin" Value="0,0,0,10" />
@@ -27,7 +21,6 @@
             <Setter Property="Background" Value="#333337" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="#555555" />
-            
         </Style>
         <Style Selector="ComboBox">
             <Setter Property="Margin" Value="0,0,0,10" />
@@ -35,7 +28,6 @@
             <Setter Property="Background" Value="#333337" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="#555555" />
-            
         </Style>
         <Style Selector="NumericUpDown">
             <Setter Property="Margin" Value="0,0,0,10" />
@@ -43,7 +35,6 @@
             <Setter Property="Background" Value="#333337" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="#555555" />
-            
         </Style>
         <Style Selector="Button">
             <Setter Property="Padding" Value="15,8" />
@@ -52,7 +43,10 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="BorderBrush" Value="#555555" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
-            
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,0,0,10" />
         </Style>
     </Window.Styles>
 
@@ -71,8 +65,11 @@
                             <StackPanel>
                                 <TextBlock Text="基本情報" FontWeight="Bold" Margin="0,0,0,10" />
 
+                                <!-- ID自動生成チェックボックスを追加 -->
+                                <CheckBox x:Name="AutoGenerateIdCheckBox" Content="IDを自動生成" IsChecked="True" />
+
                                 <TextBlock Text="ID:" />
-                                <TextBox x:Name="IdTextBox" Watermark="例: smmg_152mm_mk12" />
+                                <TextBox x:Name="IdTextBox" Watermark="例: smmg_152mm_mk12" IsEnabled="False" />
 
                                 <TextBlock Text="名前:" />
                                 <TextBox x:Name="NameTextBox" Watermark="例: 152mm Mk.12連装砲" />
@@ -122,6 +119,11 @@
 
                                 <TextBlock Text="砲身数:" />
                                 <ComboBox x:Name="BarrelCountComboBox" HorizontalAlignment="Stretch" />
+
+                                <!-- 砲身長（口径倍数）フィールドを追加 -->
+                                <TextBlock Text="砲身長 (L/口径):" />
+                                <NumericUpDown x:Name="BarrelLengthNumeric" Minimum="20" Maximum="100" Increment="1"
+                                              FormatString="F0" Value="45" />
 
                                 <TextBlock Text="最大仰俯角 (度):" />
                                 <NumericUpDown x:Name="ElevationAngleNumeric" Minimum="0" Maximum="90" Increment="1"
