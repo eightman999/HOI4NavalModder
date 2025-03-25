@@ -781,7 +781,7 @@ private async void LoadCountryData()
             {
                 mapView.ShowDialog((Window)topLevel);
             }
-        }
+        }   
     }
     
   
