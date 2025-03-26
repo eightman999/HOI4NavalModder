@@ -553,11 +553,11 @@ namespace HOI4NavalModder
                     // GunDesignViewを開く（生データがある場合はそれを使用）
                     if (rawGunData != null)
                     {
-                        editorWindow = new Gun_Design_View(rawGunData, _categories, _tierYears);
+                        editorWindow = new GunDesignView(rawGunData, _categories, _tierYears);
                     }
                     else
                     {
-                        editorWindow = new Gun_Design_View(equipment, _categories, _tierYears);
+                        editorWindow = new GunDesignView(equipment, _categories, _tierYears);
                     }
                     break;
 

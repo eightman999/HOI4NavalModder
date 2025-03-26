@@ -7,7 +7,7 @@ using Avalonia.Markup.Xaml;
 
 namespace HOI4NavalModder
 {
-    public partial class Gun_Design_View : Window
+    public partial class GunDesignView : Window
     {
         private readonly ComboBox _barrelCountComboBox;
         private readonly TextBlock _calculatedArmorPiercingText;
@@ -39,7 +39,7 @@ namespace HOI4NavalModder
         private readonly NumericUpDown _barrelLengthNumeric;
         private readonly CheckBox _autoGenerateIdCheckBox;
         
-        public Gun_Design_View(NavalEquipment equipment, Dictionary<string, NavalCategory> categories,
+        public GunDesignView(NavalEquipment equipment, Dictionary<string, NavalCategory> categories,
             Dictionary<int, string> tierYears)
         {
             InitializeComponent();
@@ -124,7 +124,7 @@ namespace HOI4NavalModder
                 
                 // 既存IDから砲身長を抽出して設定
                 if (NavalGunIdGenerator.TryParseGunId(_originalEquipment.Id, 
-                    out _, out _, out _, out _, out int barrelLength))
+                        out _, out _, out _, out _, out int barrelLength))
                 {
                     _barrelLengthNumeric.Value = barrelLength;
                 }
@@ -275,7 +275,7 @@ namespace HOI4NavalModder
             // 既存の計算値がある場合は表示
             if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedAttack"))
                 _calculatedAttackText.Text = _originalEquipment.AdditionalProperties["CalculatedAttack"].ToString();
-                if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedRange"))
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedRange"))
                 _calculatedRangeText.Text = _originalEquipment.AdditionalProperties["CalculatedRange"] + " km";
 
             if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedArmorPiercing"))
@@ -287,7 +287,7 @@ namespace HOI4NavalModder
                     _originalEquipment.AdditionalProperties["CalculatedBuildCost"].ToString();
         }
 
-        public Gun_Design_View(Dictionary<string, object> rawGunData, Dictionary<string, NavalCategory> categories,
+        public GunDesignView(Dictionary<string, object> rawGunData, Dictionary<string, NavalCategory> categories,
             Dictionary<int, string> tierYears)
         {
             InitializeComponent();
