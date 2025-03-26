@@ -2,6 +2,7 @@
 using System.IO;
 using System.Data.SQLite;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace HOI4NavalModder
 {
@@ -842,6 +843,12 @@ namespace HOI4NavalModder
         /// <param name="gunId">砲のID</param>
         /// <param name="rawGunData">砲の生データ</param>
         /// <returns>保存に成功したかどうか</returns>
+        /// <summary>
+        /// 砲の生データをJSON形式で保存する（計算前の入力値のみ）
+        /// </summary>
+        /// <param name="gunId">砲のID</param>
+        /// <param name="rawGunData">砲の生データ</param>
+        /// <returns>保存に成功したかどうか</returns>
         public bool SaveRawGunData(string gunId, Dictionary<string, object> rawGunData)
         {
             try
@@ -854,16 +861,44 @@ namespace HOI4NavalModder
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "HOI4NavalModder");
             
-                string equipmentsPath = Path.Combine(appDataPath, "equipments", "guns");
+                string equipmentsPath = Path.Combine(appDataPath, "equipments");
         
-                // フォルダが存在しない場合は作成
-                if (!Directory.Exists(equipmentsPath))
+                // カテゴリに基づいたサブディレクトリを決定
+                string categoryDir = "other";
+                if (rawGunData.ContainsKey("Category"))
                 {
-                    Directory.CreateDirectory(equipmentsPath);
+                    string category = rawGunData["Category"].ToString().ToLower();
+                    switch (category)
+                    {
+                        case "smlg":
+                            categoryDir = "guns/small";
+                            break;
+                        case "smmg":
+                            categoryDir = "guns/medium";
+                            break;
+                        case "smhg":
+                            categoryDir = "guns/heavy";
+                            break;
+                        case "smshg":
+                            categoryDir = "guns/super_heavy";
+                            break;
+                        default:
+                            categoryDir = $"guns/{category}";
+                            break;
+                    }
                 }
         
-                // JSONファイルのパス
-                string jsonFilePath = Path.Combine(equipmentsPath, $"{uuid}.json");
+                string fullDir = Path.Combine(equipmentsPath, categoryDir);
+        
+                // フォルダが存在しない場合は作成
+                if (!Directory.Exists(fullDir))
+                {
+                    Directory.CreateDirectory(fullDir);
+                }
+        
+                // JSONファイルのパス - UUIDではなくIDベースのファイル名を使用
+                string jsonFileName = $"{gunId}.json";
+                string jsonFilePath = Path.Combine(fullDir, jsonFileName);
         
                 // データをJSON文字列に変換して保存
                 var options = new System.Text.Json.JsonSerializerOptions
@@ -873,7 +908,9 @@ namespace HOI4NavalModder
                 string jsonData = System.Text.Json.JsonSerializer.Serialize(rawGunData, options);
                 File.WriteAllText(jsonFilePath, jsonData);
         
-                // データベースにUUIDとパスの参照情報を保存
+                Console.WriteLine($"装備データをJSONファイルに保存しました: {jsonFilePath}");
+        
+                // データベースにも参照情報を保存（互換性のため）
                 using (var connection = new SQLiteConnection(_connectionString))
                 {
                     connection.Open();
@@ -881,16 +918,17 @@ namespace HOI4NavalModder
                     using (var command = new SQLiteCommand(connection))
                     {
                         command.CommandText = @"
-                    INSERT OR REPLACE INTO guns_raw_datas (ID, json_data)
-                    VALUES (@ID, @json_data);";
+                INSERT OR REPLACE INTO guns_raw_datas (ID, json_data)
+                VALUES (@ID, @json_data);";
 
                         command.Parameters.AddWithValue("@ID", gunId);
-                        command.Parameters.AddWithValue("@json_data", $"{uuid}:{jsonFilePath}");
+                        command.Parameters.AddWithValue("@json_data", jsonFilePath);
 
-                        int affected = command.ExecuteNonQuery();
-                        return affected > 0;
+                        command.ExecuteNonQuery();
                     }
                 }
+        
+                return true;
             }
             catch (Exception ex)
             {
@@ -952,68 +990,181 @@ namespace HOI4NavalModder
         /// <summary>
         /// 装備の基本情報のみ取得する
         /// </summary>
+        /// <summary>
+        /// 装備の基本情報のみ取得する - equipmentsディレクトリからJSONファイルを読み込む
+        /// </summary>
         public List<NavalEquipment> GetBasicEquipmentInfo()
         {
             var equipmentList = new List<NavalEquipment>();
 
             try
             {
-                using (var connection = new SQLiteConnection(_connectionString))
+                // ApplicationDataディレクトリのパスを取得
+                string appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HOI4NavalModder");
+
+                // equipmentsディレクトリのパス
+                string equipmentsPath = Path.Combine(appDataPath, "equipments");
+
+                // ディレクトリが存在しない場合は作成
+                if (!Directory.Exists(equipmentsPath))
                 {
-                    connection.Open();
-                    Console.WriteLine("データベース接続成功");
+                    Directory.CreateDirectory(equipmentsPath);
+                    Console.WriteLine($"equipmentsディレクトリを作成しました: {equipmentsPath}");
+                    return equipmentList; // 空のリストを返す
+                }
 
-                    using (var command = new SQLiteCommand(connection))
+                Console.WriteLine($"equipmentsディレクトリからJSONファイルを検索します: {equipmentsPath}");
+
+                // 再帰的にすべてのJSONファイルを検索
+                var jsonFiles = Directory.GetFiles(equipmentsPath, "*.json", SearchOption.AllDirectories);
+                Console.WriteLine($"検出されたJSONファイル数: {jsonFiles.Length}件");
+
+                foreach (var jsonFile in jsonFiles)
+                {
+                    try
                     {
-                        command.CommandText = @"
-                    SELECT 
-                        mi.ID, 
-                        mi.name, 
-                        mi.year, 
-                        mi.country,
-                        mi.gfx
-                    FROM 
-                        module_info mi
-                    ORDER BY 
-                        mi.name;";
-
-                        using (var reader = command.ExecuteReader())
+                        // JSONファイルを読み込む
+                        string jsonContent = File.ReadAllText(jsonFile);
+                
+                        // JSONをデシリアライズ
+                        var options = new System.Text.Json.JsonSerializerOptions
                         {
-                            int count = 0;
-                            while (reader.Read())
+                            PropertyNameCaseInsensitive = true
+                        };
+                
+                        var equipmentData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent, options);
+                
+                        if (equipmentData != null && 
+                            equipmentData.ContainsKey("Id") && 
+                            equipmentData.ContainsKey("Name"))
+                        {
+                            // 必要な情報のみを抽出
+                            string id = equipmentData["Id"].ToString();
+                            string name = equipmentData["Name"].ToString();
+                    
+                            // Year、Categoryなどは存在しない場合があるのでデフォルト値を用意
+                            int year = 1900;
+                            string category = "SMOT";
+                            string country = "";
+                    
+                            if (equipmentData.ContainsKey("Year"))
                             {
-                                count++;
-                                string id = reader["ID"].ToString();
-                                string gfx = reader["gfx"]?.ToString() ?? "";
-                        
-                                Console.WriteLine($"装備データ取得: ID={id}, Name={reader["name"]}");
-
-                                var equipment = new NavalEquipment
+                                if (equipmentData["Year"] is System.Text.Json.JsonElement yearElement)
                                 {
-                                    Id = id,
-                                    Name = reader["name"].ToString(),
-                                    Category = GetCategoryFromGfx(gfx),
-                                    SubCategory = GetSubCategoryFromGfx(gfx),
-                                    Year = Convert.ToInt32(reader["year"]),
-                                    Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
-                                    Country = reader["country"]?.ToString() ?? "",
-                                    AdditionalProperties = new Dictionary<string, object>()
-                                };
-
-                                equipmentList.Add(equipment);
+                                    year = GetIntFromJsonElement(yearElement);
+                                }
                             }
-                            Console.WriteLine($"取得したデータ数: {count}件");
+
+                            if (equipmentData.ContainsKey("Category"))
+                            {
+                                if (equipmentData["Category"] is System.Text.Json.JsonElement categoryElement)
+                                {
+                                    category = GetStringFromJsonElement(categoryElement);
+                                }
+                            }
+
+                            if (equipmentData.ContainsKey("Country"))
+                            {
+                                if (equipmentData["Country"] is System.Text.Json.JsonElement categoryElement)
+                                {
+                                    country = GetStringFromJsonElement(categoryElement);
+                                }
+                            }
+                            
+                            var equipment = new NavalEquipment
+                            {
+                                Id = id,
+                                Name = name,
+                                Category = category,
+                                Year = year,
+                                Tier = GetTierFromYear(year),
+                                Country = country,
+                                AdditionalProperties = new Dictionary<string, object>
+                                {
+                                    { "FilePath", jsonFile } // ファイルパスを保存しておく
+                                }
+                            };
+                    
+                            Console.WriteLine($"装備データ読み込み: ID={id}, Name={name}");
+                            equipmentList.Add(equipment);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"JSONファイル {jsonFile} の解析中にエラーが発生しました: {ex.Message}");
+                        // エラーが発生してもスキップして次のファイルを処理
+                    }
+                }
+
+                // データベースからの情報も取得して追加（存在する場合）
+                try
+                {
+                    using (var connection = new SQLiteConnection(_connectionString))
+                    {
+                        connection.Open();
+                        Console.WriteLine("データベース接続成功");
+
+                        using (var command = new SQLiteCommand(connection))
+                        {
+                            command.CommandText = @"
+                        SELECT 
+                            mi.ID, 
+                            mi.name, 
+                            mi.year, 
+                            mi.country
+                        FROM 
+                            module_info mi
+                        ORDER BY 
+                            mi.name;";
+
+                            using (var reader = command.ExecuteReader())
+                            {
+                                int count = 0;
+                                while (reader.Read())
+                                {
+                                    count++;
+                                    string id = reader["ID"].ToString();
+                            
+                                    // 既に同じIDのデータがあるかチェック
+                                    if (!equipmentList.Any(e => e.Id == id))
+                                    {
+                                        Console.WriteLine($"DBからの装備データ取得: ID={id}, Name={reader["name"]}");
+
+                                        var equipment = new NavalEquipment
+                                        {
+                                            Id = id,
+                                            Name = reader["name"].ToString(),
+                                            Year = Convert.ToInt32(reader["year"]),
+                                            Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
+                                            Country = reader["country"]?.ToString() ?? "",
+                                            AdditionalProperties = new Dictionary<string, object>()
+                                        };
+
+                                        equipmentList.Add(equipment);
+                                    }
+                                }
+                                Console.WriteLine($"DBから取得したデータ数: {count}件");
+                            }
                         }
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"データベースからの基本装備情報の取得中にエラーが発生しました: {ex.Message}");
+                    // データベースからの取得に失敗しても、JSONからのデータはそのまま返す
+                }
+        
+                // 結果を名前でソート
+                return equipmentList.OrderBy(e => e.Name).ToList();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"基本装備情報の取得中にエラーが発生しました: {ex.Message}");
                 Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+                return new List<NavalEquipment>();
             }
-
-            return equipmentList;
         }
 
 // Helper methods needed by GetBasicEquipmentInfo
@@ -1096,6 +1247,23 @@ namespace HOI4NavalModder
     
             return 23; // 2000年以降
         }
+        private int GetIntFromJsonElement(System.Text.Json.JsonElement element)
+        {
+            if (element.ValueKind == System.Text.Json.JsonValueKind.Number && element.TryGetInt32(out int value))
+            {
+                return value;
+            }
+            return 0; // Default value
+        }
+
+        public string GetStringFromJsonElement(System.Text.Json.JsonElement element)
+        {
+            if (element.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return element.GetString();
+            }
+            return string.Empty; // デフォルト値
+        }
     }
 
     // モジュール基本情報クラス
@@ -1172,4 +1340,6 @@ namespace HOI4NavalModder
         public ModuleResources Resources { get; set; }
         public List<ModuleConvert> ConvertModules { get; set; }
     }
+    
+    
 }

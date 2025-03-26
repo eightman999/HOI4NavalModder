@@ -80,9 +80,6 @@ namespace HOI4NavalModder
             };
 
             // リストボックスのテンプレートを設定
-            // equipment_design_view.cs の CreateEquipmentListBoxProgrammatically メソッド内のコードを変更
-// 以下のコードを該当メソッド内の _equipmentListBox.ItemTemplate 設定部分に置き換えてください
-
             _equipmentListBox.ItemTemplate = new FuncDataTemplate<NavalEquipment>((item, scope) =>
             {
                 if (item == null)
@@ -96,7 +93,7 @@ namespace HOI4NavalModder
                     Margin = new Thickness(5)
                 };
 
-                // 装備情報パネル
+                // 装備情報パネル - 必要な情報のみ表示
                 var contentPanel = new StackPanel
                 {
                     Orientation = Orientation.Vertical,
@@ -120,7 +117,7 @@ namespace HOI4NavalModder
 
                 var idText = new TextBlock
                 {
-                    Text = $"：{item.Id}",
+                    Text = $"[{item.Id}]",
                     Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
                     FontSize = 14,
                     VerticalAlignment = VerticalAlignment.Center
@@ -154,26 +151,8 @@ namespace HOI4NavalModder
                 yearCountryPanel.Children.Add(yearText);
                 yearCountryPanel.Children.Add(countryText);
 
-                // カテゴリバッジを追加
-                var categoryBadge = new Border
-                {
-                    Background = new SolidColorBrush(Color.Parse("#1E90FF")),
-                    CornerRadius = new CornerRadius(3),
-                    Padding = new Thickness(5, 2, 5, 2),
-                    Margin = new Thickness(0, 5, 0, 0)
-                };
-
-                var categoryText = new TextBlock
-                {
-                    Text = item.Category,
-                    Foreground = Brushes.White,
-                    FontSize = 12
-                };
-                categoryBadge.Child = categoryText;
-
                 contentPanel.Children.Add(nameIdPanel);
                 contentPanel.Children.Add(yearCountryPanel);
-                contentPanel.Children.Add(categoryBadge);
 
                 // 編集ボタン
                 var editButton = new Button
@@ -281,15 +260,15 @@ namespace HOI4NavalModder
                 // 既存のリストをクリア
                 _equipmentList.Clear();
 
-                // データベースから基本情報のみ取得
+                // データベースから基本情報のみ取得（JSONファイル含む）
                 var equipmentList = _dbManager.GetBasicEquipmentInfo();
-                
-                Console.WriteLine($"データベースから{equipmentList.Count}件の装備データを読み込みました");
+        
+                Console.WriteLine($"{equipmentList.Count}件の装備データを読み込みました");
 
                 // 取得したデータをリストに追加
                 foreach (var equipment in equipmentList)
                 {
-                    Console.WriteLine($"装備追加: ID={equipment.Id}, Name={equipment.Name}");
+                    Console.WriteLine($"装備追加: ID={equipment.Id}, Name={equipment.Name}, Year={equipment.Year}, Country={equipment.Country}");
                     _equipmentList.Add(equipment);
                 }
 
@@ -543,7 +522,6 @@ namespace HOI4NavalModder
             // カテゴリに応じた適切なエディタを選択
             switch (equipment.Category)
             {
-
                 case "SMLG": // 小口径砲
                 case "SMMG": // 中口径砲
                 case "SMHG": // 大口径砲
@@ -551,9 +529,25 @@ namespace HOI4NavalModder
                     Dictionary<string, object> rawGunData = null;
 
                     // 既存の装備の場合は生データを取得
-                    if (!string.IsNullOrEmpty(equipment.Id) && _equipmentList.Any(e => e.Id == equipment.Id))
+                    if (!string.IsNullOrEmpty(equipment.Id))
                     {
-                        rawGunData = GunDataToDB.GetRawGunData(equipment.Id);
+                        // 装備がJSONファイルからのデータかチェック
+                        if (equipment.AdditionalProperties.ContainsKey("FilePath") && 
+                            File.Exists(equipment.AdditionalProperties["FilePath"].ToString()))
+                        {
+                            // JSONファイルから直接データを読み込む
+                            string jsonFilePath = equipment.AdditionalProperties["FilePath"].ToString();
+                            string jsonContent = File.ReadAllText(jsonFilePath);
+                            rawGunData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(
+                                jsonContent, 
+                                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                            );
+                        }
+                        else
+                        {
+                            // データベースから生データを取得
+                            rawGunData = GunDataToDB.GetRawGunData(equipment.Id);
+                        }
                     }
 
                     // GunDesignViewを開く（生データがある場合はそれを使用）
@@ -565,7 +559,6 @@ namespace HOI4NavalModder
                     {
                         editorWindow = new Gun_Design_View(equipment, _categories, _tierYears);
                     }
-
                     break;
 
                 case "SMTP": // 魚雷
@@ -605,7 +598,7 @@ namespace HOI4NavalModder
                     //editorWindow = new SMASM_Design_View(equipment, _categories, _tierYears);
                     break;
                 case "SMHNG": // 格納庫
-                    //ditorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
+                    //editorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
                     break;
                 default: // その他
                     //editorWindow = new SMOT_Design_View(equipment, _categories, _tierYears);
@@ -618,8 +611,6 @@ namespace HOI4NavalModder
                 var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Window);
                 if (result != null)
                 {
-                    // データベースに保存（Gun_Design_Viewから返されたデータはすでにGunDataToDBで保存済み）
-
                     // 既存の装備を編集した場合
                     if (_equipmentList.Any(e => e.Id == result.Id))
                     {
