@@ -80,6 +80,9 @@ namespace HOI4NavalModder
             };
 
             // リストボックスのテンプレートを設定
+            // equipment_design_view.cs の CreateEquipmentListBoxProgrammatically メソッド内のコードを変更
+// 以下のコードを該当メソッド内の _equipmentListBox.ItemTemplate 設定部分に置き換えてください
+
             _equipmentListBox.ItemTemplate = new FuncDataTemplate<NavalEquipment>((item, scope) =>
             {
                 if (item == null)
@@ -89,7 +92,7 @@ namespace HOI4NavalModder
 
                 var panel = new Grid
                 {
-                    ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+                    ColumnDefinitions = new ColumnDefinitions("*,Auto"),
                     Margin = new Thickness(5)
                 };
 
@@ -100,19 +103,64 @@ namespace HOI4NavalModder
                     Margin = new Thickness(0, 0, 10, 0)
                 };
 
-                // 装備名と基本情報
-                var headerPanel = new StackPanel
+                // 装備名とID
+                var nameIdPanel = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
-                    Spacing = 10
+                    Spacing = 5
                 };
 
+                var equipmentNameText = new TextBlock
+                {
+                    Text = item.Name ?? "不明な装備",
+                    Foreground = Brushes.White,
+                    FontWeight = FontWeight.Bold,
+                    FontSize = 14
+                };
+
+                var idText = new TextBlock
+                {
+                    Text = $"：{item.Id}",
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 14,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                nameIdPanel.Children.Add(equipmentNameText);
+                nameIdPanel.Children.Add(idText);
+
+                // 開発年と開発国
+                var yearCountryPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 5,
+                    Margin = new Thickness(0, 5, 0, 0)
+                };
+
+                var yearText = new TextBlock
+                {
+                    Text = $"開発年：{item.Year}",
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 12
+                };
+
+                var countryText = new TextBlock
+                {
+                    Text = $"　開発国：{item.Country}",
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 12
+                };
+
+                yearCountryPanel.Children.Add(yearText);
+                yearCountryPanel.Children.Add(countryText);
+
+                // カテゴリバッジを追加
                 var categoryBadge = new Border
                 {
                     Background = new SolidColorBrush(Color.Parse("#1E90FF")),
                     CornerRadius = new CornerRadius(3),
                     Padding = new Thickness(5, 2, 5, 2),
-                    Margin = new Thickness(0, 0, 5, 0)
+                    Margin = new Thickness(0, 5, 0, 0)
                 };
 
                 var categoryText = new TextBlock
@@ -123,52 +171,9 @@ namespace HOI4NavalModder
                 };
                 categoryBadge.Child = categoryText;
 
-                var equipmentNameText = new TextBlock
-                {
-                    Text = item.Name ?? "不明な装備",
-                    Foreground = Brushes.White,
-                    FontWeight = FontWeight.Bold,
-                    FontSize = 14
-                };
-
-                headerPanel.Children.Add(categoryBadge);
-                headerPanel.Children.Add(equipmentNameText);
-
-                // 装備IDと詳細情報
-                var detailsPanel = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Margin = new Thickness(0, 5, 0, 0),
-                    Spacing = 15
-                };
-
-                var idText = new TextBlock
-                {
-                    Text = $"ID: {item.Id}",
-                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
-                    FontSize = 12
-                };
-
-                var yearText = new TextBlock
-                {
-                    Text = $"開発年: {item.Year}",
-                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
-                    FontSize = 12
-                };
-
-                var countryText = new TextBlock
-                {
-                    Text = $"開発国: {item.Country}",
-                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
-                    FontSize = 12
-                };
-
-                detailsPanel.Children.Add(idText);
-                detailsPanel.Children.Add(yearText);
-                detailsPanel.Children.Add(countryText);
-
-                contentPanel.Children.Add(headerPanel);
-                contentPanel.Children.Add(detailsPanel);
+                contentPanel.Children.Add(nameIdPanel);
+                contentPanel.Children.Add(yearCountryPanel);
+                contentPanel.Children.Add(categoryBadge);
 
                 // 編集ボタン
                 var editButton = new Button
@@ -181,10 +186,10 @@ namespace HOI4NavalModder
                     VerticalAlignment = VerticalAlignment.Center
                 };
                 editButton.Click += (s, e) => OnEditButtonClick(item);
-                Grid.SetColumn(editButton, 2);
+                Grid.SetColumn(editButton, 1);
 
                 panel.Children.Add(contentPanel);
-                Grid.SetColumn(contentPanel, 1);
+                Grid.SetColumn(contentPanel, 0);
                 panel.Children.Add(editButton);
 
                 return panel;
@@ -539,99 +544,99 @@ namespace HOI4NavalModder
             switch (equipment.Category)
             {
 
-                        case "SMLG": // 小口径砲
-                        case "SMMG": // 中口径砲
-                        case "SMHG": // 大口径砲
-                        case "SMSHG": // 超大口径砲
-                            Dictionary<string, object> rawGunData = null;
+                case "SMLG": // 小口径砲
+                case "SMMG": // 中口径砲
+                case "SMHG": // 大口径砲
+                case "SMSHG": // 超大口径砲
+                    Dictionary<string, object> rawGunData = null;
 
-                            // 既存の装備の場合は生データを取得
-                            if (!string.IsNullOrEmpty(equipment.Id) && _equipmentList.Any(e => e.Id == equipment.Id))
-                            {
-                                rawGunData = GunDataToDB.GetRawGunData(equipment.Id);
-                            }
-
-                            // GunDesignViewを開く（生データがある場合はそれを使用）
-                            if (rawGunData != null)
-                            {
-                                editorWindow = new Gun_Design_View(rawGunData, _categories, _tierYears);
-                            }
-                            else
-                            {
-                                editorWindow = new Gun_Design_View(equipment, _categories, _tierYears);
-                            }
-
-                            break;
-
-                        case "SMTP": // 魚雷
-                        case "SMSTP": // 潜水艦魚雷
-                            //editorWindow = new SMTP_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMSP": // 水上機
-                        case "SMCR": // 艦上偵察機
-                        case "SMHC": // 回転翼機
-                        case "SMASP": // 対潜哨戒機
-                        case "SMLSP": // 大型飛行艇
-                            //editorWindow = new SMSP_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMDCL": // 爆雷投射機
-                        case "SMSO": // ソナー
-                        case "SMLSO": // 大型ソナー
-                        case "SMDC": // 爆雷
-                            //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMLR": // 小型電探
-                        case "SMHR": // 大型電探
-                            //editorWindow = new SMLR_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMAA": // 対空砲
-                        case "SMHAA": // 高射装置
-                            //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMTR": // 機関
-                            //editorWindow = new SMTR_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMMBL": // 増設バルジ(中型艦)
-                        case "SMHBL": // 増設バルジ(大型艦)
-                            //editorWindow = new SMMBL_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMASM": // 対艦ミサイル
-                        case "SMSAM": // 対空ミサイル
-                            //editorWindow = new SMASM_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        case "SMHNG": // 格納庫
-                            //ditorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
-                            break;
-                        default: // その他
-                            //editorWindow = new SMOT_Design_View(equipment, _categories, _tierYears);
-                            break;
+                    // 既存の装備の場合は生データを取得
+                    if (!string.IsNullOrEmpty(equipment.Id) && _equipmentList.Any(e => e.Id == equipment.Id))
+                    {
+                        rawGunData = GunDataToDB.GetRawGunData(equipment.Id);
                     }
 
-                    // エディタウィンドウを表示
-                    if (editorWindow != null)
+                    // GunDesignViewを開く（生データがある場合はそれを使用）
+                    if (rawGunData != null)
                     {
-                        var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Window);
-                        if (result != null)
-                        {
-                            // データベースに保存（Gun_Design_Viewから返されたデータはすでにGunDataToDBで保存済み）
+                        editorWindow = new Gun_Design_View(rawGunData, _categories, _tierYears);
+                    }
+                    else
+                    {
+                        editorWindow = new Gun_Design_View(equipment, _categories, _tierYears);
+                    }
 
-                            // 既存の装備を編集した場合
-                            if (_equipmentList.Any(e => e.Id == result.Id))
-                            {
-                                // リストの中の該当する装備を更新
-                                int index = _equipmentList.IndexOf(_equipmentList.First(e => e.Id == result.Id));
-                                if (index >= 0)
-                                {
-                                    _equipmentList[index] = result;
-                                }
-                            }
-                            else // 新規装備の場合
-                            {
-                                _equipmentList.Add(result);
-                            }
+                    break;
+
+                case "SMTP": // 魚雷
+                case "SMSTP": // 潜水艦魚雷
+                    //editorWindow = new SMTP_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMSP": // 水上機
+                case "SMCR": // 艦上偵察機
+                case "SMHC": // 回転翼機
+                case "SMASP": // 対潜哨戒機
+                case "SMLSP": // 大型飛行艇
+                    //editorWindow = new SMSP_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMDCL": // 爆雷投射機
+                case "SMSO": // ソナー
+                case "SMLSO": // 大型ソナー
+                case "SMDC": // 爆雷
+                    //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMLR": // 小型電探
+                case "SMHR": // 大型電探
+                    //editorWindow = new SMLR_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMAA": // 対空砲
+                case "SMHAA": // 高射装置
+                    //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMTR": // 機関
+                    //editorWindow = new SMTR_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMMBL": // 増設バルジ(中型艦)
+                case "SMHBL": // 増設バルジ(大型艦)
+                    //editorWindow = new SMMBL_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMASM": // 対艦ミサイル
+                case "SMSAM": // 対空ミサイル
+                    //editorWindow = new SMASM_Design_View(equipment, _categories, _tierYears);
+                    break;
+                case "SMHNG": // 格納庫
+                    //ditorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
+                    break;
+                default: // その他
+                    //editorWindow = new SMOT_Design_View(equipment, _categories, _tierYears);
+                    break;
+            }
+
+            // エディタウィンドウを表示
+            if (editorWindow != null)
+            {
+                var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Window);
+                if (result != null)
+                {
+                    // データベースに保存（Gun_Design_Viewから返されたデータはすでにGunDataToDBで保存済み）
+
+                    // 既存の装備を編集した場合
+                    if (_equipmentList.Any(e => e.Id == result.Id))
+                    {
+                        // リストの中の該当する装備を更新
+                        int index = _equipmentList.IndexOf(_equipmentList.First(e => e.Id == result.Id));
+                        if (index >= 0)
+                        {
+                            _equipmentList[index] = result;
                         }
+                    }
+                    else // 新規装備の場合
+                    {
+                        _equipmentList.Add(result);
                     }
                 }
             }
-        
+        }
     }
+        
+}

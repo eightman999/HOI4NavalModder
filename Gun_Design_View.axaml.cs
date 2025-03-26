@@ -518,6 +518,7 @@ namespace HOI4NavalModder
         }
 
         // ヘルパーメソッド: Dictionaryから安全にdouble値を取得
+// ヘルパーメソッド: Dictionaryから安全にdouble値を取得
         private decimal GetDoubleValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
@@ -530,6 +531,11 @@ namespace HOI4NavalModder
                     {
                         return (decimal)jsonElement.GetDouble();
                     }
+                    else if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.String &&
+                             decimal.TryParse(jsonElement.GetString(), out decimal result))
+                    {
+                        return result;
+                    }
                 }
                 return Convert.ToDecimal(data[key]);
             }
@@ -539,7 +545,7 @@ namespace HOI4NavalModder
             }
         }
 
-        // ヘルパーメソッド: Dictionaryから安全にint値を取得
+// ヘルパーメソッド: Dictionaryから安全にint値を取得
         private decimal GetIntValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
@@ -552,6 +558,11 @@ namespace HOI4NavalModder
                     {
                         return jsonElement.GetInt32();
                     }
+                    else if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.String &&
+                             int.TryParse(jsonElement.GetString(), out int result))
+                    {
+                        return result;
+                    }
                 }
                 return Convert.ToInt32(data[key]);
             }
@@ -560,7 +571,6 @@ namespace HOI4NavalModder
                 return 0;
             }
         }
-        
         // ヘルパーメソッド: Dictionaryから安全にdecimal値を取得
         private decimal GetDecimalValue(Dictionary<string, object> data, string key)
         {
