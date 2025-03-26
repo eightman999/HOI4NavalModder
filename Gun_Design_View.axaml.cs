@@ -38,12 +38,7 @@ namespace HOI4NavalModder
         // 追加されたコントロール
         private readonly NumericUpDown _barrelLengthNumeric;
         private readonly CheckBox _autoGenerateIdCheckBox;
-
-        public Gun_Design_View()
-        {
-            InitializeComponent();
-        }
-
+        
         public Gun_Design_View(NavalEquipment equipment, Dictionary<string, NavalCategory> categories,
             Dictionary<int, string> tierYears)
         {
@@ -437,7 +432,7 @@ namespace HOI4NavalModder
             // ComboBoxの選択
             SelectComboBoxItem(_categoryComboBox, "Id", categoryId);
             SelectComboBoxItem(_subCategoryComboBox, null, rawGunData["SubCategory"].ToString());
-            SelectComboBoxItem(_yearComboBox, "Tier", Convert.ToInt32(rawGunData["Tier"]));
+            SelectComboBoxItem(_yearComboBox, "Year", GetIntValue(rawGunData, "Year"));
             SelectComboBoxItem(_countryComboBox, null, rawGunData["Country"].ToString());
 
             // 数値の設定
@@ -510,7 +505,7 @@ namespace HOI4NavalModder
         }
 
         // ヘルパーメソッド: NumericUpDownの値を設定
-        private void SetNumericValue(NumericUpDown numericUpDown, decimal value)
+        private static void SetNumericValue(NumericUpDown numericUpDown, decimal value)
         {
             if (value >= numericUpDown.Minimum && value <= numericUpDown.Maximum)
             {
@@ -520,7 +515,7 @@ namespace HOI4NavalModder
 
         // ヘルパーメソッド: Dictionaryから安全にdouble値を取得
 // ヘルパーメソッド: Dictionaryから安全にdouble値を取得
-        private decimal GetDoubleValue(Dictionary<string, object> data, string key)
+        private static decimal GetDoubleValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
 
@@ -547,7 +542,7 @@ namespace HOI4NavalModder
         }
 
 // ヘルパーメソッド: Dictionaryから安全にint値を取得
-        private decimal GetIntValue(Dictionary<string, object> data, string key)
+        private static decimal GetIntValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
 
@@ -573,7 +568,7 @@ namespace HOI4NavalModder
             }
         }
         // ヘルパーメソッド: Dictionaryから安全にdecimal値を取得
-        private decimal GetDecimalValue(Dictionary<string, object> data, string key)
+        private static decimal GetDecimalValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
 
@@ -593,7 +588,27 @@ namespace HOI4NavalModder
                 return 0;
             }
         }
+// ヘルパーメソッド: Dictionaryから安全にString値を取得
+        private static string GetStringValue(Dictionary<string, object> data, string key)
+        {
+            if (!data.ContainsKey(key)) return string.Empty;
 
+            try
+            {
+                if (data[key] is System.Text.Json.JsonElement jsonElement)
+                {
+                    if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        return jsonElement.GetString();
+                    }
+                }
+                return data[key].ToString();
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
         private string GetCategoryDisplayName(string categoryId)
         {
             if (_categories.ContainsKey(categoryId)) return _categories[categoryId].Name;
