@@ -35,11 +35,17 @@
         <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
     <ItemGroup>
-      <Compile Update="equipment_design_view.cs">
-        <DependentUpon>equipment_design_view.axaml</DependentUpon>
+      <Compile Update="Views\Gun_Design_View.axaml.cs">
+        <DependentUpon>Gun_Design_View.axaml</DependentUpon>
+        <SubType>Code</SubType>
       </Compile>
-      <Compile Update="IdConflictWindow.cs">
-        <DependentUpon>IdConflictWindow.axaml</DependentUpon>
+      <Compile Update="Window\Category_Selection_Window.axaml.cs">
+        <DependentUpon>Category_Selection_Window.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Window\MainWindow.axaml.cs">
+        <DependentUpon>MainWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
       </Compile>
     </ItemGroup>
 
