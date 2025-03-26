@@ -33,7 +33,8 @@ namespace HOI4NavalModder
         private readonly Dictionary<int, string> _tierYears;
         private readonly NumericUpDown _turretWeightNumeric;
         private readonly ComboBox _yearComboBox;
-        
+
+        private readonly TextBox _descriptionTextBox;
         // 追加されたコントロール
         private readonly NumericUpDown _barrelLengthNumeric;
         private readonly CheckBox _autoGenerateIdCheckBox;
@@ -324,7 +325,7 @@ namespace HOI4NavalModder
             _calculatedRangeText = this.FindControl<TextBlock>("CalculatedRangeText");
             _calculatedArmorPiercingText = this.FindControl<TextBlock>("CalculatedArmorPiercingText");
             _calculatedBuildCostText = this.FindControl<TextBlock>("CalculatedBuildCostText");
-            
+            _descriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
             // 追加されたコントロールの取得
             _barrelLengthNumeric = this.FindControl<NumericUpDown>("BarrelLengthNumeric");
             _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
@@ -827,7 +828,8 @@ namespace HOI4NavalModder
                 { "TurretWeight", (double)_turretWeightNumeric.Value },
                 { "Manpower", (int)_manpowerNumeric.Value },
                 { "Steel", (int)_steelNumeric.Value },
-                { "Chromium", (int)_chromiumNumeric.Value }
+                { "Chromium", (int)_chromiumNumeric.Value },
+                { "Description", _descriptionTextBox.Text ?? "" }
             };
 
             // Gun_Processingクラスに全てのデータを渡して処理を行う

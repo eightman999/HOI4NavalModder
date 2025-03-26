@@ -43,9 +43,84 @@ namespace HOI4NavalModder
             else
             {
                 ValidateDatabaseStructure();
+                UpdateGunRawDataSchema();
             }
+            UpdateGunRawDataSchema();
         }
 
+        
+        
+        // DatabaseManager.csのValidateDatabaseStructureメソッド内または初期化時に追加
+        public void UpdateGunRawDataSchema()
+        {
+            try
+            {
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+            
+                    // テーブルの存在を確認
+                    using (var command = new SQLiteCommand(connection))
+                    {
+                        command.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='guns_raw_datas';";
+                        var result = command.ExecuteScalar();
+                
+                        if (result != null)
+                        {
+                            // テーブルが存在する場合、一時テーブルを作成してデータを移行
+                            using (var transaction = connection.BeginTransaction())
+                            {
+                                try
+                                {
+                                    // 古いテーブルのデータをバックアップ
+                                    command.CommandText = "CREATE TABLE IF NOT EXISTS guns_raw_datas_backup AS SELECT * FROM guns_raw_datas;";
+                                    command.ExecuteNonQuery();
+                            
+                                    // 古いテーブルを削除
+                                    command.CommandText = "DROP TABLE guns_raw_datas;";
+                                    command.ExecuteNonQuery();
+                            
+                                    // 新しいテーブルを作成
+                                    command.CommandText = @"
+                                CREATE TABLE guns_raw_datas (
+                                    ID TEXT PRIMARY KEY,
+                                    json_data TEXT NOT NULL
+                                );";
+                                    command.ExecuteNonQuery();
+                            
+                                    // 古いテーブルからデータを移行（UUIDとパスに変換）
+                                    // 実際のデータ移行はアプリ起動時に必要に応じて実装
+                            
+                                    transaction.Commit();
+                                    Console.WriteLine("guns_raw_datasテーブルのスキーマを更新しました。");
+                                }
+                                catch (Exception ex)
+                                {
+                                    transaction.Rollback();
+                                    Console.WriteLine($"テーブル更新中にエラーが発生しました: {ex.Message}");
+                                    throw;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // テーブルが存在しない場合は新規作成
+                            command.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS guns_raw_datas (
+                            ID TEXT PRIMARY KEY,
+                            json_data TEXT NOT NULL
+                        );";
+                            command.ExecuteNonQuery();
+                            Console.WriteLine("guns_raw_datasテーブルを作成しました。");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"スキーマ更新中にエラーが発生しました: {ex.Message}");
+            }
+        }
         /// <summary>
         /// データベースのテーブルを作成
         /// </summary>
@@ -771,13 +846,34 @@ namespace HOI4NavalModder
         {
             try
             {
-                // データをJSON文字列に変換
+                // UUIDを生成
+                string uuid = Guid.NewGuid().ToString();
+        
+                // フォルダパスを作成
+                string appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HOI4NavalModder");
+            
+                string equipmentsPath = Path.Combine(appDataPath, "equipments", "guns");
+        
+                // フォルダが存在しない場合は作成
+                if (!Directory.Exists(equipmentsPath))
+                {
+                    Directory.CreateDirectory(equipmentsPath);
+                }
+        
+                // JSONファイルのパス
+                string jsonFilePath = Path.Combine(equipmentsPath, $"{uuid}.json");
+        
+                // データをJSON文字列に変換して保存
                 var options = new System.Text.Json.JsonSerializerOptions
                 {
                     WriteIndented = true
                 };
                 string jsonData = System.Text.Json.JsonSerializer.Serialize(rawGunData, options);
-
+                File.WriteAllText(jsonFilePath, jsonData);
+        
+                // データベースにUUIDとパスの参照情報を保存
                 using (var connection = new SQLiteConnection(_connectionString))
                 {
                     connection.Open();
@@ -789,7 +885,7 @@ namespace HOI4NavalModder
                     VALUES (@ID, @json_data);";
 
                         command.Parameters.AddWithValue("@ID", gunId);
-                        command.Parameters.AddWithValue("@json_data", jsonData);
+                        command.Parameters.AddWithValue("@json_data", $"{uuid}:{jsonFilePath}");
 
                         int affected = command.ExecuteNonQuery();
                         return affected > 0;
@@ -803,11 +899,6 @@ namespace HOI4NavalModder
             }
         }
 
-        /// <summary>
-        /// 砲の生データをデータベースから取得する
-        /// </summary>
-        /// <param name="gunId">砲のID</param>
-        /// <returns>砲の生データ</returns>
         public Dictionary<string, object> GetRawGunData(string gunId)
         {
             try
@@ -824,11 +915,28 @@ namespace HOI4NavalModder
                         var result = command.ExecuteScalar();
                         if (result != null && result != DBNull.Value)
                         {
-                            string jsonData = result.ToString();
-                            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonData, 
-                                new System.Text.Json.JsonSerializerOptions { 
-                                    PropertyNameCaseInsensitive = true 
-                                });
+                            string reference = result.ToString();
+                            // UUIDとパスを取得
+                            string[] parts = reference.Split(new char[] { ':' }, 2);
+                            if (parts.Length == 2)
+                            {
+                                string filePath = parts[1];
+                        
+                                // ファイルが存在するか確認
+                                if (File.Exists(filePath))
+                                {
+                                    // JSONファイルから生データを読み込む
+                                    string jsonData = File.ReadAllText(filePath);
+                                    return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonData, 
+                                        new System.Text.Json.JsonSerializerOptions { 
+                                            PropertyNameCaseInsensitive = true 
+                                        });
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"JSONファイルが見つかりません: {filePath}");
+                                }
+                            }
                         }
                     }
                 }
@@ -841,24 +949,23 @@ namespace HOI4NavalModder
                 return null;
             }
         }
-
         /// <summary>
         /// 装備の基本情報のみ取得する
         /// </summary>
-       public List<NavalEquipment> GetBasicEquipmentInfo()
-{
-    var equipmentList = new List<NavalEquipment>();
-
-    try
-    {
-        using (var connection = new SQLiteConnection(_connectionString))
+        public List<NavalEquipment> GetBasicEquipmentInfo()
         {
-            connection.Open();
-            Console.WriteLine("データベース接続成功");
+            var equipmentList = new List<NavalEquipment>();
 
-            using (var command = new SQLiteCommand(connection))
+            try
             {
-                command.CommandText = @"
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+                    Console.WriteLine("データベース接続成功");
+
+                    using (var command = new SQLiteCommand(connection))
+                    {
+                        command.CommandText = @"
                     SELECT 
                         mi.ID, 
                         mi.name, 
@@ -870,44 +977,44 @@ namespace HOI4NavalModder
                     ORDER BY 
                         mi.name;";
 
-                using (var reader = command.ExecuteReader())
-                {
-                    int count = 0;
-                    while (reader.Read())
-                    {
-                        count++;
-                        string id = reader["ID"].ToString();
-                        string gfx = reader["gfx"]?.ToString() ?? "";
-                        
-                        Console.WriteLine($"装備データ取得: ID={id}, Name={reader["name"]}");
-
-                        var equipment = new NavalEquipment
+                        using (var reader = command.ExecuteReader())
                         {
-                            Id = id,
-                            Name = reader["name"].ToString(),
-                            Category = GetCategoryFromGfx(gfx),
-                            SubCategory = GetSubCategoryFromGfx(gfx),
-                            Year = Convert.ToInt32(reader["year"]),
-                            Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
-                            Country = reader["country"]?.ToString() ?? "",
-                            AdditionalProperties = new Dictionary<string, object>()
-                        };
+                            int count = 0;
+                            while (reader.Read())
+                            {
+                                count++;
+                                string id = reader["ID"].ToString();
+                                string gfx = reader["gfx"]?.ToString() ?? "";
+                        
+                                Console.WriteLine($"装備データ取得: ID={id}, Name={reader["name"]}");
 
-                        equipmentList.Add(equipment);
+                                var equipment = new NavalEquipment
+                                {
+                                    Id = id,
+                                    Name = reader["name"].ToString(),
+                                    Category = GetCategoryFromGfx(gfx),
+                                    SubCategory = GetSubCategoryFromGfx(gfx),
+                                    Year = Convert.ToInt32(reader["year"]),
+                                    Tier = GetTierFromYear(Convert.ToInt32(reader["year"])),
+                                    Country = reader["country"]?.ToString() ?? "",
+                                    AdditionalProperties = new Dictionary<string, object>()
+                                };
+
+                                equipmentList.Add(equipment);
+                            }
+                            Console.WriteLine($"取得したデータ数: {count}件");
+                        }
                     }
-                    Console.WriteLine($"取得したデータ数: {count}件");
                 }
             }
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"基本装備情報の取得中にエラーが発生しました: {ex.Message}");
-        Console.WriteLine($"スタックトレース: {ex.StackTrace}");
-    }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"基本装備情報の取得中にエラーが発生しました: {ex.Message}");
+                Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+            }
 
-    return equipmentList;
-}
+            return equipmentList;
+        }
 
 // Helper methods needed by GetBasicEquipmentInfo
 // These would typically be in your EquipmentDesignView but are needed here for the query

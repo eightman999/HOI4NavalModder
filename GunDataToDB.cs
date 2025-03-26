@@ -22,18 +22,18 @@ namespace HOI4NavalModder
             {
                 // データベースマネージャーのインスタンスを作成
                 var dbManager = new DatabaseManager();
-                
-                // 生データをデータベースに保存
+        
+                // 生データをデータベースに保存（この中でJSONファイルも保存される）
                 bool rawDataSaved = dbManager.SaveRawGunData(equipment.Id, rawGunData);
                 if (!rawDataSaved)
                 {
                     Console.WriteLine($"砲の生データの保存に失敗しました: {equipment.Id}");
                     return false;
                 }
-                
+        
                 // NavalEquipmentをModuleDataに変換
                 ModuleData moduleData = ConvertToModuleData(equipment);
-                
+        
                 // ModuleDataをデータベースに保存
                 dbManager.SaveModuleData(
                     moduleData.Info,
@@ -43,7 +43,7 @@ namespace HOI4NavalModder
                     moduleData.Resources,
                     moduleData.ConvertModules
                 );
-                
+        
                 Console.WriteLine($"砲データ {equipment.Id} をデータベースに保存しました");
                 return true;
             }
