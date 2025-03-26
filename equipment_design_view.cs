@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Avalonia.Media;
 using System.Linq;
 using System.IO;
+using System.Windows.Input;
 using Avalonia.VisualTree;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
@@ -20,15 +21,25 @@ namespace HOI4NavalModder
         private ObservableCollection<NavalEquipment> _equipmentList = new ObservableCollection<NavalEquipment>();
         private Dictionary<string, NavalCategory> _categories = new Dictionary<string, NavalCategory>();
         private Dictionary<int, string> _tierYears = new Dictionary<int, string>();
-
         private DatabaseManager _dbManager;
+    
+        // 編集コマンドの追加
+        public ICommand EditCommand { get; }
 
         public EquipmentDesignView()
         {
+            // EditCommandの初期化
+            EditCommand = new RelayCommand<NavalEquipment>(equipment => OpenCategorySpecificEditor(equipment));
+        
             InitializeComponent();
 
             // コントロールの取得
             _equipmentListBox = this.FindControl<ListBox>("EquipmentListBox");
+        
+            // DataContextを自分自身に設定（コマンドバインディングのため）
+            DataContext = this;
+            // コントロールの取得
+          
 
             if (_equipmentListBox == null)
             {
@@ -93,15 +104,15 @@ namespace HOI4NavalModder
                     Margin = new Thickness(5)
                 };
 
-                // 装備情報パネル - 必要な情報のみ表示
+                // 装備情報パネル
                 var contentPanel = new StackPanel
                 {
                     Orientation = Orientation.Vertical,
                     Margin = new Thickness(0, 0, 10, 0)
                 };
 
-                // 装備名とID
-                var nameIdPanel = new StackPanel
+                // 装備名と開発年を1行目に表示
+                var nameYearPanel = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
                     Spacing = 5
@@ -115,44 +126,44 @@ namespace HOI4NavalModder
                     FontSize = 14
                 };
 
-                var idText = new TextBlock
+                var yearText = new TextBlock
                 {
-                    Text = $"[{item.Id}]",
+                    Text = $"：{item.Year}年",
                     Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
                     FontSize = 14,
                     VerticalAlignment = VerticalAlignment.Center
                 };
 
-                nameIdPanel.Children.Add(equipmentNameText);
-                nameIdPanel.Children.Add(idText);
+                nameYearPanel.Children.Add(equipmentNameText);
+                nameYearPanel.Children.Add(yearText);
 
-                // 開発年と開発国
-                var yearCountryPanel = new StackPanel
+                // IDと開発国を2行目に表示
+                var idCountryPanel = new StackPanel
                 {
                     Orientation = Orientation.Horizontal,
                     Spacing = 5,
                     Margin = new Thickness(0, 5, 0, 0)
                 };
 
-                var yearText = new TextBlock
+                var idText = new TextBlock
                 {
-                    Text = $"開発年：{item.Year}",
+                    Text = $"{item.Id}",
                     Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
                     FontSize = 12
                 };
 
                 var countryText = new TextBlock
                 {
-                    Text = $"　開発国：{item.Country}",
+                    Text = $"：{item.Country}",
                     Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
                     FontSize = 12
                 };
 
-                yearCountryPanel.Children.Add(yearText);
-                yearCountryPanel.Children.Add(countryText);
+                idCountryPanel.Children.Add(idText);
+                idCountryPanel.Children.Add(countryText);
 
-                contentPanel.Children.Add(nameIdPanel);
-                contentPanel.Children.Add(yearCountryPanel);
+                contentPanel.Children.Add(nameYearPanel);
+                contentPanel.Children.Add(idCountryPanel);
 
                 // 編集ボタン
                 var editButton = new Button
@@ -164,7 +175,6 @@ namespace HOI4NavalModder
                     BorderThickness = new Thickness(0),
                     VerticalAlignment = VerticalAlignment.Center
                 };
-                editButton.Click += (s, e) => OnEditButtonClick(item);
                 Grid.SetColumn(editButton, 1);
 
                 panel.Children.Add(contentPanel);
@@ -283,10 +293,19 @@ namespace HOI4NavalModder
             }
         }
 
-        private void OnEditButtonClick(NavalEquipment equipment)
+        public void OnEditButtonClick(object sender, RoutedEventArgs e)
         {
-            // 装備の編集
-            OpenCategorySpecificEditor(equipment);
+            // Button の DataContext から NavalEquipment を取得
+            var button = sender as Button;
+            if (button?.DataContext is NavalEquipment selectedEquipment)
+            {
+                OpenCategorySpecificEditor(selectedEquipment);
+            }
+            // DataContext が取得できない場合はリストボックスの選択アイテムを使用
+            else if (_equipmentListBox.SelectedItem is NavalEquipment equipment)
+            {
+                OpenCategorySpecificEditor(equipment);
+            }
         }
         
         // データベースに装備データを保存するメソッド

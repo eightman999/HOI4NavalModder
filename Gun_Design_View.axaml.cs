@@ -783,79 +783,114 @@ namespace HOI4NavalModder
         }
 
         // 保存ボタンのイベントハンドラを修正
-        public void On_Save_Click(object sender, RoutedEventArgs e)
+        // Gun_Design_View.cs の On_Save_Click メソッドを修正
+public async void On_Save_Click(object sender, RoutedEventArgs e)
+{
+    // 入力バリデーション
+    if (string.IsNullOrWhiteSpace(_idTextBox.Text))
+    {
+        ShowError("IDを入力してください");
+        return;
+    }
+
+    if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
+    {
+        ShowError("名前を入力してください");
+        return;
+    }
+
+    if (_categoryComboBox.SelectedItem == null)
+    {
+        ShowError("カテゴリを選択してください");
+        return;
+    }
+
+    if (_subCategoryComboBox.SelectedItem == null)
+    {
+        ShowError("サブカテゴリを選択してください");
+        return;
+    }
+
+    if (_yearComboBox.SelectedItem == null)
+    {
+        ShowError("開発年を選択してください");
+        return;
+    }
+
+    if (_countryComboBox.SelectedItem == null)
+    {
+        ShowError("開発国を選択してください");
+        return;
+    }
+
+    string equipmentId = _idTextBox.Text;
+    
+    // IDが既存のものと衝突するかチェック
+    var dbManager = new DatabaseManager();
+    bool idExists = dbManager.IdExists(equipmentId);
+    
+    // オリジナルの装備を編集している場合は衝突としない
+    bool isEditingOriginal = _originalEquipment != null && 
+                            _originalEquipment.Id == equipmentId;
+    
+    if (idExists && !isEditingOriginal)
+    {
+        // ID衝突ダイアログを表示
+        var conflictDialog = new IdConflictWindow(equipmentId);
+        var result = await conflictDialog.ShowDialog<IdConflictWindow.ConflictResolution>(this);
+        
+        switch (result)
         {
-            // 入力バリデーション
-            if (string.IsNullOrWhiteSpace(_idTextBox.Text))
-            {
-                ShowError("IDを入力してください");
+            case IdConflictWindow.ConflictResolution.Cancel:
+                // キャンセル - 何もせずに戻る
                 return;
-            }
-
-            if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
-            {
-                ShowError("名前を入力してください");
-                return;
-            }
-
-            if (_categoryComboBox.SelectedItem == null)
-            {
-                ShowError("カテゴリを選択してください");
-                return;
-            }
-
-            if (_subCategoryComboBox.SelectedItem == null)
-            {
-                ShowError("サブカテゴリを選択してください");
-                return;
-            }
-
-            if (_yearComboBox.SelectedItem == null)
-            {
-                ShowError("開発年を選択してください");
-                return;
-            }
-
-            if (_countryComboBox.SelectedItem == null)
-            {
-                ShowError("開発国を選択してください");
-                return;
-            }
-
-            // 全てのパラメータをGun_Processing()に渡すためにデータを収集
-            var gunData = new Dictionary<string, object>
-            {
-                { "Id", _idTextBox.Text },
-                { "Name", _nameTextBox.Text },
-                { "Category", ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id },
-                { "SubCategory", _subCategoryComboBox.SelectedItem.ToString() },
-                { "Year", int.Parse(((NavalYearItem)_yearComboBox.SelectedItem).Year.Replace("以前", "")) },
-                { "Tier", ((NavalYearItem)_yearComboBox.SelectedItem).Tier },
-                { "Country", _countryComboBox.SelectedItem.ToString() },
-                { "ShellWeight", (double)_shellWeightNumeric.Value },
-                { "MuzzleVelocity", (double)_muzzleVelocityNumeric.Value },
-                { "RPM", (double)_rpmNumeric.Value },
-                { "Calibre", (double)_calibreNumeric.Value },
-                { "CalibreType", _calibreTypeComboBox.SelectedItem.ToString() },
-                { "BarrelCount", int.Parse(_barrelCountComboBox.SelectedItem.ToString()) },
-                { "BarrelLength", (double)_barrelLengthNumeric.Value }, // 砲身長を追加
-                { "ElevationAngle", (double)_elevationAngleNumeric.Value },
-                { "TurretWeight", (double)_turretWeightNumeric.Value },
-                { "Manpower", (int)_manpowerNumeric.Value },
-                { "Steel", (int)_steelNumeric.Value },
-                { "Chromium", (int)_chromiumNumeric.Value },
-                { "Description", _descriptionTextBox.Text ?? "" }
-            };
-
-            // Gun_Processingクラスに全てのデータを渡して処理を行う
-            NavalEquipment processedEquipment = GunCalculator.Gun_Processing(gunData);
-
-            // 砲の生データも保存
-            GunDataToDB.SaveGunData(processedEquipment, gunData);
-
-            // 処理結果を返して画面を閉じる
-            Close(processedEquipment);
+                
+            case IdConflictWindow.ConflictResolution.Overwrite:
+                // 上書き保存 - そのまま続行
+                break;
+                
+            case IdConflictWindow.ConflictResolution.SaveAsNew:
+                // 別物として保存 - 一意のIDを生成
+                var allIds = dbManager.GetAllEquipmentIds();
+                equipmentId = UniqueIdGenerator.GenerateUniqueId(equipmentId, allIds);
+                break;
         }
+    }
+
+    // 全てのパラメータをGun_Processing()に渡すためにデータを収集
+    var gunData = new Dictionary<string, object>
+    {
+        { "Id", equipmentId }, // 更新されたIDを使用
+        { "Name", _nameTextBox.Text },
+        { "Category", ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id },
+        { "SubCategory", _subCategoryComboBox.SelectedItem.ToString() },
+        { "Year", int.Parse(((NavalYearItem)_yearComboBox.SelectedItem).Year.Replace("以前", "")) },
+        { "Tier", ((NavalYearItem)_yearComboBox.SelectedItem).Tier },
+        { "Country", _countryComboBox.SelectedItem.ToString() },
+        { "ShellWeight", (double)_shellWeightNumeric.Value },
+        { "MuzzleVelocity", (double)_muzzleVelocityNumeric.Value },
+        { "RPM", (double)_rpmNumeric.Value },
+        { "Calibre", (double)_calibreNumeric.Value },
+        { "CalibreType", _calibreTypeComboBox.SelectedItem.ToString() },
+        { "BarrelCount", int.Parse(_barrelCountComboBox.SelectedItem.ToString()) },
+        { "BarrelLength", (double)_barrelLengthNumeric.Value }, // 砲身長を追加
+        { "ElevationAngle", (double)_elevationAngleNumeric.Value },
+        { "TurretWeight", (double)_turretWeightNumeric.Value },
+        { "Manpower", (int)_manpowerNumeric.Value },
+        { "Steel", (int)_steelNumeric.Value },
+        { "Chromium", (int)_chromiumNumeric.Value },
+        { "Description", _descriptionTextBox.Text ?? "" }
+    };
+
+    // Gun_Processingクラスに全てのデータを渡して処理を行う
+    NavalEquipment processedEquipment = GunCalculator.Gun_Processing(gunData);
+
+    // 砲の生データも保存
+    GunDataToDB.SaveGunData(processedEquipment, gunData);
+
+    // 処理結果を返して画面を閉じる
+    Close(processedEquipment);
+}
 
         // キャンセルボタンのイベントハンドラ
         public void On_Cancel_Click(object sender, RoutedEventArgs e)

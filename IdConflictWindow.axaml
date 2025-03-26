@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="200"
+        x:Class="HOI4NavalModder.IdConflictWindow"
+        Title="ID衝突の警告"
+        Width="400" Height="200"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,5,0,5" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="Background" Value="#3E3E42" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#555555" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Margin" Value="5,0,5,0" />
+            <Setter Property="MinWidth" Value="100" />
+        </Style>
+    </Window.Styles>
+
+    <Border Background="#2D2D30" Padding="20">
+        <Grid RowDefinitions="Auto,*,Auto">
+            <!-- ヘッダー -->
+            <TextBlock Grid.Row="0" Text="ID衝突の警告" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" />
+            
+            <!-- メッセージ -->
+            <StackPanel Grid.Row="1">
+                <TextBlock x:Name="ConflictMessageText" 
+                           Text="指定したIDは既に存在します。どのように処理しますか？"
+                           Margin="0,0,0,10" />
+                
+                <TextBlock Text="・キャンセル：保存を中止します。"
+                           Margin="10,2,0,2"
+                           FontSize="12" />
+                <TextBlock Text="・上書き保存：既存のデータを上書きします。"
+                           Margin="10,2,0,2"
+                           FontSize="12" />
+                <TextBlock Text="・別物として保存：IDに連番を付けて別の装備として保存します。"
+                           Margin="10,2,0,2"
+                           FontSize="12" />
+            </StackPanel>
+            
+            <!-- ボタン -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button x:Name="CancelButton" Content="キャンセル" />
+                <Button x:Name="OverwriteButton" Content="上書き保存" Background="#FF5050" />
+                <Button x:Name="SaveAsNewButton" Content="別物として保存" Background="#0078D7" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

@@ -3,6 +3,7 @@ using System.IO;
 using System.Data.SQLite;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Avalonia.Controls;
 
 namespace HOI4NavalModder
@@ -1265,6 +1266,183 @@ namespace HOI4NavalModder
             }
             return string.Empty; // デフォルト値
         }
+        // DatabaseManager.cs に以下のメソッドを追加
+
+/// <summary>
+/// 指定したIDが既に存在するかどうか確認する
+/// </summary>
+/// <param name="id">確認するID</param>
+/// <returns>存在する場合はtrue</returns>
+public bool IdExists(string id)
+{
+    try
+    {
+        using (var connection = new SQLiteConnection(_connectionString))
+        {
+            connection.Open();
+
+            // module_info テーブルでの確認
+            using (var command = new SQLiteCommand(connection))
+            {
+                command.CommandText = "SELECT COUNT(*) FROM module_info WHERE ID = @ID;";
+                command.Parameters.AddWithValue("@ID", id);
+                
+                var count = Convert.ToInt32(command.ExecuteScalar());
+                if (count > 0)
+                {
+                    return true;
+                }
+            }
+
+            // guns_raw_datas テーブルでの確認
+            using (var command = new SQLiteCommand(connection))
+            {
+                command.CommandText = "SELECT COUNT(*) FROM guns_raw_datas WHERE ID = @ID;";
+                command.Parameters.AddWithValue("@ID", id);
+                
+                var count = Convert.ToInt32(command.ExecuteScalar());
+                if (count > 0)
+                {
+                    return true;
+                }
+            }
+
+            // ローカルファイルシステムでの確認
+            // ApplicationDataディレクトリのパスを取得
+            string appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "HOI4NavalModder");
+
+            // equipmentsディレクトリのパス
+            string equipmentsPath = Path.Combine(appDataPath, "equipments");
+
+            if (Directory.Exists(equipmentsPath))
+            {
+                // ID名.jsonという形式のファイルを探す
+                var jsonFiles = Directory.GetFiles(equipmentsPath, $"{id}.json", SearchOption.AllDirectories);
+                if (jsonFiles.Length > 0)
+                {
+                    return true;
+                }
+                
+                // サブディレクトリを再帰的に検索
+                var allJsonFiles = Directory.GetFiles(equipmentsPath, "*.json", SearchOption.AllDirectories);
+                foreach (var jsonFile in allJsonFiles)
+                {
+                    try
+                    {
+                        string jsonContent = File.ReadAllText(jsonFile);
+                        if (jsonContent.Contains($"\"Id\":\"{id}\"") || jsonContent.Contains($"\"id\":\"{id}\""))
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        // ファイル読み込みエラーは無視
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"ID確認中にエラーが発生しました: {ex.Message}");
+        return false; // エラー時は存在しないと見なす
+    }
+}
+
+/// <summary>
+/// すべての装備IDのリストを取得する
+/// </summary>
+/// <returns>IDのリスト</returns>
+public List<string> GetAllEquipmentIds()
+{
+    var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // 大文字小文字を区別しない一意のリスト
+    
+    try
+    {
+        // データベースからIDを取得
+        using (var connection = new SQLiteConnection(_connectionString))
+        {
+            connection.Open();
+
+            // module_info テーブルからIDを取得
+            using (var command = new SQLiteCommand(connection))
+            {
+                command.CommandText = "SELECT ID FROM module_info;";
+                
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ids.Add(reader["ID"].ToString());
+                    }
+                }
+            }
+
+            // guns_raw_datas テーブルからIDを取得
+            using (var command = new SQLiteCommand(connection))
+            {
+                command.CommandText = "SELECT ID FROM guns_raw_datas;";
+                
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        ids.Add(reader["ID"].ToString());
+                    }
+                }
+            }
+        }
+
+        // ファイルシステムからもIDを取得
+        string appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HOI4NavalModder");
+
+        string equipmentsPath = Path.Combine(appDataPath, "equipments");
+
+        if (Directory.Exists(equipmentsPath))
+        {
+            // JSONファイルからIDを抽出
+            var jsonFiles = Directory.GetFiles(equipmentsPath, "*.json", SearchOption.AllDirectories);
+            foreach (var jsonFile in jsonFiles)
+            {
+                try
+                {
+                    // ファイル名がIDの場合
+                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(jsonFile);
+                    ids.Add(fileNameWithoutExt);
+                    
+                    // ファイル内容も確認
+                    string jsonContent = File.ReadAllText(jsonFile);
+                    var matches = Regex.Matches(jsonContent, @"""[Ii]d""\s*:\s*""([^""]+)""");
+                    foreach (Match match in matches)
+                    {
+                        if (match.Groups.Count > 1)
+                        {
+                            ids.Add(match.Groups[1].Value);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 読み込みエラーは無視
+                }
+            }
+        }
+
+        return ids.ToList();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"ID一覧取得中にエラーが発生しました: {ex.Message}");
+        return new List<string>(); // エラー時は空のリストを返す
+    }
+}
     }
 
     // モジュール基本情報クラス
@@ -1341,6 +1519,7 @@ namespace HOI4NavalModder
         public ModuleResources Resources { get; set; }
         public List<ModuleConvert> ConvertModules { get; set; }
     }
+    
     
     
 }

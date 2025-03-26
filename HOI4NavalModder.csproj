@@ -38,6 +38,9 @@
       <Compile Update="equipment_design_view.cs">
         <DependentUpon>equipment_design_view.axaml</DependentUpon>
       </Compile>
+      <Compile Update="IdConflictWindow.cs">
+        <DependentUpon>IdConflictWindow.axaml</DependentUpon>
+      </Compile>
     </ItemGroup>
 
     <ItemGroup>
