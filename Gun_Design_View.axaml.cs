@@ -327,7 +327,8 @@ namespace HOI4NavalModder
 
             // UI項目の選択肢を初期化
             InitializeUIOptions();
-
+            // 2番目のコンストラクタの InitializeUIOptions() の後に以下を追加
+            _descriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
             // 生データから値を設定
             if (rawGunData != null)
             {
@@ -858,6 +859,21 @@ public async void On_Save_Click(object sender, RoutedEventArgs e)
     }
 
     // 全てのパラメータをGun_Processing()に渡すためにデータを収集
+    Console.WriteLine("ID: " + equipmentId +
+                      "\nName: " + _nameTextBox.Text +
+                      "\nCategory: " + ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id +
+                      "\nSubCategory: " + _subCategoryComboBox.SelectedItem +
+                      "\nYear: " + ((NavalYearItem)_yearComboBox.SelectedItem).Year +
+                      "\nTier: " + ((NavalYearItem)_yearComboBox.SelectedItem).Tier +
+                      "\nCountry: " + _countryComboBox.SelectedItem +
+                      "\nShellWeight: " + _shellWeightNumeric.Value +
+                      "\nMuzzleVelocity: " + _muzzleVelocityNumeric.Value +
+                      "\nRPM: " + _rpmNumeric.Value +
+                      "\nCalibre: " + _calibreNumeric.Value +
+                      "\nCalibreType: " + _calibreTypeComboBox.SelectedItem +
+                      "\nBarrelCount: " + _barrelCountComboBox.SelectedItem +
+                      "\nBarrelLength: " + _barrelLengthNumeric.Value +
+                      "\nElevationAngle: " + _elevationAngleNumeric.Value);
     var gunData = new Dictionary<string, object>
     {
         { "Id", equipmentId }, // 更新されたIDを使用
