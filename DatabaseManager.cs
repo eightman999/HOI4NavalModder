@@ -3,6 +3,7 @@ using System.IO;
 using System.Data.SQLite;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Controls;
 
 namespace HOI4NavalModder
 {
@@ -1247,16 +1248,16 @@ namespace HOI4NavalModder
     
             return 23; // 2000年以降
         }
-        private int GetIntFromJsonElement(System.Text.Json.JsonElement element)
+        private static int GetIntFromJsonElement(System.Text.Json.JsonElement element)
         {
             if (element.ValueKind == System.Text.Json.JsonValueKind.Number && element.TryGetInt32(out int value))
             {
                 return value;
             }
-            return 0; // Default value
+            return 0; // デフォルト値
         }
 
-        public string GetStringFromJsonElement(System.Text.Json.JsonElement element)
+        private static string GetStringFromJsonElement(System.Text.Json.JsonElement element)
         {
             if (element.ValueKind == System.Text.Json.JsonValueKind.String)
             {
