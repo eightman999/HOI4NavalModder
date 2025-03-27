@@ -12,149 +12,142 @@
                        Foreground="White"
                        VerticalAlignment="Center"
                        Margin="20,0,0,0"
-                       FontSize="16"
-                       />
+                       FontSize="16" />
         </Panel>
-        
+
         <!-- コンテンツエリア -->
         <Grid Grid.Row="1" ColumnDefinitions="250,*">
             <!-- 左側：フィルタパネル -->
             <Border Grid.Column="0" Background="#252526" BorderThickness="0,0,1,0" BorderBrush="#3F3F46">
                 <StackPanel Margin="10">
                     <TextBlock Text="フィルタ" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" />
-                    
+
                     <!-- フィルタ内容は省略 -->
                 </StackPanel>
             </Border>
-            
+
             <!-- 右側：メインコンテンツエリア -->
             <Grid Grid.Column="1" RowDefinitions="Auto,*">
                 <!-- ツールバー -->
                 <Panel Grid.Row="0" Background="#333337" Height="40">
                     <StackPanel Orientation="Horizontal" Margin="10,5,0,0">
-                        <Button x:Name="NewEquipmentButton" 
+                        <Button x:Name="NewEquipmentButton"
                                 Content="新規"
                                 Padding="10,5,10,5"
                                 Margin="0,0,5,0"
                                 Background="#3E3E42"
                                 Foreground="White"
                                 BorderThickness="0"
-                                Click="OnNewEquipmentClick"
-                                />
-                                
-                        <Button x:Name="EditEquipmentButton" 
+                                Click="OnNewEquipmentClick" />
+
+                        <Button x:Name="EditEquipmentButton"
                                 Content="編集"
                                 Padding="10,5,10,5"
                                 Margin="0,0,5,0"
                                 Background="#3E3E42"
                                 Foreground="White"
                                 BorderThickness="0"
-                                Click="OnEditEquipmentClick"
-                                />                              
-                        <Button x:Name="DeleteEquipmentButton" 
+                                Click="OnEditEquipmentClick" />
+                        <Button x:Name="DeleteEquipmentButton"
                                 Content="削除"
                                 Padding="10,5,10,5"
                                 Margin="0,0,5,0"
                                 Background="#3E3E42"
                                 Foreground="White"
                                 BorderThickness="0"
-                                Click="OnDeleteEquipmentClick"
-                                />
-                                
-                        <Button x:Name="DuplicateEquipmentButton" 
+                                Click="OnDeleteEquipmentClick" />
+
+                        <Button x:Name="DuplicateEquipmentButton"
                                 Content="複製"
                                 Padding="10,5,10,5"
                                 Margin="0,0,5,0"
                                 Background="#3E3E42"
                                 Foreground="White"
                                 BorderThickness="0"
-                                Click="OnDuplicateEquipmentClick"
-                                />
-                                
-                        <Button x:Name="ExportButton" 
+                                Click="OnDuplicateEquipmentClick" />
+
+                        <Button x:Name="ExportButton"
                                 Content="エクスポート"
                                 Padding="10,5,10,5"
                                 Margin="0,0,5,0"
                                 Background="#3E3E42"
                                 Foreground="White"
                                 BorderThickness="0"
-                                Click="OnExportClick"
-                                />
-                                
-                        <Button x:Name="ImportButton" 
+                                Click="OnExportClick" />
+
+                        <Button x:Name="ImportButton"
                                 Content="インポート"
                                 Padding="10,5,10,5"
                                 Margin="0,0,5,0"
                                 Background="#3E3E42"
                                 Foreground="White"
                                 BorderThickness="0"
-                                Click="OnImportClick"
-                                />
+                                Click="OnImportClick" />
                     </StackPanel>
                 </Panel>
-                
+
                 <!-- 装備リスト (ListBoxをXAMLで定義) -->
                 <!-- equipment_design_view.axaml ファイル内のListBox定義を修正（Avalonia構文） -->
-<!-- equipment_design_view.axaml ファイル内のListBox定義を修正 -->
-<Grid Grid.Row="1">
-    <ListBox x:Name="EquipmentListBox"
-             Background="#1E1E1E"
-             BorderThickness="0"
-             Foreground="White"
-             Margin="5">
-        <!-- ItemsSource はコードビハインドで設定されます (_equipmentListBox.ItemsSource = _equipmentList;) -->
-        <ListBox.ItemTemplate>
-            <DataTemplate DataType="{x:Type local:NavalEquipment}">
-                <Grid ColumnDefinitions="*,Auto" Margin="5">
-                    <!-- 装備情報パネル -->
-                    <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,10,0">
-                        <!-- 装備名と開発年を1行目に表示 -->
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <TextBlock Text="{Binding Name, Mode=OneWay}" 
-                                       Foreground="White" 
-                                       FontWeight="Bold" 
-                                       FontSize="14"/>
-                            <TextBlock Foreground="#CCCCCC" 
-                                       FontSize="14" 
-                                       VerticalAlignment="Center">
-                                <TextBlock.Text>
-                                    <MultiBinding StringFormat="：{0}年">
-                                        <Binding Path="Year" Mode="OneWay"/>
-                                    </MultiBinding>
-                                </TextBlock.Text>
-                            </TextBlock>
-                        </StackPanel>
-                        
-                        <!-- IDと開発国を2行目に表示 -->
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,5,0,0">
-                            <TextBlock Text="{Binding Id, Mode=OneWay}" 
-                                       Foreground="#CCCCCC" 
-                                       FontSize="12"/>
-                            <TextBlock Foreground="#CCCCCC" 
-                                       FontSize="12">
-                                <TextBlock.Text>
-                                    <MultiBinding StringFormat="：{0}">
-                                        <Binding Path="Country" Mode="OneWay"/>
-                                    </MultiBinding>
-                                </TextBlock.Text>
-                            </TextBlock>
-                        </StackPanel>
-                    </StackPanel>
-                    
-                    <!-- 編集ボタン -->
-                    <Button Grid.Column="1" 
-                            Content="編集" 
-                            Padding="8,4" 
-                            Background="#1E90FF" 
-                            Foreground="White" 
-                            BorderThickness="0" 
-                            VerticalAlignment="Center"
-                            Click="OnEditButtonClick"/>
+                <!-- equipment_design_view.axaml ファイル内のListBox定義を修正 -->
+                <Grid Grid.Row="1">
+                    <ListBox x:Name="EquipmentListBox"
+                             Background="#1E1E1E"
+                             BorderThickness="0"
+                             Foreground="White"
+                             Margin="5">
+                        <!-- ItemsSource はコードビハインドで設定されます (_equipmentListBox.ItemsSource = _equipmentList;) -->
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type local:NavalEquipment}">
+                                <Grid ColumnDefinitions="*,Auto" Margin="5">
+                                    <!-- 装備情報パネル -->
+                                    <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,10,0">
+                                        <!-- 装備名と開発年を1行目に表示 -->
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="{Binding Name, Mode=OneWay}"
+                                                       Foreground="White"
+                                                       FontWeight="Bold"
+                                                       FontSize="14" />
+                                            <TextBlock Foreground="#CCCCCC"
+                                                       FontSize="14"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="：{0}年">
+                                                        <Binding Path="Year" Mode="OneWay" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- IDと開発国を2行目に表示 -->
+                                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding Id, Mode=OneWay}"
+                                                       Foreground="#CCCCCC"
+                                                       FontSize="12" />
+                                            <TextBlock Foreground="#CCCCCC"
+                                                       FontSize="12">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="：{0}">
+                                                        <Binding Path="Country" Mode="OneWay" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- 編集ボタン -->
+                                    <Button Grid.Column="1"
+                                            Content="編集"
+                                            Padding="8,4"
+                                            Background="#1E90FF"
+                                            Foreground="White"
+                                            BorderThickness="0"
+                                            VerticalAlignment="Center"
+                                            Click="OnEditButtonClick" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </Grid>
-            </DataTemplate>
-        </ListBox.ItemTemplate>
-    </ListBox>
-</Grid>
             </Grid>
         </Grid>
     </Grid>

@@ -123,7 +123,7 @@
                                 <!-- 砲身長（口径倍数）フィールドを追加 -->
                                 <TextBlock Text="砲身長 (L/口径):" />
                                 <NumericUpDown x:Name="BarrelLengthNumeric" Minimum="20" Maximum="100" Increment="1"
-                                              FormatString="F0" Value="45" />
+                                               FormatString="F0" Value="45" />
 
                                 <TextBlock Text="最大仰俯角 (度):" />
                                 <NumericUpDown x:Name="ElevationAngleNumeric" Minimum="0" Maximum="90" Increment="1"
@@ -188,7 +188,8 @@
                             <StackPanel>
                                 <TextBlock Text="備考" FontWeight="Bold" Margin="0,0,0,10" />
                                 <!-- 備考欄 -->
-                                <TextBox x:Name="DescriptionTextBox" AcceptsReturn="True" Height="150" Watermark="装備に関する追加情報や特記事項を入力してください" />
+                                <TextBox x:Name="DescriptionTextBox" AcceptsReturn="True" Height="150"
+                                         Watermark="装備に関する追加情報や特記事項を入力してください" />
                             </StackPanel>
                         </Border>
                     </StackPanel>

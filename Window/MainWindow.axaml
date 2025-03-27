@@ -18,179 +18,179 @@
     <Grid RowDefinitions="Auto,*" ColumnDefinitions="250,*">
         <!-- トップバー -->
         <Panel Grid.Row="0" Grid.ColumnSpan="2" Background="#2D2D30" Height="50">
-            <TextBlock Text="Naval Design Studio" 
-                       Foreground="White" 
-                       VerticalAlignment="Center" 
-                       Margin="20,0,0,0" 
-                       FontSize="18" 
-                       FontWeight="Bold"/>
+            <TextBlock Text="Naval Design Studio"
+                       Foreground="White"
+                       VerticalAlignment="Center"
+                       Margin="20,0,0,0"
+                       FontSize="18"
+                       FontWeight="Bold" />
         </Panel>
-        
+
         <!-- サイドバー -->
         <ScrollViewer Grid.Row="1" Grid.Column="0" Background="#252526">
             <StackPanel>
                 <!-- モジュールセクション -->
                 <Expander Header="モジュール" IsExpanded="True"
-                          Foreground="White" 
+                          Foreground="White"
                           Background="#252526"
                           BorderThickness="0">
                     <StackPanel>
-                        <Button x:Name="EquipmentDesignButton" 
-                                Content="装備設計" 
-                                HorizontalAlignment="Stretch" 
+                        <Button x:Name="EquipmentDesignButton"
+                                Content="装備設計"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnEquipmentDesignButtonClick"/>
-                                
-                        <Button x:Name="EquipmentIconButton" 
-                                Content="装備アイコン" 
-                                HorizontalAlignment="Stretch" 
+                                Click="OnEquipmentDesignButtonClick" />
+
+                        <Button x:Name="EquipmentIconButton"
+                                Content="装備アイコン"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnEquipmentIconButtonClick"/>
+                                Click="OnEquipmentIconButtonClick" />
                     </StackPanel>
                 </Expander>
-                
+
                 <!-- 艦船セクション -->
                 <Expander Header="艦船" IsExpanded="False"
-                          Foreground="White" 
+                          Foreground="White"
                           Background="#252526"
                           BorderThickness="0">
                     <StackPanel>
-                        <Button x:Name="ShipTypeButton" 
-                                Content="艦種" 
-                                HorizontalAlignment="Stretch" 
+                        <Button x:Name="ShipTypeButton"
+                                Content="艦種"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnShipTypeButtonClick"/>
-                                
-                        <Button x:Name="ShipDesignButton" 
-                                Content="艦船設計" 
-                                HorizontalAlignment="Stretch" 
+                                Click="OnShipTypeButtonClick" />
+
+                        <Button x:Name="ShipDesignButton"
+                                Content="艦船設計"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnShipDesignButtonClick"/>
-                                
-                        <Button x:Name="ShipIconButton" 
-                                Content="艦船アイコン" 
-                                HorizontalAlignment="Stretch" 
+                                Click="OnShipDesignButtonClick" />
+
+                        <Button x:Name="ShipIconButton"
+                                Content="艦船アイコン"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnShipIconButtonClick"/>
+                                Click="OnShipIconButtonClick" />
                     </StackPanel>
                 </Expander>
-                
+
                 <!-- 配備セクション -->
                 <Expander Header="配備" IsExpanded="False"
-                          Foreground="White" 
+                          Foreground="White"
                           Background="#252526"
                           BorderThickness="0">
                     <StackPanel>
-                        <Button x:Name="FleetDeploymentButton" 
-                                Content="艦隊配備" 
-                                HorizontalAlignment="Stretch" 
+                        <Button x:Name="FleetDeploymentButton"
+                                Content="艦隊配備"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnFleetDeploymentButtonClick"/>
+                                Click="OnFleetDeploymentButtonClick" />
                     </StackPanel>
                 </Expander>
-                
+
                 <!-- 言語セクション -->
                 <Expander Header="言語" IsExpanded="False"
-                          Foreground="White" 
+                          Foreground="White"
                           Background="#252526"
                           BorderThickness="0">
                     <StackPanel>
-                        <Button x:Name="ShipNameButton" 
-                                Content="艦名" 
-                                HorizontalAlignment="Stretch" 
+                        <Button x:Name="ShipNameButton"
+                                Content="艦名"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnShipNameButtonClick"/>
-                                
-                        <Button x:Name="EquipmentNameButton" 
-                                Content="装備名" 
-                                HorizontalAlignment="Stretch" 
+                                Click="OnShipNameButtonClick" />
+
+                        <Button x:Name="EquipmentNameButton"
+                                Content="装備名"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnEquipmentNameButtonClick"/>
+                                Click="OnEquipmentNameButtonClick" />
                     </StackPanel>
                 </Expander>
-                
+
                 <!-- 設定セクション -->
                 <Expander Header="設定" IsExpanded="False"
-                          Foreground="White" 
+                          Foreground="White"
                           Background="#252526"
                           BorderThickness="0">
                     <StackPanel>
-                        <Button x:Name="IDESettingsButton" 
-                                Content="IDE" 
-                                HorizontalAlignment="Stretch" 
+                        <Button x:Name="IDESettingsButton"
+                                Content="IDE"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnIDESettingsButtonClick"/>
-                                
-                        <Button x:Name="ModSettingsButton" 
-                                Content="MOD" 
-                                HorizontalAlignment="Stretch" 
+                                Click="OnIDESettingsButtonClick" />
+
+                        <Button x:Name="ModSettingsButton"
+                                Content="MOD"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"
-                                Background="#252526" 
-                                Foreground="White" 
+                                Background="#252526"
+                                Foreground="White"
                                 BorderThickness="0"
-                                Padding="25,10,0,10" 
-                                Margin="0,2,0,2" 
+                                Padding="25,10,0,10"
+                                Margin="0,2,0,2"
                                 CornerRadius="0"
-                                Click="OnModSettingsButtonClick"/>
+                                Click="OnModSettingsButtonClick" />
                     </StackPanel>
                 </Expander>
             </StackPanel>
         </ScrollViewer>
-        
+
         <!-- コンテンツエリア -->
         <Panel x:Name="ContentPanel" Grid.Row="1" Grid.Column="1" Background="#1E1E1E">
             <!-- コンテンツは動的に入れ替わります -->

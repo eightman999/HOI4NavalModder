@@ -31,13 +31,13 @@
         <Grid RowDefinitions="Auto,*,Auto">
             <!-- ヘッダー -->
             <TextBlock Grid.Row="0" Text="ID衝突の警告" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" />
-            
+
             <!-- メッセージ -->
             <StackPanel Grid.Row="1">
-                <TextBlock x:Name="ConflictMessageText" 
+                <TextBlock x:Name="ConflictMessageText"
                            Text="指定したIDは既に存在します。どのように処理しますか？"
                            Margin="0,0,0,10" />
-                
+
                 <TextBlock Text="・キャンセル：保存を中止します。"
                            Margin="10,2,0,2"
                            FontSize="12" />
@@ -48,7 +48,7 @@
                            Margin="10,2,0,2"
                            FontSize="12" />
             </StackPanel>
-            
+
             <!-- ボタン -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                 <Button x:Name="CancelButton" Content="キャンセル" />

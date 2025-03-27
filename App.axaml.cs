@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -14,20 +13,15 @@ public class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-        
+
         RegisterFonts();
-        foreach (var fontFamily in FontManager.Current.SystemFonts)
-        {
-            Console.WriteLine($"利用可能なフォント: {fontFamily.Name}");
-        }
+        foreach (var fontFamily in FontManager.Current.SystemFonts) Console.WriteLine($"利用可能なフォント: {fontFamily.Name}");
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
             desktop.MainWindow = new MainWindow();
-        }
 
         base.OnFrameworkInitializationCompleted();
     }
@@ -37,10 +31,10 @@ public class App : Application
         try
         {
             var assembly = Assembly.GetExecutingAssembly();
-        
+
             // 埋め込みリソースから NotoSansJP-Regular.otf を取得
             var fontStream = assembly.GetManifestResourceStream("HOI4NavalModder.Assets.Fonts.JF-Dot-jiskan24.ttf");
-        
+
             if (fontStream != null)
             {
                 // 一時ファイルに保存
@@ -49,11 +43,11 @@ public class App : Application
                 {
                     fontStream.CopyTo(fileStream);
                 }
-            
+
                 // フォントを登録
                 var fontUri = new Uri(tempFile);
                 var fontFamily = new FontFamily(fontUri.AbsolutePath);
-            
+
                 Console.WriteLine("フォントを正常に読み込みました");
             }
             else
@@ -66,5 +60,4 @@ public class App : Application
             Console.WriteLine($"フォント登録エラー: {ex.Message}");
         }
     }
-    
 }

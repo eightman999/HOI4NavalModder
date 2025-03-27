@@ -5,9 +5,13 @@
     <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
     <Application.Resources>
         <FontFamily
-            x:Key="03SmartFontUI">avares://HOI4NavalModder/Assets/Fonts/03SmartFontUI.ttf#03SmartFontUI</FontFamily>
+            x:Key="03SmartFontUI">
+            avares://HOI4NavalModder/Assets/Fonts/03SmartFontUI.ttf#03SmartFontUI
+        </FontFamily>
         <FontFamily
-            x:Key="Kai">avares://HOI4NavalModder/Assets/Fonts/Kai.ttf#Kai</FontFamily>
+            x:Key="Kai">
+            avares://HOI4NavalModder/Assets/Fonts/Kai.ttf#Kai
+        </FontFamily>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme />
@@ -15,13 +19,13 @@
             <Setter Property="FontFamily" Value="{StaticResource 03SmartFontUI}" />
         </Style>
         <Style Selector="TextBox">
-            <Setter Property="FontFamily"  Value="{StaticResource 03SmartFontUI}" />
+            <Setter Property="FontFamily" Value="{StaticResource 03SmartFontUI}" />
         </Style>
         <Style Selector="ComboBox">
-            <Setter Property="FontFamily"  Value="{StaticResource 03SmartFontUI}" />
+            <Setter Property="FontFamily" Value="{StaticResource 03SmartFontUI}" />
         </Style>
         <Style Selector="Button">
-            <Setter Property="FontFamily"  Value="{StaticResource 03SmartFontUI}" />
+            <Setter Property="FontFamily" Value="{StaticResource 03SmartFontUI}" />
         </Style>
     </Application.Styles>
 
