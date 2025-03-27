@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -224,7 +225,7 @@ namespace HOI4NavalModder
             }
 
             // 開発国の選択
-         if (!string.IsNullOrEmpty(_originalEquipment.Country))
+            if (!string.IsNullOrEmpty(_originalEquipment.Country))
             {
                 SetCountrySelection(_originalEquipment.Country);
             }
@@ -375,10 +376,39 @@ namespace HOI4NavalModder
         {
             try
             {
-                // CountryListManagerは内部でパスを自動的に探索するので
-                // 空文字列を渡しても問題ない
-                _countryListManager = new CountryListManager(string.Empty, string.Empty);
-                
+                // 設定からパスを取得（空文字を渡しても内部で自動的に探索する）
+                string appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HOI4NavalModder");
+            
+                string settingsPath = Path.Combine(appDataPath, "idesettings.json");
+        
+                // 設定ファイルからパスを直接読み込む（CountryListManagerでも行われるが明示的に行う）
+                string modPath = string.Empty;
+                string gamePath = string.Empty;
+        
+                if (File.Exists(settingsPath))
+                {
+                    try
+                    {
+                        string settingsJson = File.ReadAllText(settingsPath);
+                        var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(settingsJson);
+                        if (settings != null)
+                        {
+                            modPath = settings.ModPath ?? string.Empty;
+                            gamePath = settings.GamePath ?? string.Empty;
+                            Console.WriteLine($"設定から読み込んだパス - MOD: {modPath}, ゲーム: {gamePath}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"設定ファイル読み込みエラー: {ex.Message}");
+                    }
+                }
+        
+                // CountryListManagerは明示的にパスを指定
+                _countryListManager = new CountryListManager(modPath, gamePath);
+        
                 // 国家リストを非同期で取得（showAllCountries=trueは全国家表示）
                 _countryInfoList = await _countryListManager.GetCountriesAsync(true);
 
@@ -404,54 +434,77 @@ namespace HOI4NavalModder
                 {
                     SetCountrySelection(_originalEquipment.Country);
                 }
+        
+                Console.WriteLine($"国家リスト初期化完了: {_countryComboBox.Items.Count - 1}件");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"国家リスト初期化エラー: {ex.Message}");
-                
+                Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+        
                 // エラー時は既存の国家リストを使用
                 _countryComboBox.Items.Clear();
-                string[] defaultCountries = { "未設定", "日本", "アメリカ", "イギリス", "ドイツ", "ソ連", "イタリア", "フランス", "その他" };
+                string[] defaultCountries = { "未設定", "日本 (JAP)", "アメリカ (USA)", "イギリス (ENG)", 
+                    "ドイツ (GER)", "ソ連 (SOV)", "イタリア (ITA)", "フランス (FRA)", "その他 (OTH)" };
                 foreach (var country in defaultCountries)
                 {
                     _countryComboBox.Items.Add(country);
                 }
                 _countryComboBox.SelectedIndex = 0;
+        
+                // 空のリストを初期化しておく
+                _countryInfoList = new List<CountryListManager.CountryInfo>();
             }
         }
-        
+
 
         // 国家タグに基づいてコンボボックスの選択を設定
-        private void SetCountrySelection(string countryTag)
+        // 国家タグまたは国名に基づいてコンボボックスの選択を設定
+        private void SetCountrySelection(string countryValue)
         {
-            if (string.IsNullOrEmpty(countryTag)) return;
+            if (string.IsNullOrEmpty(countryValue))
+            {
+                // 値が空の場合は「未設定」を選択
+                _countryComboBox.SelectedIndex = 0;
+                return;
+            }
 
-            // まず国家タグの完全一致を検索
+            Console.WriteLine($"国家選択: {countryValue}");
+    
+            // 1. 完全一致（タグが括弧内にある場合）
             for (int i = 0; i < _countryComboBox.Items.Count; i++)
             {
                 string item = _countryComboBox.Items[i].ToString();
-                if (item.EndsWith($"({countryTag})"))
+                if (item.EndsWith($"({countryValue})"))
                 {
                     _countryComboBox.SelectedIndex = i;
+                    Console.WriteLine($"タグの完全一致で選択: {item}");
                     return;
                 }
             }
 
-            // 次に部分一致を検索
-            for (int i = 0; i < _countryComboBox.Items.Count; i++)
-            {
-                string item = _countryComboBox.Items[i].ToString();
-                if (item.Contains(countryTag) || (countryTag == item))
-                {
-                    _countryComboBox.SelectedIndex = i;
-                    return;
-                }
-            }
-
-            // 国名で検索（タグではなく国名が保存されている場合）
+            // 2. 国家タグが直接マッチする場合
             foreach (var country in _countryInfoList)
             {
-                if (country.Name == countryTag)
+                if (country.Tag.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    for (int i = 0; i < _countryComboBox.Items.Count; i++)
+                    {
+                        string item = _countryComboBox.Items[i].ToString();
+                        if (item.Contains($"({country.Tag})"))
+                        {
+                            _countryComboBox.SelectedIndex = i;
+                            Console.WriteLine($"タグの直接マッチで選択: {item}");
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 3. 国名が直接マッチする場合
+            foreach (var country in _countryInfoList)
+            {
+                if (country.Name.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
                 {
                     for (int i = 0; i < _countryComboBox.Items.Count; i++)
                     {
@@ -459,11 +512,50 @@ namespace HOI4NavalModder
                         if (item.StartsWith(country.Name))
                         {
                             _countryComboBox.SelectedIndex = i;
+                            Console.WriteLine($"国名の直接マッチで選択: {item}");
                             return;
                         }
                     }
                 }
             }
+
+            // 4. 部分一致を試みる
+            for (int i = 0; i < _countryComboBox.Items.Count; i++)
+            {
+                string item = _countryComboBox.Items[i].ToString();
+                if (item.Contains(countryValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    _countryComboBox.SelectedIndex = i;
+                    Console.WriteLine($"部分一致で選択: {item}");
+                    return;
+                }
+            }
+
+            // 5. 一致するものがなかった場合、mainとか一般的な接頭辞か判定
+            string lowerValue = countryValue.ToLower();
+            if (lowerValue == "main" || lowerValue == "generic" || lowerValue == "default")
+            {
+                // 未設定（デフォルト）を選択
+                _countryComboBox.SelectedIndex = 0;
+                Console.WriteLine("一般的な値のため「未設定」を選択");
+                return;
+            }
+
+            // それでも見つからない場合は「その他」を探す
+            for (int i = 0; i < _countryComboBox.Items.Count; i++)
+            {
+                string item = _countryComboBox.Items[i].ToString();
+                if (item.Contains("その他") || item.Contains("(OTH)"))
+                {
+                    _countryComboBox.SelectedIndex = i;
+                    Console.WriteLine("一致しないため「その他」を選択");
+                    return;
+                }
+            }
+    
+            // 最後の手段として最初の項目を選択
+            Console.WriteLine($"一致する国家が見つからないため「未設定」を選択: {countryValue}");
+            _countryComboBox.SelectedIndex = 0;
         }
 
         private void InitializeComponent()
@@ -711,6 +803,33 @@ namespace HOI4NavalModder
                 return string.Empty;
             }
         }
+        
+        private string GetSelectedCountryValue()
+        {
+            if (_countryComboBox.SelectedIndex <= 0 || _countryComboBox.SelectedItem == null)
+            {
+                // 未選択または「未設定」の場合
+                return "";
+            }
+
+            string selectedCountry = _countryComboBox.SelectedItem.ToString();
+    
+            // 表示名から国家タグを抽出（例: "日本 (JAP)" → "JAP"）
+            int startIndex = selectedCountry.LastIndexOf('(');
+            int endIndex = selectedCountry.LastIndexOf(')');
+    
+            if (startIndex > 0 && endIndex > startIndex)
+            {
+                string tag = selectedCountry.Substring(startIndex + 1, endIndex - startIndex - 1);
+                Console.WriteLine($"選択された国家タグ: {tag}");
+                return tag;
+            }
+    
+            // タグが見つからない場合は表示名をそのまま返す
+            Console.WriteLine($"選択された国家名: {selectedCountry}");
+            return selectedCountry;
+        }
+        
         private string GetCategoryDisplayName(string categoryId)
         {
             if (_categories.ContainsKey(categoryId)) return _categories[categoryId].Name;
@@ -886,145 +1005,145 @@ namespace HOI4NavalModder
 
         // 保存ボタンのイベントハンドラを修正
         // Gun_Design_View.cs の On_Save_Click メソッドを修正
-public async void On_Save_Click(object sender, RoutedEventArgs e)
-{
-    // 入力バリデーション
-    if (string.IsNullOrWhiteSpace(_idTextBox.Text))
-    {
-        ShowError("IDを入力してください");
-        return;
-    }
-
-    if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
-    {
-        ShowError("名前を入力してください");
-        return;
-    }
-
-    if (_categoryComboBox.SelectedItem == null)
-    {
-        ShowError("カテゴリを選択してください");
-        return;
-    }
-
-    if (_subCategoryComboBox.SelectedItem == null)
-    {
-        ShowError("サブカテゴリを選択してください");
-        return;
-    }
-
-    if (_yearComboBox.SelectedItem == null)
-    {
-        ShowError("開発年を選択してください");
-        return;
-    }
-
-    if (_countryComboBox.SelectedItem == null)
-    {
-        ShowError("開発国を選択してください");
-        return;
-    }
-
-    string equipmentId = _idTextBox.Text;
-    
-    // IDが既存のものと衝突するかチェック
-    var dbManager = new DatabaseManager();
-    bool idExists = dbManager.IdExists(equipmentId);
-    
-    // オリジナルの装備を編集している場合は衝突としない
-    bool isEditingOriginal = _originalEquipment != null && 
-                            _originalEquipment.Id == equipmentId;
-    string countryValue = "未設定";
-    if (_countryComboBox.SelectedItem != null && _countryComboBox.SelectedIndex > 0)
-    {
-        string selectedCountry = _countryComboBox.SelectedItem.ToString();
-                
-        // 表示名から国家タグを抽出（例: "日本 (JAP)" → "JAP"）
-        int startIndex = selectedCountry.LastIndexOf('(');
-        int endIndex = selectedCountry.LastIndexOf(')');
-                
-        if (startIndex > 0 && endIndex > startIndex)
+        public async void On_Save_Click(object sender, RoutedEventArgs e)
         {
-            countryValue = selectedCountry.Substring(startIndex + 1, endIndex - startIndex - 1);
-        }
-        else
-        {
-            countryValue = selectedCountry;
-        }
-    }
-    if (idExists && !isEditingOriginal)
-    {
-        // ID衝突ダイアログを表示
-        var conflictDialog = new IdConflictWindow(equipmentId);
-        var result = await conflictDialog.ShowDialog<IdConflictWindow.ConflictResolution>(this);
-        
-        switch (result)
-        {
-            case IdConflictWindow.ConflictResolution.Cancel:
-                // キャンセル - 何もせずに戻る
+            // 入力バリデーション
+            if (string.IsNullOrWhiteSpace(_idTextBox.Text))
+            {
+                ShowError("IDを入力してください");
                 return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
+            {
+                ShowError("名前を入力してください");
+                return;
+            }
+
+            if (_categoryComboBox.SelectedItem == null)
+            {
+                ShowError("カテゴリを選択してください");
+                return;
+            }
+
+            if (_subCategoryComboBox.SelectedItem == null)
+            {
+                ShowError("サブカテゴリを選択してください");
+                return;
+            }
+
+            if (_yearComboBox.SelectedItem == null)
+            {
+                ShowError("開発年を選択してください");
+                return;
+            }
+
+            if (_countryComboBox.SelectedItem == null)
+            {
+                ShowError("開発国を選択してください");
+                return;
+            }
+
+            string equipmentId = _idTextBox.Text;
+    
+            // IDが既存のものと衝突するかチェック
+            var dbManager = new DatabaseManager();
+            bool idExists = dbManager.IdExists(equipmentId);
+    
+            // オリジナルの装備を編集している場合は衝突としない
+            bool isEditingOriginal = _originalEquipment != null && 
+                                     _originalEquipment.Id == equipmentId;
+            string countryValue = GetSelectedCountryValue();
+            if (_countryComboBox.SelectedItem != null && _countryComboBox.SelectedIndex > 0)
+            {
+                string selectedCountry = _countryComboBox.SelectedItem.ToString();
                 
-            case IdConflictWindow.ConflictResolution.Overwrite:
-                // 上書き保存 - そのまま続行
-                break;
+                // 表示名から国家タグを抽出（例: "日本 (JAP)" → "JAP"）
+                int startIndex = selectedCountry.LastIndexOf('(');
+                int endIndex = selectedCountry.LastIndexOf(')');
                 
-            case IdConflictWindow.ConflictResolution.SaveAsNew:
-                // 別物として保存 - 一意のIDを生成
-                var allIds = dbManager.GetAllEquipmentIds();
-                equipmentId = UniqueIdGenerator.GenerateUniqueId(equipmentId, allIds);
-                break;
+                if (startIndex > 0 && endIndex > startIndex)
+                {
+                    countryValue = selectedCountry.Substring(startIndex + 1, endIndex - startIndex - 1);
+                }
+                else
+                {
+                    countryValue = selectedCountry;
+                }
+            }
+            if (idExists && !isEditingOriginal)
+            {
+                // ID衝突ダイアログを表示
+                var conflictDialog = new IdConflictWindow(equipmentId);
+                var result = await conflictDialog.ShowDialog<IdConflictWindow.ConflictResolution>(this);
+        
+                switch (result)
+                {
+                    case IdConflictWindow.ConflictResolution.Cancel:
+                        // キャンセル - 何もせずに戻る
+                        return;
+                
+                    case IdConflictWindow.ConflictResolution.Overwrite:
+                        // 上書き保存 - そのまま続行
+                        break;
+                
+                    case IdConflictWindow.ConflictResolution.SaveAsNew:
+                        // 別物として保存 - 一意のIDを生成
+                        var allIds = dbManager.GetAllEquipmentIds();
+                        equipmentId = UniqueIdGenerator.GenerateUniqueId(equipmentId, allIds);
+                        break;
+                }
+            }
+
+            // 全てのパラメータをGun_Processing()に渡すためにデータを収集
+            Console.WriteLine("ID: " + equipmentId +
+                              "\nName: " + _nameTextBox.Text +
+                              "\nCategory: " + ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id +
+                              "\nSubCategory: " + _subCategoryComboBox.SelectedItem +
+                              "\nYear: " + ((NavalYearItem)_yearComboBox.SelectedItem).Year +
+                              "\nTier: " + ((NavalYearItem)_yearComboBox.SelectedItem).Tier +
+                              "\nCountry: " + _countryComboBox.SelectedItem +
+                              "\nShellWeight: " + _shellWeightNumeric.Value +
+                              "\nMuzzleVelocity: " + _muzzleVelocityNumeric.Value +
+                              "\nRPM: " + _rpmNumeric.Value +
+                              "\nCalibre: " + _calibreNumeric.Value +
+                              "\nCalibreType: " + _calibreTypeComboBox.SelectedItem +
+                              "\nBarrelCount: " + _barrelCountComboBox.SelectedItem +
+                              "\nBarrelLength: " + _barrelLengthNumeric.Value +
+                              "\nElevationAngle: " + _elevationAngleNumeric.Value);
+            var gunData = new Dictionary<string, object>
+            {
+                { "Id", equipmentId }, // 更新されたIDを使用
+                { "Name", _nameTextBox.Text },
+                { "Category", ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id },
+                { "SubCategory", _subCategoryComboBox.SelectedItem.ToString() },
+                { "Year", int.Parse(((NavalYearItem)_yearComboBox.SelectedItem).Year.Replace("以前", "")) },
+                { "Tier", ((NavalYearItem)_yearComboBox.SelectedItem).Tier },
+                { "Country", countryValue },
+                { "ShellWeight", (double)_shellWeightNumeric.Value },
+                { "MuzzleVelocity", (double)_muzzleVelocityNumeric.Value },
+                { "RPM", (double)_rpmNumeric.Value },
+                { "Calibre", (double)_calibreNumeric.Value },
+                { "CalibreType", _calibreTypeComboBox.SelectedItem.ToString() },
+                { "BarrelCount", int.Parse(_barrelCountComboBox.SelectedItem.ToString()) },
+                { "BarrelLength", (double)_barrelLengthNumeric.Value }, // 砲身長を追加
+                { "ElevationAngle", (double)_elevationAngleNumeric.Value },
+                { "TurretWeight", (double)_turretWeightNumeric.Value },
+                { "Manpower", (int)_manpowerNumeric.Value },
+                { "Steel", (int)_steelNumeric.Value },
+                { "Chromium", (int)_chromiumNumeric.Value },
+                { "Description", _descriptionTextBox?.Text ?? "" }
+            };
+
+            // Gun_Processingクラスに全てのデータを渡して処理を行う
+            NavalEquipment processedEquipment = GunCalculator.Gun_Processing(gunData);
+
+            // 砲の生データも保存
+            GunDataToDB.SaveGunData(processedEquipment, gunData);
+
+            // 処理結果を返して画面を閉じる
+            Close(processedEquipment);
         }
-    }
-
-    // 全てのパラメータをGun_Processing()に渡すためにデータを収集
-    Console.WriteLine("ID: " + equipmentId +
-                      "\nName: " + _nameTextBox.Text +
-                      "\nCategory: " + ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id +
-                      "\nSubCategory: " + _subCategoryComboBox.SelectedItem +
-                      "\nYear: " + ((NavalYearItem)_yearComboBox.SelectedItem).Year +
-                      "\nTier: " + ((NavalYearItem)_yearComboBox.SelectedItem).Tier +
-                      "\nCountry: " + _countryComboBox.SelectedItem +
-                      "\nShellWeight: " + _shellWeightNumeric.Value +
-                      "\nMuzzleVelocity: " + _muzzleVelocityNumeric.Value +
-                      "\nRPM: " + _rpmNumeric.Value +
-                      "\nCalibre: " + _calibreNumeric.Value +
-                      "\nCalibreType: " + _calibreTypeComboBox.SelectedItem +
-                      "\nBarrelCount: " + _barrelCountComboBox.SelectedItem +
-                      "\nBarrelLength: " + _barrelLengthNumeric.Value +
-                      "\nElevationAngle: " + _elevationAngleNumeric.Value);
-    var gunData = new Dictionary<string, object>
-    {
-        { "Id", equipmentId }, // 更新されたIDを使用
-        { "Name", _nameTextBox.Text },
-        { "Category", ((NavalCategoryItem)_categoryComboBox.SelectedItem).Id },
-        { "SubCategory", _subCategoryComboBox.SelectedItem.ToString() },
-        { "Year", int.Parse(((NavalYearItem)_yearComboBox.SelectedItem).Year.Replace("以前", "")) },
-        { "Tier", ((NavalYearItem)_yearComboBox.SelectedItem).Tier },
-        { "Country", countryValue },
-        { "ShellWeight", (double)_shellWeightNumeric.Value },
-        { "MuzzleVelocity", (double)_muzzleVelocityNumeric.Value },
-        { "RPM", (double)_rpmNumeric.Value },
-        { "Calibre", (double)_calibreNumeric.Value },
-        { "CalibreType", _calibreTypeComboBox.SelectedItem.ToString() },
-        { "BarrelCount", int.Parse(_barrelCountComboBox.SelectedItem.ToString()) },
-        { "BarrelLength", (double)_barrelLengthNumeric.Value }, // 砲身長を追加
-        { "ElevationAngle", (double)_elevationAngleNumeric.Value },
-        { "TurretWeight", (double)_turretWeightNumeric.Value },
-        { "Manpower", (int)_manpowerNumeric.Value },
-        { "Steel", (int)_steelNumeric.Value },
-        { "Chromium", (int)_chromiumNumeric.Value },
-        { "Description", _descriptionTextBox?.Text ?? "" }
-    };
-
-    // Gun_Processingクラスに全てのデータを渡して処理を行う
-    NavalEquipment processedEquipment = GunCalculator.Gun_Processing(gunData);
-
-    // 砲の生データも保存
-    GunDataToDB.SaveGunData(processedEquipment, gunData);
-
-    // 処理結果を返して画面を閉じる
-    Close(processedEquipment);
-}
 
         // キャンセルボタンのイベントハンドラ
         public void On_Cancel_Click(object sender, RoutedEventArgs e)
@@ -1037,6 +1156,12 @@ public async void On_Save_Click(object sender, RoutedEventArgs e)
         {
             // エラーメッセージを表示（実際の実装ではダイアログを表示する）
             Console.WriteLine($"エラー: {message}");
+        }
+        private class IDESettings
+        {
+            public string GamePath { get; set; }
+            public string ModPath { get; set; }
+            public bool IsJapanese { get; set; } = true;
         }
     }
 }
