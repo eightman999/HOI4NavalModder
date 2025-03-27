@@ -73,7 +73,8 @@ namespace HOI4NavalModder
             _calculatedRangeText = this.FindControl<TextBlock>("CalculatedRangeText");
             _calculatedArmorPiercingText = this.FindControl<TextBlock>("CalculatedArmorPiercingText");
             _calculatedBuildCostText = this.FindControl<TextBlock>("CalculatedBuildCostText");
-            
+            // 追加：記述テキストボックスの取得
+            _descriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
             // 追加されたコントロールの取得
             _barrelLengthNumeric = this.FindControl<NumericUpDown>("BarrelLengthNumeric");
             _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
@@ -895,7 +896,7 @@ public async void On_Save_Click(object sender, RoutedEventArgs e)
         { "Manpower", (int)_manpowerNumeric.Value },
         { "Steel", (int)_steelNumeric.Value },
         { "Chromium", (int)_chromiumNumeric.Value },
-        { "Description", _descriptionTextBox.Text ?? "" }
+        { "Description", _descriptionTextBox?.Text ?? "" }
     };
 
     // Gun_Processingクラスに全てのデータを渡して処理を行う

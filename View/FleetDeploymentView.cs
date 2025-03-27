@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -17,17 +17,7 @@ namespace HOI4NavalModder
 {
     public class FleetDeploymentView : UserControl
     {
-        // モデルクラス
-        public class CountryInfo
-        {
-            public string Tag { get; set; }
-            public string Name { get; set; }
-            public string FlagPath { get; set; }
-            public Bitmap FlagImage { get; set; }
-            public bool IsSelected { get; set; }
-        }
-
-        private readonly ObservableCollection<CountryInfo> _countriesList = new ObservableCollection<CountryInfo>();
+        private readonly ObservableCollection<CountryListManager.CountryInfo> _countriesList = new ObservableCollection<CountryListManager.CountryInfo>();
         private ListBox _countriesListBox;
         private TextBlock _statusTextBlock;
         private Button _refreshButton;
@@ -44,6 +34,7 @@ namespace HOI4NavalModder
             
         private string _activeMod;
         private string _vanillaPath;
+        private CountryListManager _countryListManager;
         
         public FleetDeploymentView()
         {
@@ -184,7 +175,7 @@ namespace HOI4NavalModder
             _countriesListBox.SelectionChanged += OnCountrySelectionChanged;
             
             // リストアイテムテンプレート
-            _countriesListBox.ItemTemplate = new FuncDataTemplate<CountryInfo>((item, scope) =>
+            _countriesListBox.ItemTemplate = new FuncDataTemplate<CountryListManager.CountryInfo>((item, scope) =>
             {
                 if (item == null)
                 {
@@ -346,6 +337,9 @@ namespace HOI4NavalModder
                             _statusTextBlock.Text = "アクティブなMODが設定されていません。";
                         }
                         
+                        // CountryListManagerを初期化
+                        _countryListManager = new CountryListManager(_activeMod, _vanillaPath);
+                        
                         // 国家データのロード
                         LoadCountryData();
                     }
@@ -361,222 +355,51 @@ namespace HOI4NavalModder
             }
         }
 
-// In the LoadCountryData method of FleetDeploymentView.cs
-private async void LoadCountryData()
-{
-    _loadingProgressBar.IsVisible = true;
-    _refreshButton.IsEnabled = false;
-    _countriesList.Clear();
-    
-    // UIスレッドをブロックしないために非同期で実行
-    await Dispatcher.UIThread.InvokeAsync(async () => 
-    {
-        try
+        private async void LoadCountryData()
         {
-            // MODパスのチェック - バニラパスがあれば国家データ読み込みを続行
-            if (string.IsNullOrEmpty(_activeMod) && string.IsNullOrEmpty(_vanillaPath))
+            _loadingProgressBar.IsVisible = true;
+            _refreshButton.IsEnabled = false;
+            _countriesList.Clear();
+            
+            // UIスレッドをブロックしないために非同期で実行
+            await Dispatcher.UIThread.InvokeAsync(async () => 
             {
-                _statusTextBlock.Text = "MODパスまたはバニラパスが設定されていません。";
-                _loadingProgressBar.IsVisible = false;
-                _refreshButton.IsEnabled = true;
-                return;
-            }
-
-            List<string> countryTags = new List<string>();
-            Dictionary<string, string> tagDescriptions = new Dictionary<string, string>();
-            bool hasReplaceTags = false;
-
-            // MODのdescriptor.modを確認（replace_path設定の確認）
-            if (!string.IsNullOrEmpty(_activeMod))
-            {
-                string descriptorPath = Path.Combine(_activeMod, "descriptor.mod");
-                if (File.Exists(descriptorPath))
+                try
                 {
-                    string[] descriptorLines = await File.ReadAllLinesAsync(descriptorPath);
-                    hasReplaceTags = descriptorLines.Any(line => 
-                        line.Contains("replace_path=\"common/country_tags\""));
-                }
-            }
-
-            // 国家タグの収集 - MODから取得
-            if (!string.IsNullOrEmpty(_activeMod))
-            {
-                string modTagsPath = Path.Combine(_activeMod, "common", "country_tags");
-                if (Directory.Exists(modTagsPath))
-                {
-                    foreach (var file in Directory.GetFiles(modTagsPath, "*.txt"))
+                    // MODパスのチェック - バニラパスがあれば国家データ読み込みを続行
+                    if (string.IsNullOrEmpty(_activeMod) && string.IsNullOrEmpty(_vanillaPath))
                     {
-                        CollectCountryTags(file, countryTags, tagDescriptions);
-                    }
-                }
-            }
-
-            // バニラからも国家タグを取得 (MODが置き換えてない場合または_activeMod がない場合)
-            if ((!hasReplaceTags || string.IsNullOrEmpty(_activeMod)) && !string.IsNullOrEmpty(_vanillaPath))
-            {
-                string vanillaTagsPath = Path.Combine(_vanillaPath, "common", "country_tags");
-                if (Directory.Exists(vanillaTagsPath))
-                {
-                    foreach (var file in Directory.GetFiles(vanillaTagsPath, "*.txt"))
-                    {
-                        CollectCountryTags(file, countryTags, tagDescriptions);
-                    }
-                }
-            }
-
-            // 残りのコードは変更なし...
-
-                    // 国名の取得
-                    Dictionary<string, string> countryNames = new Dictionary<string, string>();
-                    
-                    // IDE設定から言語設定を取得
-                    bool isJapanese = true; // デフォルトは日本語
-                    string ideSettingsPath = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                        "HOI4NavalModder",
-                        "idesettings.json");
-                        
-                    if (File.Exists(ideSettingsPath))
-                    {
-                        try
-                        {
-                            var json = await File.ReadAllTextAsync(ideSettingsPath);
-                            var settings = JsonSerializer.Deserialize<IDESettings>(json);
-                            if (settings != null)
-                            {
-                                isJapanese = settings.IsJapanese;
-                            }
-                        }
-                        catch {}
-                    }
-                    
-                    string localeSuffix = isJapanese ? "japanese" : "english";
-                    
-                    // MODからのローカライズ取得
-                    if (!string.IsNullOrEmpty(_activeMod))
-                    {
-                        string locPath = Path.Combine(_activeMod, "localisation", localeSuffix);
-                        if (Directory.Exists(locPath))
-                        {
-                            CollectCountryNames(locPath, countryNames);
-                        }
-                        else
-                        {
-                            // 下位フォルダなしのケース
-                            locPath = Path.Combine(_activeMod, "localisation");
-                            if (Directory.Exists(locPath))
-                            {
-                                CollectCountryNames(locPath, countryNames);
-                            }
-                        }
-                    }
-                    
-                    // バニラからのローカライズ取得（MODになければ）
-                    if (!string.IsNullOrEmpty(_vanillaPath))
-                    {
-                        string locPath = Path.Combine(_vanillaPath, "localisation", localeSuffix);
-                        if (Directory.Exists(locPath))
-                        {
-                            foreach (var tag in countryTags)
-                            {
-                                if (!countryNames.ContainsKey(tag))
-                                {
-                                    CollectCountryNames(locPath, countryNames);
-                                }
-                            }
-                        }
+                        _statusTextBlock.Text = "MODパスまたはバニラパスが設定されていません。";
+                        _loadingProgressBar.IsVisible = false;
+                        _refreshButton.IsEnabled = true;
+                        return;
                     }
 
-                                            // 国旗の収集と国家リストの生成
-                    foreach (var tag in countryTags)
+                    if (_countryListManager == null)
                     {
-                        string flagPath = null;
-                        Bitmap flagImage = null;
-                        
-                        // MODから国旗を検索
-                        if (!string.IsNullOrEmpty(_activeMod))
-                        {
-                            string modFlagPath = Path.Combine(_activeMod, "gfx", "flags", $"{tag}.tga");
-                            if (File.Exists(modFlagPath))
-                            {
-                                flagPath = modFlagPath;
-                                try
-                                {
-                                    // TGAデコーダーを使用して国旗画像を読み込む
-                                    flagImage = TgaDecoder.LoadFromFile(modFlagPath);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"MOD国旗読み込みエラー: {ex.Message}");
-                                }
-                            }
-                        }
-                        
-                        // バニラから国旗を検索（MODになければ）
-                        if ((flagPath == null || flagImage == null) && !string.IsNullOrEmpty(_vanillaPath))
-                        {
-                            string vanillaFlagPath = Path.Combine(_vanillaPath, "gfx", "flags", $"{tag}.tga");
-                            if (File.Exists(vanillaFlagPath))
-                            {
-                                flagPath = vanillaFlagPath;
-                                try
-                                {
-                                    // TGAデコーダーを使用して国旗画像を読み込む
-                                    flagImage = TgaDecoder.LoadFromFile(vanillaFlagPath);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"バニラ国旗読み込みエラー: {ex.Message}");
-                                }
-                            }
-                        }
-                        
-                        // 国名がない場合はタグ説明から代替テキストを作成
-                        string countryName = null;
-                        if (countryNames.TryGetValue(tag, out var name))
-                        {
-                            countryName = name;
-                        }
-                        else if (tagDescriptions.TryGetValue(tag, out var desc))
-                        {
-                            // ファイルパスから国名を推測（"countries/Western Europe.txt" → "Western Europe"）
-                            var match = Regex.Match(desc, @"countries/([^.]+)\.txt");
-                            if (match.Success)
-                            {
-                                countryName = match.Groups[1].Value;
-                            }
-                            else
-                            {
-                                countryName = desc;
-                            }
-                        }
-                        
-                        // 主要国か判定（3文字以下のタグは主要国と仮定）
-                        bool isMajorCountry = tag.Length <= 3;
-                        
-                        // 全国家表示がオンか、主要国の場合のみ追加（初期状態）
-                        if (_showAllCountriesCheckBox.IsChecked == true || isMajorCountry)
-                        {
-                            _countriesList.Add(new CountryInfo
-                            {
-                                Tag = tag,
-                                Name = countryName,
-                                FlagPath = flagPath,
-                                FlagImage = flagImage,
-                                IsSelected = false
-                            });
-                        }
+                        _countryListManager = new CountryListManager(_activeMod, _vanillaPath);
                     }
-                    
-                    // 国名でソート
-                    var sorted = _countriesList.OrderBy(c => c.Name).ToList();
-                    _countriesList.Clear();
-                    foreach (var country in sorted)
+
+                    // 国家データを取得
+                    bool showAllCountries = _showAllCountriesCheckBox.IsChecked ?? false;
+                    var countries = await _countryListManager.GetCountriesAsync(showAllCountries);
+
+                    // フィルタリング（検索テキストがある場合）
+                    string searchText = _searchBox.Text?.ToLower() ?? "";
+                    if (!string.IsNullOrWhiteSpace(searchText))
+                    {
+                        countries = countries.Where(c => 
+                            (c.Name?.ToLower().Contains(searchText) ?? false) || 
+                            c.Tag.ToLower().Contains(searchText)).ToList();
+                    }
+
+                    // ObservableCollectionに追加
+                    foreach (var country in countries)
                     {
                         _countriesList.Add(country);
                     }
-                    
-                    _statusTextBlock.Text = $"合計 {countryTags.Count} か国を検出しました。表示: {_countriesList.Count} か国";
+
+                    _statusTextBlock.Text = $"合計 {countries.Count} か国を検出しました。表示: {_countriesList.Count} か国";
                 }
                 catch (Exception ex)
                 {
@@ -588,102 +411,6 @@ private async void LoadCountryData()
                     _refreshButton.IsEnabled = true;
                 }
             });
-        }
-
-        private void CollectCountryTags(string filePath, List<string> tags, Dictionary<string, string> descriptions)
-        {
-            try
-            {
-                string[] lines = File.ReadAllLines(filePath);
-                foreach (var line in lines)
-                {
-                    // コメントを除去
-                    string trimmedLine = line.Split('#')[0].Trim();
-                    if (string.IsNullOrEmpty(trimmedLine))
-                    {
-                        continue;
-                    }
-                    
-                    // 複数のパターンを試す
-                    // パターン1: 標準的な定義 - IBE = "countries/Western Europe.txt"
-                    var match = Regex.Match(trimmedLine, @"([A-Za-z0-9_]{2,})\s*=\s*[""'](.+?)[""']");
-                    
-                    // パターン2: 引用符なしの定義 - IBE = countries/Western Europe.txt
-                    if (!match.Success)
-                    {
-                        match = Regex.Match(trimmedLine, @"([A-Za-z0-9_]{2,})\s*=\s*([^\s#]+)");
-                    }
-                    
-                    // パターン3: 動的定義 - dynamic_tags = { IBE FRA GER }
-                    if (!match.Success && trimmedLine.Contains("dynamic_tags") || trimmedLine.Contains("allowed_tags"))
-                    {
-                        var dynamicTagMatches = Regex.Matches(trimmedLine, @"([A-Za-z0-9_]{2,})");
-                        foreach (Match dynamicMatch in dynamicTagMatches)
-                        {
-                            string potentialTag = dynamicMatch.Groups[1].Value;
-                            // 一般的なキーワードを除外
-                            if (potentialTag != "dynamic_tags" && potentialTag != "allowed_tags" && !tags.Contains(potentialTag))
-                            {
-                                tags.Add(potentialTag);
-                                descriptions[potentialTag] = "Dynamic Tag";
-                            }
-                        }
-                        continue;
-                    }
-                    
-                    if (match.Success)
-                    {
-                        string tag = match.Groups[1].Value.ToUpper(); // TAGは通常大文字で標準化
-                        string description = match.Groups[2].Value;
-                        
-                        if (!tags.Contains(tag))
-                        {
-                            tags.Add(tag);
-                            descriptions[tag] = description;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"国家タグファイル読み込みエラー: {ex.Message}");
-            }
-        }
-
-        private void CollectCountryNames(string localizationDir, Dictionary<string, string> countryNames)
-        {
-            try
-            {
-                // YMLファイルを再帰的に検索
-                foreach (var file in Directory.GetFiles(localizationDir, "*.yml", SearchOption.AllDirectories))
-                {
-                    string[] lines = File.ReadAllLines(file);
-                    foreach (var line in lines)
-                    {
-                        // 国名のローカライズキーを検索（例: IBE:0 "イベリア連合"）
-                        var match = Regex.Match(line, @"([A-Z0-9_]{2,}):0 *""(.+?)""");
-                        if (match.Success)
-                        {
-                            string tag = match.Groups[1].Value;
-                            string name = match.Groups[2].Value;
-                            
-                            // 特殊文字やフォーマット指定子を削除
-                            name = Regex.Replace(name, @"\$.*?\$", "");
-                            name = Regex.Replace(name, @"\§[A-Za-z]", "");
-                            name = name.Trim();
-                            
-                            if (!string.IsNullOrEmpty(name) && !countryNames.ContainsKey(tag))
-                            {
-                                countryNames[tag] = name;
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ローカライゼーション読み込みエラー: {ex.Message}");
-            }
         }
 
         private void OnRefreshButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -717,33 +444,12 @@ private async void LoadCountryData()
                 return;
             }
             
-            // 検索条件に一致する国家のみ表示
-            var originalList = _countriesList.ToList();
-            _countriesList.Clear();
-            
-            foreach (var country in originalList)
-            {
-                bool nameMatch = country.Name?.ToLower().Contains(searchText) ?? false;
-                bool tagMatch = country.Tag.ToLower().Contains(searchText);
-                
-                if (nameMatch || tagMatch)
-                {
-                    _countriesList.Add(country);
-                }
-            }
-            
-            _statusTextBlock.Text = $"検索結果: {_countriesList.Count} か国";
+            // 検索条件に一致する国家のみ表示するため、国家リストを再読み込み
+            LoadCountryData();
         }
 
         private void OnShowAllCountriesChanged(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            // 検索テキストがある場合は検索を優先
-            if (!string.IsNullOrWhiteSpace(_searchBox.Text))
-            {
-                OnSearchTextChanged(null, null);
-                return;
-            }
-            
             // 国家リストの再読み込み
             LoadCountryData();
         }
@@ -760,13 +466,12 @@ private async void LoadCountryData()
             }
         }
 
-        private void OnConfigCountryClick(CountryInfo country)
+        private void OnConfigCountryClick(CountryListManager.CountryInfo country)
         {
             // 国家配備設定ダイアログを表示
             _statusTextBlock.Text = $"{country.Name ?? country.Tag} の配備設定を編集中...";
             Console.WriteLine($"配備設定: {country.Tag}");
             
-              
             // 新たな艦隊配備マップビューを表示
             var mapView = new FleetDeploymentWindow(
                 country.Tag, 
@@ -781,8 +486,6 @@ private async void LoadCountryData()
             {
                 mapView.ShowDialog((Window)topLevel);
             }
-        }   
+        }
     }
-    
-  
 }
