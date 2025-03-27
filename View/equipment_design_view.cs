@@ -582,7 +582,7 @@ namespace HOI4NavalModder
 
                 case "SMTP": // 魚雷
                 case "SMSTP": // 潜水艦魚雷
-                    //editorWindow = new SMTP_Design_View(equipment, _categories, _tierYears);
+                    //editorWindow = new Torpedo_Design_View(equipment, _categories, _tierYears);
                     break;
                 case "SMSP": // 水上機
                 case "SMCR": // 艦上偵察機
