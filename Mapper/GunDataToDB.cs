@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using HOI4NavalModder.Core.Models;
+using HOI4NavalModder.Core.Services;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Mapper;
 
 /// <summary>
 ///     Gun Design View と DB の間でデータを転送する中間クラス

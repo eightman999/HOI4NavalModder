@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="720"
-        x:Class="HOI4NavalModder.GunDesignView"
+        x:Class="HOI4NavalModder.View.GunDesignView"
         Title="砲の設計"
         Width="800" Height="720"
         WindowStartupLocation="CenterOwner"

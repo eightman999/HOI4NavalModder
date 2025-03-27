@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Utilities;
 
 /// <summary>
 ///     一意のIDを生成するためのユーティリティクラス

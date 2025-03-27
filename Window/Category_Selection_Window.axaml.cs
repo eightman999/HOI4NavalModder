@@ -4,10 +4,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using HOI4NavalModder.Core.Models;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Window;
 
-public partial class CategorySelectionWindow : Window
+public partial class CategorySelectionWindow : Avalonia.Controls.Window
 {
     private readonly Dictionary<string, NavalCategory> _categories;
     private readonly ComboBox _categoryComboBox;

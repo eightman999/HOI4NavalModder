@@ -5,8 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using HOI4NavalModder.Core.Models;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Services;
 
 public class DatabaseManager
 {

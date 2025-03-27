@@ -5,7 +5,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Utilities.Map;
 
 /// <summary>
 ///     Bitmapからピクセルデータを効率的に読み込むためのヘルパークラス

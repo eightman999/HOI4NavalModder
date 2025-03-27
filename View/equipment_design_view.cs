@@ -13,8 +13,12 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using HOI4NavalModder.Core;
+using HOI4NavalModder.Core.Models;
+using HOI4NavalModder.Core.Services;
+using HOI4NavalModder.Mapper;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.View;
 
 public partial class EquipmentDesignView : UserControl
 {
@@ -486,10 +490,10 @@ public partial class EquipmentDesignView : UserControl
     private async void ShowCategorySelectionWindow()
     {
         // カテゴリ選択ウィンドウを表示
-        var categoryWindow = new CategorySelectionWindow(_categories, _tierYears);
+        var categoryWindow = new Window.CategorySelectionWindow(_categories, _tierYears);
 
         // 結果の処理
-        var result = await categoryWindow.ShowDialog<CategorySelectionResult>(this.GetVisualRoot() as Window);
+        var result = await categoryWindow.ShowDialog<CategorySelectionResult>(this.GetVisualRoot() as Avalonia.Controls.Window);
         if (result != null)
         {
             // 選択されたカテゴリとティアに基づいて、適切なエディタを開く
@@ -519,7 +523,7 @@ public partial class EquipmentDesignView : UserControl
 
     private async void OpenCategorySpecificEditor(NavalEquipment equipment)
     {
-        Window editorWindow = null;
+        Avalonia.Controls.Window editorWindow = null;
 
         // カテゴリに応じた適切なエディタを選択
         switch (equipment.Category)
@@ -603,7 +607,7 @@ public partial class EquipmentDesignView : UserControl
         // エディタウィンドウを表示
         if (editorWindow != null)
         {
-            var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Window);
+            var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Avalonia.Controls.Window);
             if (result != null)
             {
                 // 既存の装備を編集した場合

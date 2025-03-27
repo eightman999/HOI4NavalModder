@@ -2,12 +2,12 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Window;
 
 /// <summary>
 ///     ID衝突時に表示する警告ダイアログ
 /// </summary>
-public partial class IdConflictWindow : Window
+public partial class IdConflictWindow : Avalonia.Controls.Window
 {
     public enum ConflictResolution
     {

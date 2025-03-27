@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Utilities;
 
 /// <summary>
 ///     砲IDの自動生成を処理するクラス

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using HOI4NavalModder.Core.Models;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Calculators;
 
 public static class GunCalculator
 {

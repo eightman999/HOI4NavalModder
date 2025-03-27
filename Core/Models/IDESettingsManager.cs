@@ -4,7 +4,7 @@ using System.IO;
 using System.Text.Json;
 using Microsoft.Win32;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Models;
 
 /// <summary>
 ///     アプリケーション設定を管理するクラス

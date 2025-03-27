@@ -9,10 +9,11 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using HOI4NavalModder.Core.Utilities;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.View;
 
-public class FleetDeploymentWindow : Window
+public class FleetDeploymentWindow : Avalonia.Controls.Window
 {
     // パス情報
     private readonly string _activeMod;
@@ -26,13 +27,13 @@ public class FleetDeploymentWindow : Window
     // 港情報のディクショナリ
     private readonly Dictionary<int, string> _portNames = new();
     private readonly string _vanillaPath;
-    private Button _closeButton;
+    private Button? _closeButton;
 
     // 艦隊リスト
-    private ListBox _fleetListBox;
-    private ProgressBar _loadingProgressBar;
+    private ListBox? _fleetListBox;
+    private ProgressBar? _loadingProgressBar;
 
-    private TextBlock _statusTextBlock;
+    private TextBlock? _statusTextBlock;
 
     public FleetDeploymentWindow(string countryTag, string countryName, Bitmap countryFlag, string activeMod,
         string vanillaPath)
@@ -535,7 +536,7 @@ public class FleetDeploymentWindow : Window
         var isNew = fleet == null;
 
         // 編集用ウィンドウの作成
-        var dialog = new Window
+        var dialog = new Avalonia.Controls.Window
         {
             Title = isNew ? "艦隊の追加" : "艦隊の編集",
             Width = 400,
@@ -697,7 +698,7 @@ public class FleetDeploymentWindow : Window
     private async void ShowFleetDetails(FleetInfo fleet)
     {
         // 艦隊詳細ウィンドウの作成
-        var dialog = new Window
+        var dialog = new Avalonia.Controls.Window
         {
             Title = $"{fleet.Name} の詳細",
             Width = 550,
@@ -858,7 +859,7 @@ public class FleetDeploymentWindow : Window
     private async void ShowAddShipDialog(FleetInfo fleet, ListBox shipListBox)
     {
         // 艦船追加ダイアログの作成
-        var dialog = new Window
+        var dialog = new Avalonia.Controls.Window
         {
             Title = "艦船の追加",
             Width = 400,

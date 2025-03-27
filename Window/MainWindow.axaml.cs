@@ -15,10 +15,12 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using HOI4NavalModder.Core.Models;
+using HOI4NavalModder.View;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Window;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Avalonia.Controls.Window
 {
     private readonly Panel _contentPanel;
     private readonly Dictionary<string, UserControl> _pages = new();
@@ -33,7 +35,7 @@ public partial class MainWindow : Window
         _contentPanel = this.FindControl<Panel>("ContentPanel");
 
         // 各ページを初期化
-        _pages.Add("EquipmentDesign", new EquipmentDesignView());
+        _pages.Add("EquipmentDesign", new View.EquipmentDesignView());
         _pages.Add("EquipmentIcon", new EquipmentIconView());
         _pages.Add("ShipType", new ShipTypeView());
         _pages.Add("ShipDesign", new ShipDesignView());

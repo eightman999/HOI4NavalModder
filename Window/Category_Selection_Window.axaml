@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
-        x:Class="HOI4NavalModder.CategorySelectionWindow"
+        x:Class="HOI4NavalModder.Window.CategorySelectionWindow"
         Title="装備カテゴリの選択"
         Width="400" Height="300"
         WindowStartupLocation="CenterOwner"

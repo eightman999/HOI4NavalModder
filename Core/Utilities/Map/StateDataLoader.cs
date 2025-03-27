@@ -5,8 +5,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia;
+using HOI4NavalModder.Core.Models;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Utilities.Map;
 
 public class StateDataLoader
 {

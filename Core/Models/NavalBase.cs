@@ -2,7 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Media;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Models;
 
 // NavalBaseクラス - 港の情報を格納
 public class NavalBase

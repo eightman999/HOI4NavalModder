@@ -3,8 +3,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:HOI4NavalModder"
+             xmlns:models="clr-namespace:HOI4NavalModder.Core.Models"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
-             x:Class="HOI4NavalModder.EquipmentDesignView">
+             x:Class="HOI4NavalModder.View.EquipmentDesignView">
     <Grid RowDefinitions="Auto,*" x:Name="ContentGrid">
         <!-- ヘッダーパネル -->
         <Panel Grid.Row="0" Background="#2D2D30" Height="40">
@@ -97,7 +98,7 @@
                              Margin="5">
                         <!-- ItemsSource はコードビハインドで設定されます (_equipmentListBox.ItemsSource = _equipmentList;) -->
                         <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type local:NavalEquipment}">
+                            <DataTemplate DataType="{x:Type models:NavalEquipment}">
                                 <Grid ColumnDefinitions="*,Auto" Margin="5">
                                     <!-- 装備情報パネル -->
                                     <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,10,0">

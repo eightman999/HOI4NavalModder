@@ -7,10 +7,16 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using HOI4NavalModder.Calculators;
+using HOI4NavalModder.Core.Models;
+using HOI4NavalModder.Core.Services;
+using HOI4NavalModder.Core.Utilities;
+using HOI4NavalModder.Mapper;
+using HOI4NavalModder.Window;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.View;
 
-public partial class GunDesignView : Window
+public partial class GunDesignView : Avalonia.Controls.Window
 {
     private readonly CheckBox _autoGenerateIdCheckBox;
 
@@ -1046,20 +1052,20 @@ public partial class GunDesignView : Window
         if (idExists && !isEditingOriginal)
         {
             // ID衝突ダイアログを表示
-            var conflictDialog = new IdConflictWindow(equipmentId);
-            var result = await conflictDialog.ShowDialog<IdConflictWindow.ConflictResolution>(this);
+            var conflictDialog = new Window.IdConflictWindow(equipmentId);
+            var result = await conflictDialog.ShowDialog<Window.IdConflictWindow.ConflictResolution>(this);
 
             switch (result)
             {
-                case IdConflictWindow.ConflictResolution.Cancel:
+                case Window.IdConflictWindow.ConflictResolution.Cancel:
                     // キャンセル - 何もせずに戻る
                     return;
 
-                case IdConflictWindow.ConflictResolution.Overwrite:
+                case Window.IdConflictWindow.ConflictResolution.Overwrite:
                     // 上書き保存 - そのまま続行
                     break;
 
-                case IdConflictWindow.ConflictResolution.SaveAsNew:
+                case Window.IdConflictWindow.ConflictResolution.SaveAsNew:
                     // 別物として保存 - 一意のIDを生成
                     var allIds = dbManager.GetAllEquipmentIds();
                     equipmentId = UniqueIdGenerator.GenerateUniqueId(equipmentId, allIds);

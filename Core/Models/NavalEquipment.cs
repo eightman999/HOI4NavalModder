@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Models;
 
 /// <summary>
 ///     装備データを表すクラス

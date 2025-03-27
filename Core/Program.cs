@@ -1,7 +1,7 @@
 ﻿using System;
 using Avalonia;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core;
 
 internal class Program
 {

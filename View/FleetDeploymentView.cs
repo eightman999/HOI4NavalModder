@@ -10,8 +10,10 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using HOI4NavalModder.Core.Models;
+using HOI4NavalModder.Core.Utilities;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.View;
 
 public class FleetDeploymentView : UserControl
 {
@@ -459,6 +461,6 @@ public class FleetDeploymentView : UserControl
 
         // ダイアログとして表示
         var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel != null) mapView.ShowDialog((Window)topLevel);
+        if (topLevel != null) mapView.ShowDialog((Avalonia.Controls.Window)topLevel);
     }
 }

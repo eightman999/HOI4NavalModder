@@ -148,7 +148,7 @@ public static class TgaDecoder
         catch (Exception ex)
         {
             Console.WriteLine($"TGAファイル読み込みエラー: {ex.Message}");
-            return null;
+            return null!;
         }
     }
 

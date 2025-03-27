@@ -6,9 +6,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using HOI4NavalModder.Core.Models;
 using Microsoft.Win32;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core.Utilities;
 
 /// <summary>
 ///     HOI4の国家情報を読み込み・管理するためのクラス（改良版）

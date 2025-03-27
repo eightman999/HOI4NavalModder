@@ -21,7 +21,7 @@ public class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new MainWindow();
+            desktop.MainWindow = new Window.MainWindow();
 
         base.OnFrameworkInitializationCompleted();
     }
@@ -47,8 +47,9 @@ public class App : Application
                 // フォントを登録
                 var fontUri = new Uri(tempFile);
                 var fontFamily = new FontFamily(fontUri.AbsolutePath);
-
+        
                 Console.WriteLine("フォントを正常に読み込みました");
+                Console.WriteLine($"フォントファミリー: {fontFamily.Name}");
             }
             else
             {

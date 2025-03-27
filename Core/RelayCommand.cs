@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace HOI4NavalModder;
+namespace HOI4NavalModder.Core;
 
 // RelayCommand の実装
 public class RelayCommand<T> : ICommand
