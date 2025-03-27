@@ -44,7 +44,7 @@ namespace HOI4NavalModder
             _pages.Add("FleetDeployment", new FleetDeploymentView());
             _pages.Add("ShipName", new ShipNameView());
             _pages.Add("EquipmentName", new EquipmentNameView());
-            _pages.Add("IDESettings", new IDESettingsView());
+            _pages.Add("IDESettings", new IdeSettingsView());
             _pages.Add("ModSettings", new ModSettingsView());
 
             // デフォルトのページを設定
@@ -425,7 +425,7 @@ namespace HOI4NavalModder
         }
     }
 
-public class IDESettingsView : UserControl
+    public class IdeSettingsView : UserControl
     {
         private ComboBox _themeComboBox;
         private ComboBox _fontFamilyComboBox;
@@ -434,21 +434,21 @@ public class IDESettingsView : UserControl
         private RadioButton _equipmentFileSplitRadio;
         private RadioButton _languageJapaneseRadio;
         private RadioButton _languageEnglishRadio;
-        
+
         // 設定ファイルパス
         private readonly string _configFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "HOI4NavalModder",
             "idesettings.json");
-            
+
         // 設定を保持するクラス
-        private IDESettings _settings;
-        
-        public IDESettingsView()
+        private IdeSettings _settings;
+
+        public IdeSettingsView()
         {
             // 設定の読み込み
             LoadSettings();
-            
+
             var grid = new Grid
             {
                 RowDefinitions = new RowDefinitions("Auto,*")
@@ -488,14 +488,14 @@ public class IDESettingsView : UserControl
             // 外観設定セクション
             var appearanceSection = CreateSectionHeader("外観設定");
             mainPanel.Children.Add(appearanceSection);
-            
+
             // テーマ設定
             var themePanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Margin = new Thickness(10, 10, 0, 10)
             };
-            
+
             var themeLabel = new TextBlock
             {
                 Text = "テーマ:",
@@ -503,7 +503,7 @@ public class IDESettingsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = Brushes.White
             };
-            
+
             _themeComboBox = new ComboBox
             {
                 Width = 200,
@@ -512,18 +512,18 @@ public class IDESettingsView : UserControl
             _themeComboBox.Items.Add("ダークモード");
             _themeComboBox.Items.Add("ライトモード");
             _themeComboBox.SelectionChanged += OnThemeSelectionChanged;
-            
+
             themePanel.Children.Add(themeLabel);
             themePanel.Children.Add(_themeComboBox);
             mainPanel.Children.Add(themePanel);
-            
+
             // フォント設定
             var fontPanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Margin = new Thickness(10, 10, 0, 10)
             };
-            
+
             var fontLabel = new TextBlock
             {
                 Text = "フォント:",
@@ -531,15 +531,15 @@ public class IDESettingsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = Brushes.White
             };
-            
+
             _fontFamilyComboBox = new ComboBox
             {
                 Width = 200
             };
-            
+
             // システムから利用可能なフォントを取得する試み
             var availableFonts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            
+
             try
             {
                 // 方法1: TextDecorationCollection からフォント情報を取得
@@ -553,9 +553,10 @@ public class IDESettingsView : UserControl
                         availableFonts.Add(fontFamily);
                     }
                 }
-                
+
                 // 方法2: SystemFonts を通じてフォント取得を試みる
-                try {
+                try
+                {
                     var systemFonts = Avalonia.Media.FontManager.Current.SystemFonts;
                     if (systemFonts != null)
                     {
@@ -577,19 +578,20 @@ public class IDESettingsView : UserControl
             {
                 Console.WriteLine($"フォント一覧取得エラー: {ex.Message}");
             }
-            
+
             // 方法3: 一般的なフォントを追加（上記方法が失敗した場合のバックアップ）
             if (availableFonts.Count == 0)
             {
-                string[] commonFonts = {
-                    "Yu Gothic UI", "Meiryo UI", "MS Gothic", "MS PGothic", "MS UI Gothic", 
-                    "Yu Mincho", "MS Mincho", "Segoe UI", "Arial", "Times New Roman", 
+                string[] commonFonts =
+                {
+                    "Yu Gothic UI", "Meiryo UI", "MS Gothic", "MS PGothic", "MS UI Gothic",
+                    "Yu Mincho", "MS Mincho", "Segoe UI", "Arial", "Times New Roman",
                     "Courier New", "Verdana", "Tahoma", "Consolas", "Calibri", "Yu Gothic",
                     "Meiryo", "MS Mincho", "HGS明朝E", "HGP創英角ゴシックUB", "HGS教科書体",
                     "HGP行書体", "メイリオ", "游ゴシック", "游明朝", "ＭＳ ゴシック", "ＭＳ 明朝",
                     "ＭＳ Ｐゴシック", "ＭＳ Ｐ明朝", "Arial Unicode MS", "Microsoft Sans Serif"
                 };
-                
+
                 foreach (var font in commonFonts)
                 {
                     try
@@ -604,13 +606,13 @@ public class IDESettingsView : UserControl
                     }
                 }
             }
-            
+
             // フォントを追加
             foreach (var font in availableFonts.OrderBy(f => f))
             {
                 _fontFamilyComboBox.Items.Add(font);
             }
-            
+
             // 設定されたフォントが存在しない場合はデフォルトを選択
             if (availableFonts.Contains(_settings.FontFamily))
             {
@@ -619,10 +621,10 @@ public class IDESettingsView : UserControl
             else
             {
                 // 代替フォントとして日本語対応フォントを探す
-                string[] preferredFonts = {"Yu Gothic UI", "Meiryo UI", "MS Gothic", "Segoe UI"};
-                string selectedFont = preferredFonts.FirstOrDefault(f => availableFonts.Contains(f)) ?? 
-                                    availableFonts.FirstOrDefault() ?? "Segoe UI";
-                
+                string[] preferredFonts = { "Yu Gothic UI", "Meiryo UI", "MS Gothic", "Segoe UI" };
+                string selectedFont = preferredFonts.FirstOrDefault(f => availableFonts.Contains(f)) ??
+                                      availableFonts.FirstOrDefault() ?? "Segoe UI";
+
                 if (_fontFamilyComboBox.Items.Contains(selectedFont))
                 {
                     _fontFamilyComboBox.SelectedItem = selectedFont;
@@ -632,23 +634,23 @@ public class IDESettingsView : UserControl
                     _fontFamilyComboBox.SelectedIndex = 0;
                     selectedFont = _fontFamilyComboBox.SelectedItem?.ToString() ?? "Segoe UI";
                 }
-                
+
                 _settings.FontFamily = selectedFont;
             }
-            
+
             _fontFamilyComboBox.SelectionChanged += OnFontFamilyChanged;
-            
+
             fontPanel.Children.Add(fontLabel);
             fontPanel.Children.Add(_fontFamilyComboBox);
             mainPanel.Children.Add(fontPanel);
-            
+
             // フォントサイズ設定
             var fontSizePanel = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Margin = new Thickness(10, 10, 0, 20)
             };
-            
+
             var fontSizeLabel = new TextBlock
             {
                 Text = "フォントサイズ:",
@@ -656,7 +658,7 @@ public class IDESettingsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = Brushes.White
             };
-            
+
             _fontSizeNumeric = new NumericUpDown
             {
                 Width = 200,
@@ -667,34 +669,34 @@ public class IDESettingsView : UserControl
                 FormatString = "0"
             };
             _fontSizeNumeric.ValueChanged += OnFontSizeChanged;
-            
+
             fontSizePanel.Children.Add(fontSizeLabel);
             fontSizePanel.Children.Add(_fontSizeNumeric);
             mainPanel.Children.Add(fontSizePanel);
-            
+
             // 書き出し設定セクション
             var exportSection = CreateSectionHeader("書き出し設定");
             mainPanel.Children.Add(exportSection);
-            
+
             // 装備ファイル設定
             var equipmentFilePanel = new StackPanel
             {
                 Margin = new Thickness(10, 10, 0, 10)
             };
-            
+
             var equipmentFileLabel = new TextBlock
             {
                 Text = "装備ファイル:",
                 Foreground = Brushes.White,
                 Margin = new Thickness(0, 0, 0, 5)
             };
-            
+
             var equipmentFileOptions = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Margin = new Thickness(20, 5, 0, 0)
             };
-            
+
             _equipmentFileIntegratedRadio = new RadioButton
             {
                 Content = "統合",
@@ -704,7 +706,7 @@ public class IDESettingsView : UserControl
                 IsChecked = _settings.IsEquipmentFileIntegrated
             };
             _equipmentFileIntegratedRadio.Checked += OnEquipmentFileOptionChanged;
-            
+
             _equipmentFileSplitRadio = new RadioButton
             {
                 Content = "分割",
@@ -713,33 +715,33 @@ public class IDESettingsView : UserControl
                 IsChecked = !_settings.IsEquipmentFileIntegrated
             };
             _equipmentFileSplitRadio.Checked += OnEquipmentFileOptionChanged;
-            
+
             equipmentFileOptions.Children.Add(_equipmentFileIntegratedRadio);
             equipmentFileOptions.Children.Add(_equipmentFileSplitRadio);
-            
+
             equipmentFilePanel.Children.Add(equipmentFileLabel);
             equipmentFilePanel.Children.Add(equipmentFileOptions);
             mainPanel.Children.Add(equipmentFilePanel);
-            
+
             // 言語設定
             var languagePanel = new StackPanel
             {
                 Margin = new Thickness(10, 10, 0, 10)
             };
-            
+
             var languageLabel = new TextBlock
             {
                 Text = "言語:",
                 Foreground = Brushes.White,
                 Margin = new Thickness(0, 0, 0, 5)
             };
-            
+
             var languageOptions = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Margin = new Thickness(20, 5, 0, 0)
             };
-            
+
             _languageJapaneseRadio = new RadioButton
             {
                 Content = "日本語",
@@ -749,7 +751,7 @@ public class IDESettingsView : UserControl
                 IsChecked = _settings.IsJapanese
             };
             _languageJapaneseRadio.Checked += OnLanguageOptionChanged;
-            
+
             _languageEnglishRadio = new RadioButton
             {
                 Content = "英語",
@@ -758,14 +760,14 @@ public class IDESettingsView : UserControl
                 IsChecked = !_settings.IsJapanese
             };
             _languageEnglishRadio.Checked += OnLanguageOptionChanged;
-            
+
             languageOptions.Children.Add(_languageJapaneseRadio);
             languageOptions.Children.Add(_languageEnglishRadio);
-            
+
             languagePanel.Children.Add(languageLabel);
             languagePanel.Children.Add(languageOptions);
             mainPanel.Children.Add(languagePanel);
-            
+
             // 保存ボタン
             var saveButton = new Button
             {
@@ -777,16 +779,16 @@ public class IDESettingsView : UserControl
                 Foreground = Brushes.White
             };
             saveButton.Click += OnSaveButtonClick;
-            
+
             mainPanel.Children.Add(saveButton);
-            
+
             Grid.SetRow(mainPanel, 1);
             grid.Children.Add(headerPanel);
             grid.Children.Add(mainPanel);
 
             Content = grid;
         }
-        
+
         private Panel CreateSectionHeader(string title)
         {
             var panel = new Panel
@@ -795,7 +797,7 @@ public class IDESettingsView : UserControl
                 Height = 30,
                 Margin = new Thickness(0, 10, 0, 10)
             };
-            
+
             var titleText = new TextBlock
             {
                 Text = title,
@@ -804,11 +806,11 @@ public class IDESettingsView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(10, 0, 0, 0)
             };
-            
+
             panel.Children.Add(titleText);
             return panel;
         }
-        
+
         private void LoadSettings()
         {
             try
@@ -822,12 +824,26 @@ public class IDESettingsView : UserControl
                 if (File.Exists(_configFilePath))
                 {
                     var json = File.ReadAllText(_configFilePath);
-                    _settings = JsonSerializer.Deserialize<IDESettings>(json);
+                    var jsonData = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+
+                    if (jsonData != null)
+                    {
+                        _settings = new IdeSettings
+                        {
+                            IsDarkTheme = GetBooleanValue(jsonData, "IsDarkTheme"),
+                            FontFamily = jsonData.ContainsKey("FontFamily")
+                                ? jsonData["FontFamily"].ToString()
+                                : "Yu Gothic UI",
+                            FontSize = GetDecimalValue(jsonData, "FontSize"),
+                            IsEquipmentFileIntegrated = GetBooleanValue(jsonData, "IsEquipmentFileIntegrated"),
+                            IsJapanese = GetBooleanValue(jsonData, "IsJapanese")
+                        };
+                    }
                 }
                 else
                 {
-                    // デフォルト設定
-                    _settings = new IDESettings
+                    // Default settings
+                    _settings = new IdeSettings
                     {
                         IsDarkTheme = true,
                         FontFamily = "Yu Gothic UI",
@@ -839,10 +855,10 @@ public class IDESettingsView : UserControl
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"設定ファイルの読み込み中にエラーが発生しました: {ex.Message}");
-                
-                // エラー時はデフォルト設定
-                _settings = new IDESettings
+                Console.WriteLine($"Error loading settings file: {ex.Message}");
+
+                // Default settings in case of error
+                _settings = new IdeSettings
                 {
                     IsDarkTheme = true,
                     FontFamily = "Yu Gothic UI",
@@ -852,7 +868,52 @@ public class IDESettingsView : UserControl
                 };
             }
         }
-        
+
+        private static bool GetBooleanValue(Dictionary<string, object> data, string key)
+        {
+            if (!data.ContainsKey(key)) return false;
+
+            try
+            {
+                if (data[key] is System.Text.Json.JsonElement jsonElement)
+                {
+                    if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.True ||
+                        jsonElement.ValueKind == System.Text.Json.JsonValueKind.False)
+                    {
+                        return jsonElement.GetBoolean();
+                    }
+                }
+
+                return Convert.ToBoolean(data[key]);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static decimal GetDecimalValue(Dictionary<string, object> data, string key)
+        {
+            if (!data.ContainsKey(key)) return 0;
+
+            try
+            {
+                if (data[key] is System.Text.Json.JsonElement jsonElement)
+                {
+                    if (jsonElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    {
+                        return jsonElement.GetDecimal();
+                    }
+                }
+
+                return Convert.ToDecimal(data[key]);
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
         private void SaveSettings()
         {
             try
@@ -870,7 +931,7 @@ public class IDESettingsView : UserControl
 
                 var json = JsonSerializer.Serialize(_settings, options);
                 File.WriteAllText(_configFilePath, json);
-                
+
                 ApplySettings();
             }
             catch (Exception ex)
@@ -878,7 +939,7 @@ public class IDESettingsView : UserControl
                 Console.WriteLine($"設定ファイルの保存中にエラーが発生しました: {ex.Message}");
             }
         }
-        
+
         private void ApplySettings()
         {
             // アプリケーション全体に設定を反映する
@@ -887,7 +948,7 @@ public class IDESettingsView : UserControl
             {
                 // テーマの適用
                 app.RequestedThemeVariant = _settings.IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
-                
+
                 // フォント設定の適用（実装は環境によって異なる場合があります）
                 if (app.Resources is ResourceDictionary resourceDictionary)
                 {
@@ -896,7 +957,7 @@ public class IDESettingsView : UserControl
                 }
             }
         }
-        
+
         private void OnThemeSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_themeComboBox.SelectedIndex == 0)
@@ -908,290 +969,299 @@ public class IDESettingsView : UserControl
                 _settings.IsDarkTheme = false;
             }
         }
-        
+
         private void OnFontFamilyChanged(object sender, SelectionChangedEventArgs e)
         {
             _settings.FontFamily = _fontFamilyComboBox.SelectedItem?.ToString() ?? "Yu Gothic UI";
         }
-        
+
         private void OnFontSizeChanged(object sender, NumericUpDownValueChangedEventArgs e)
         {
             _settings.FontSize = (double)_fontSizeNumeric.Value;
         }
-        
+
         private void OnEquipmentFileOptionChanged(object sender, RoutedEventArgs e)
         {
             _settings.IsEquipmentFileIntegrated = _equipmentFileIntegratedRadio.IsChecked ?? true;
         }
-        
+
         private void OnLanguageOptionChanged(object sender, RoutedEventArgs e)
         {
             _settings.IsJapanese = _languageJapaneseRadio.IsChecked ?? true;
         }
-        
+
         private void OnSaveButtonClick(object sender, RoutedEventArgs e)
         {
             SaveSettings();
         }
     }
-    
 
-public class ModSettingsView : UserControl
-{
-    private ObservableCollection<ModInfo> _modList = new ObservableCollection<ModInfo>();
-    private ListBox _modListBox;
-    private Button _addButton;
-    private Button _removeButton;
-    private Button _saveButton;
-    private string _vanillaGamePath;
-    private string _vanillaLogPath;
-    private TextBox _vanillaGamePathTextBox;
-    private TextBox _vanillaLogPathTextBox;
 
-    private readonly string _configFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "HOI4NavalModder",
-        "modpaths.json");
-
-    public ModSettingsView()
+    public class ModSettingsView : UserControl
     {
-        var grid = new Grid
+        private ObservableCollection<ModInfo> _modList = new ObservableCollection<ModInfo>();
+        private ListBox _modListBox;
+        private Button _addButton;
+        private Button _removeButton;
+        private Button _saveButton;
+        private string _vanillaGamePath;
+        private string _vanillaLogPath;
+        private TextBox _vanillaGamePathTextBox;
+        private TextBox _vanillaLogPathTextBox;
+
+        private readonly string _configFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HOI4NavalModder",
+            "modpaths.json");
+
+        public ModSettingsView()
         {
-            RowDefinitions = new RowDefinitions("Auto,*")
-        };
-
-        var headerPanel = new Panel
-        {
-            Background = new SolidColorBrush(Color.Parse("#2D2D30")),
-            Height = 40
-        };
-
-        var headerText = new TextBlock
-        {
-            Text = "MOD設定",
-            Foreground = Brushes.White,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Margin = new Thickness(20, 0, 0, 0),
-            FontSize = 16
-        };
-
-        headerPanel.Children.Add(headerText);
-        Grid.SetRow(headerPanel, 0);
-
-        var mainPanel = new StackPanel
-        {
-            Margin = new Thickness(20)
-        };
-
-        var descriptionText = new TextBlock
-        {
-            Text = "バニラゲームとMODの設定をします",
-            Foreground = Brushes.White,
-            Margin = new Thickness(0, 0, 0, 20)
-        };
-
-        // ==================== バニラゲームパス設定セクション ====================
-        var vanillaGameSection = CreateSectionHeader("バニラ環境設定");
-        mainPanel.Children.Add(vanillaGameSection);
-
-        // Game Path
-        var gamePathLabel = new TextBlock
-        {
-            Text = "ゲームパス:",
-            Foreground = Brushes.White,
-            Margin = new Thickness(5, 10, 0, 5)
-        };
-        mainPanel.Children.Add(gamePathLabel);
-
-        var vanillaGamePathPanel = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*, Auto"),
-            Margin = new Thickness(5, 0, 0, 10)
-        };
-
-        _vanillaGamePathTextBox = new TextBox
-        {
-            Watermark = "Hearts of Iron IV のインストールパスを設定してください",
-            Foreground = Brushes.White,
-            Background = new SolidColorBrush(Color.Parse("#333337")),
-            BorderBrush = new SolidColorBrush(Color.Parse("#555555")),
-            Margin = new Thickness(0, 0, 10, 0)
-        };
-        Grid.SetColumn(_vanillaGamePathTextBox, 0);
-
-        var browseGamePathButton = new Button
-        {
-            Content = "参照...",
-            Padding = new Thickness(10, 5, 10, 5),
-            Background = new SolidColorBrush(Color.Parse("#3E3E42")),
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(Color.Parse("#555555"))
-        };
-        browseGamePathButton.Click += OnBrowseGamePathButtonClick;
-        Grid.SetColumn(browseGamePathButton, 1);
-
-        vanillaGamePathPanel.Children.Add(_vanillaGamePathTextBox);
-        vanillaGamePathPanel.Children.Add(browseGamePathButton);
-
-        mainPanel.Children.Add(vanillaGamePathPanel);
-
-        // Log Path
-        var logPathLabel = new TextBlock
-        {
-            Text = "データログパス:",
-            Foreground = Brushes.White,
-            Margin = new Thickness(5, 10, 0, 5)
-        };
-        mainPanel.Children.Add(logPathLabel);
-
-        var vanillaLogPathPanel = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*, Auto"),
-            Margin = new Thickness(5, 0, 0, 20)
-        };
-
-        _vanillaLogPathTextBox = new TextBox
-        {
-            Watermark = "ゲームのデータログパスを設定してください（通常は Documents\\Paradox Interactive\\Hearts of Iron IV）",
-            Foreground = Brushes.White,
-            Background = new SolidColorBrush(Color.Parse("#333337")),
-            BorderBrush = new SolidColorBrush(Color.Parse("#555555")),
-            Margin = new Thickness(0, 0, 10, 0)
-        };
-        Grid.SetColumn(_vanillaLogPathTextBox, 0);
-
-        var browseLogPathButton = new Button
-        {
-            Content = "参照...",
-            Padding = new Thickness(10, 5, 10, 5),
-            Background = new SolidColorBrush(Color.Parse("#3E3E42")),
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(Color.Parse("#555555"))
-        };
-        browseLogPathButton.Click += OnBrowseLogPathButtonClick;
-        Grid.SetColumn(browseLogPathButton, 1);
-
-        vanillaLogPathPanel.Children.Add(_vanillaLogPathTextBox);
-        vanillaLogPathPanel.Children.Add(browseLogPathButton);
-
-        mainPanel.Children.Add(vanillaLogPathPanel);
-
-        // ==================== MODリスト設定セクション ====================
-        var modListSection = CreateSectionHeader("MODリスト");
-        mainPanel.Children.Add(modListSection);
-
-        var toolbarPanel = new Panel
-        {
-            Background = new SolidColorBrush(Color.Parse("#333337")),
-            Height = 40,
-            Margin = new Thickness(0, 0, 0, 1)
-        };
-
-        var toolbar = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(10, 5, 0, 0)
-        };
-
-        _addButton = new Button
-        {
-            Content = "+",
-            Padding = new Thickness(10, 5, 10, 5),
-            Margin = new Thickness(0, 0, 5, 0),
-            Background = new SolidColorBrush(Color.Parse("#3E3E42")),
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(0)
-        };
-        _addButton.Click += OnAddButtonClick;
-
-        _removeButton = new Button
-        {
-            Content = "-",
-            Padding = new Thickness(10, 5, 10, 5),
-            Margin = new Thickness(0, 0, 5, 0),
-            Background = new SolidColorBrush(Color.Parse("#3E3E42")),
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(0),
-            IsEnabled = false
-        };
-        _removeButton.Click += OnRemoveButtonClick;
-
-        toolbar.Children.Add(_addButton);
-        toolbar.Children.Add(_removeButton);
-        toolbarPanel.Children.Add(toolbar);
-
-        var listContainer = new Border
-        {
-            Background = new SolidColorBrush(Color.Parse("#2D2D30")),
-            BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(Color.Parse("#3F3F46")),
-            Padding = new Thickness(5),
-            Height = 400
-        };
-
-        _modListBox = new ListBox
-        {
-            Background = new SolidColorBrush(Color.Parse("#2D2D30")),
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(0),
-            ItemsSource = _modList,
-            SelectionMode = SelectionMode.Multiple
-        };
-        _modListBox.SelectionChanged += OnModSelectionChanged;
-
-        _modListBox.ItemTemplate = new FuncDataTemplate<ModInfo>((item, scope) =>
-        {
-            if (item == null)
+            var grid = new Grid
             {
-                return new TextBlock { Text = "No data available", Foreground = Brushes.White };
-            }
-
-            var panel = new DockPanel
-            {
-                LastChildFill = true,
-                Margin = new Thickness(5)
+                RowDefinitions = new RowDefinitions("Auto,*")
             };
 
-            var radioButton = new RadioButton
+            var headerPanel = new Panel
             {
-                GroupName = "ModSelection",
-                IsChecked = item.IsActive,
-                Margin = new Thickness(0, 0, 5, 0),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            radioButton.Checked += (s, e) => 
-            { 
-                // このMODをアクティブにし、他のすべてのMODを非アクティブにする
-                foreach (var mod in _modList)
-                {
-                    mod.IsActive = (mod == item);
-                }
-                SaveConfigData(); 
+                Background = new SolidColorBrush(Color.Parse("#2D2D30")),
+                Height = 40
             };
 
-            var stackPanel = new StackPanel
+            var headerText = new TextBlock
+            {
+                Text = "MOD設定",
+                Foreground = Brushes.White,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                Margin = new Thickness(20, 0, 0, 0),
+                FontSize = 16
+            };
+
+            headerPanel.Children.Add(headerText);
+            Grid.SetRow(headerPanel, 0);
+
+            var mainPanel = new StackPanel
+            {
+                Margin = new Thickness(20)
+            };
+
+            var descriptionText = new TextBlock
+            {
+                Text = "バニラゲームとMODの設定をします",
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+
+            // ==================== バニラゲームパス設定セクション ====================
+            var vanillaGameSection = CreateSectionHeader("バニラ環境設定");
+            mainPanel.Children.Add(vanillaGameSection);
+
+            // Game Path
+            var gamePathLabel = new TextBlock
+            {
+                Text = "ゲームパス:",
+                Foreground = Brushes.White,
+                Margin = new Thickness(5, 10, 0, 5)
+            };
+            mainPanel.Children.Add(gamePathLabel);
+
+            var vanillaGamePathPanel = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("*, Auto"),
+                Margin = new Thickness(5, 0, 0, 10)
+            };
+
+            _vanillaGamePathTextBox = new TextBox
+            {
+                Watermark = "Hearts of Iron IV のインストールパスを設定してください",
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.Parse("#333337")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#555555")),
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            Grid.SetColumn(_vanillaGamePathTextBox, 0);
+
+            var browseGamePathButton = new Button
+            {
+                Content = "参照...",
+                Padding = new Thickness(10, 5, 10, 5),
+                Background = new SolidColorBrush(Color.Parse("#3E3E42")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.Parse("#555555"))
+            };
+            browseGamePathButton.Click += OnBrowseGamePathButtonClick;
+            Grid.SetColumn(browseGamePathButton, 1);
+
+            vanillaGamePathPanel.Children.Add(_vanillaGamePathTextBox);
+            vanillaGamePathPanel.Children.Add(browseGamePathButton);
+
+            mainPanel.Children.Add(vanillaGamePathPanel);
+
+            // Log Path
+            var logPathLabel = new TextBlock
+            {
+                Text = "データログパス:",
+                Foreground = Brushes.White,
+                Margin = new Thickness(5, 10, 0, 5)
+            };
+            mainPanel.Children.Add(logPathLabel);
+
+            var vanillaLogPathPanel = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("*, Auto"),
+                Margin = new Thickness(5, 0, 0, 20)
+            };
+
+            _vanillaLogPathTextBox = new TextBox
+            {
+                Watermark = "ゲームのデータログパスを設定してください（通常は Documents\\Paradox Interactive\\Hearts of Iron IV）",
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.Parse("#333337")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#555555")),
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            Grid.SetColumn(_vanillaLogPathTextBox, 0);
+
+            var browseLogPathButton = new Button
+            {
+                Content = "参照...",
+                Padding = new Thickness(10, 5, 10, 5),
+                Background = new SolidColorBrush(Color.Parse("#3E3E42")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.Parse("#555555"))
+            };
+            browseLogPathButton.Click += OnBrowseLogPathButtonClick;
+            Grid.SetColumn(browseLogPathButton, 1);
+
+            vanillaLogPathPanel.Children.Add(_vanillaLogPathTextBox);
+            vanillaLogPathPanel.Children.Add(browseLogPathButton);
+
+            mainPanel.Children.Add(vanillaLogPathPanel);
+
+            // ==================== MODリスト設定セクション ====================
+            var modListSection = CreateSectionHeader("MODリスト");
+            mainPanel.Children.Add(modListSection);
+
+            var toolbarPanel = new Panel
+            {
+                Background = new SolidColorBrush(Color.Parse("#333337")),
+                Height = 40,
+                Margin = new Thickness(0, 0, 0, 1)
+            };
+
+            var toolbar = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Spacing = 10
+                Margin = new Thickness(10, 5, 0, 0)
             };
 
-            Image thumbnail = null;
-            if (item.ThumbnailPath != null)
+            _addButton = new Button
             {
-                try
+                Content = "+",
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 5, 0),
+                Background = new SolidColorBrush(Color.Parse("#3E3E42")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0)
+            };
+            _addButton.Click += OnAddButtonClick;
+
+            _removeButton = new Button
+            {
+                Content = "-",
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 5, 0),
+                Background = new SolidColorBrush(Color.Parse("#3E3E42")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0),
+                IsEnabled = false
+            };
+            _removeButton.Click += OnRemoveButtonClick;
+
+            toolbar.Children.Add(_addButton);
+            toolbar.Children.Add(_removeButton);
+            toolbarPanel.Children.Add(toolbar);
+
+            var listContainer = new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#2D2D30")),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.Parse("#3F3F46")),
+                Padding = new Thickness(5),
+                Height = 400
+            };
+
+            _modListBox = new ListBox
+            {
+                Background = new SolidColorBrush(Color.Parse("#2D2D30")),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0),
+                ItemsSource = _modList,
+                SelectionMode = SelectionMode.Multiple
+            };
+            _modListBox.SelectionChanged += OnModSelectionChanged;
+
+            _modListBox.ItemTemplate = new FuncDataTemplate<ModInfo>((item, scope) =>
+            {
+                if (item == null)
                 {
-                    var bitmap = new Bitmap(item.ThumbnailPath);
-                    thumbnail = new Image
-                    {
-                        Source = bitmap,
-                        Width = 40,
-                        Height = 40,
-                        Stretch = Stretch.Uniform
-                    };
+                    return new TextBlock { Text = "No data available", Foreground = Brushes.White };
                 }
-                catch
+
+                var panel = new DockPanel
+                {
+                    LastChildFill = true,
+                    Margin = new Thickness(5)
+                };
+
+                var radioButton = new RadioButton
+                {
+                    GroupName = "ModSelection",
+                    IsChecked = item.IsActive,
+                    Margin = new Thickness(0, 0, 5, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                radioButton.Checked += (s, e) => 
+                { 
+                    // このMODをアクティブにし、他のすべてのMODを非アクティブにする
+                    foreach (var mod in _modList)
+                    {
+                        mod.IsActive = (mod == item);
+                    }
+                    SaveConfigData(); 
+                };
+
+                var stackPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10
+                };
+
+                Image thumbnail = null;
+                if (item.ThumbnailPath != null)
+                {
+                    try
+                    {
+                        var bitmap = new Bitmap(item.ThumbnailPath);
+                        thumbnail = new Image
+                        {
+                            Source = bitmap,
+                            Width = 40,
+                            Height = 40,
+                            Stretch = Stretch.Uniform
+                        };
+                    }
+                    catch
+                    {
+                        thumbnail = new Image
+                        {
+                            Width = 40,
+                            Height = 40
+                        };
+                    }
+                }
+                else
                 {
                     thumbnail = new Image
                     {
@@ -1199,403 +1269,394 @@ public class ModSettingsView : UserControl
                         Height = 40
                     };
                 }
-            }
-            else
-            {
-                thumbnail = new Image
+
+                var textStack = new StackPanel
                 {
-                    Width = 40,
-                    Height = 40
+                    VerticalAlignment = VerticalAlignment.Center
                 };
-            }
 
-            var textStack = new StackPanel
+                var modNameText = new TextBlock
+                {
+                    Text = item.Name,
+                    Foreground = Brushes.White,
+                    FontWeight = FontWeight.Bold
+                };
+
+                var modVersionText = new TextBlock
+                {
+                    Text = item.Version,
+                    Foreground = Brushes.White,
+                    FontSize = 12
+                };
+
+                var modPathText = new TextBlock
+                {
+                    Text = item.Path,
+                    Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
+                    FontSize = 12
+                };
+
+                textStack.Children.Add(modNameText);
+                textStack.Children.Add(modVersionText);
+                textStack.Children.Add(modPathText);
+
+                stackPanel.Children.Add(thumbnail);
+                stackPanel.Children.Add(textStack);
+
+                panel.Children.Add(radioButton);
+                panel.Children.Add(stackPanel);
+                return panel;
+            });
+
+            listContainer.Child = _modListBox;
+
+            mainPanel.Children.Add(toolbarPanel);
+            mainPanel.Children.Add(listContainer);
+
+            // ボタンパネル
+            var buttonPanel = new StackPanel
             {
-                VerticalAlignment = VerticalAlignment.Center
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 10, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Right
             };
 
-            var modNameText = new TextBlock
+            _saveButton = new Button
             {
-                Text = item.Name,
+                Content = "設定を保存",
+                Padding = new Thickness(15, 8, 15, 8),
+                Background = new SolidColorBrush(Color.Parse("#0078D7")),
                 Foreground = Brushes.White,
-                FontWeight = FontWeight.Bold
+                Margin = new Thickness(10, 0, 0, 0)
             };
+            _saveButton.Click += OnSaveButtonClick;
 
-            var modVersionText = new TextBlock
+            buttonPanel.Children.Add(_saveButton);
+            mainPanel.Children.Add(buttonPanel);
+
+            Grid.SetRow(mainPanel, 1);
+            grid.Children.Add(headerPanel);
+            grid.Children.Add(mainPanel);
+
+            Content = grid;
+
+            LoadConfigData();
+        }
+
+        private Panel CreateSectionHeader(string title)
+        {
+            var panel = new Panel
             {
-                Text = item.Version,
+                Background = new SolidColorBrush(Color.Parse("#3E3E42")),
+                Height = 30,
+                Margin = new Thickness(0, 10, 0, 10)
+            };
+        
+            var titleText = new TextBlock
+            {
+                Text = title,
                 Foreground = Brushes.White,
-                FontSize = 12
+                FontWeight = FontWeight.Bold,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(10, 0, 0, 0)
             };
-
-            var modPathText = new TextBlock
-            {
-                Text = item.Path,
-                Foreground = new SolidColorBrush(Color.Parse("#CCCCCC")),
-                FontSize = 12
-            };
-
-            textStack.Children.Add(modNameText);
-            textStack.Children.Add(modVersionText);
-            textStack.Children.Add(modPathText);
-
-            stackPanel.Children.Add(thumbnail);
-            stackPanel.Children.Add(textStack);
-
-            panel.Children.Add(radioButton);
-            panel.Children.Add(stackPanel);
+        
+            panel.Children.Add(titleText);
             return panel;
-        });
+        }
 
-        listContainer.Child = _modListBox;
-
-        mainPanel.Children.Add(toolbarPanel);
-        mainPanel.Children.Add(listContainer);
-
-        // ボタンパネル
-        var buttonPanel = new StackPanel
+        private void LoadConfigData()
         {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 10, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
-
-        _saveButton = new Button
-        {
-            Content = "設定を保存",
-            Padding = new Thickness(15, 8, 15, 8),
-            Background = new SolidColorBrush(Color.Parse("#0078D7")),
-            Foreground = Brushes.White,
-            Margin = new Thickness(10, 0, 0, 0)
-        };
-        _saveButton.Click += OnSaveButtonClick;
-
-        buttonPanel.Children.Add(_saveButton);
-        mainPanel.Children.Add(buttonPanel);
-
-        Grid.SetRow(mainPanel, 1);
-        grid.Children.Add(headerPanel);
-        grid.Children.Add(mainPanel);
-
-        Content = grid;
-
-        LoadConfigData();
-    }
-
-    private Panel CreateSectionHeader(string title)
-    {
-        var panel = new Panel
-        {
-            Background = new SolidColorBrush(Color.Parse("#3E3E42")),
-            Height = 30,
-            Margin = new Thickness(0, 10, 0, 10)
-        };
-        
-        var titleText = new TextBlock
-        {
-            Text = title,
-            Foreground = Brushes.White,
-            FontWeight = FontWeight.Bold,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(10, 0, 0, 0)
-        };
-        
-        panel.Children.Add(titleText);
-        return panel;
-    }
-
-    private void LoadConfigData()
-    {
-        try
-        {
-            var configDir = Path.GetDirectoryName(_configFilePath);
-            if (!Directory.Exists(configDir))
+            try
             {
-                Directory.CreateDirectory(configDir);
-            }
-
-            if (!File.Exists(_configFilePath))
-            {
-                // デフォルトのログパスを設定
-                string defaultLogPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "Paradox Interactive",
-                    "Hearts of Iron IV");
-                
-                if (Directory.Exists(defaultLogPath))
+                var configDir = Path.GetDirectoryName(_configFilePath);
+                if (!Directory.Exists(configDir))
                 {
-                    _vanillaLogPath = defaultLogPath;
-                    _vanillaLogPathTextBox.Text = defaultLogPath;
+                    Directory.CreateDirectory(configDir);
                 }
-                
-                return;
-            }
 
-            var json = File.ReadAllText(_configFilePath);
-            var config = JsonSerializer.Deserialize<ModConfig>(json);
-
-            if (config != null)
-            {
-                // バニラゲームパスの設定
-                _vanillaGamePath = config.VanillaGamePath;
-                _vanillaGamePathTextBox.Text = _vanillaGamePath;
-                
-                // バニラログパスの設定
-                _vanillaLogPath = config.VanillaLogPath;
-                _vanillaLogPathTextBox.Text = _vanillaLogPath;
-
-                // MODリストの設定
-                _modList.Clear();
-                if (config.Mods != null)
+                if (!File.Exists(_configFilePath))
                 {
-                    foreach (var modInfo in config.Mods)
+                    // デフォルトのログパスを設定
+                    string defaultLogPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "Paradox Interactive",
+                        "Hearts of Iron IV");
+                
+                    if (Directory.Exists(defaultLogPath))
                     {
-                        if (!string.IsNullOrEmpty(modInfo.ThumbnailPath) && !File.Exists(modInfo.ThumbnailPath))
-                        {
-                            modInfo.ThumbnailPath = null;
-                        }
-                        _modList.Add(modInfo);
+                        _vanillaLogPath = defaultLogPath;
+                        _vanillaLogPathTextBox.Text = defaultLogPath;
                     }
+                
+                    return;
+                }
+
+                var json = File.ReadAllText(_configFilePath);
+                var config = JsonSerializer.Deserialize<ModConfig>(json);
+
+                if (config != null)
+                {
+                    // バニラゲームパスの設定
+                    _vanillaGamePath = config.VanillaGamePath;
+                    _vanillaGamePathTextBox.Text = _vanillaGamePath;
+                
+                    // バニラログパスの設定
+                    _vanillaLogPath = config.VanillaLogPath;
+                    _vanillaLogPathTextBox.Text = _vanillaLogPath;
+
+                    // MODリストの設定
+                    _modList.Clear();
+                    if (config.Mods != null)
+                    {
+                        foreach (var modInfo in config.Mods)
+                        {
+                            if (!string.IsNullOrEmpty(modInfo.ThumbnailPath) && !File.Exists(modInfo.ThumbnailPath))
+                            {
+                                modInfo.ThumbnailPath = null;
+                            }
+                            _modList.Add(modInfo);
+                        }
                     
-                    // アクティブなMODが複数ある場合は最初の1つだけをアクティブにする
-                    bool foundActive = false;
-                    foreach (var mod in _modList)
-                    {
-                        if (mod.IsActive)
+                        // アクティブなMODが複数ある場合は最初の1つだけをアクティブにする
+                        bool foundActive = false;
+                        foreach (var mod in _modList)
                         {
-                            if (foundActive)
+                            if (mod.IsActive)
                             {
-                                mod.IsActive = false;
-                            }
-                            else
-                            {
-                                foundActive = true;
+                                if (foundActive)
+                                {
+                                    mod.IsActive = false;
+                                }
+                                else
+                                {
+                                    foundActive = true;
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"設定ファイルの読み込み中にエラーが発生しました: {ex.Message}");
-        }
-    }
-
-    private async void OnBrowseGamePathButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null) return;
-
-        var folderDialog = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "Hearts of Iron IV のインストールフォルダを選択",
-            AllowMultiple = false
-        });
-
-        if (folderDialog != null && folderDialog.Count > 0)
-        {
-            var folderPath = folderDialog[0].Path.LocalPath;
-            
-            // ゲームディレクトリの検証（executable または特定のディレクトリの存在確認）
-            bool isValidGameDir = Directory.Exists(Path.Combine(folderPath, "common")) && 
-                                  Directory.Exists(Path.Combine(folderPath, "history")) &&
-                                  File.Exists(Path.Combine(folderPath, "hoi4.exe"));
-            
-            if (isValidGameDir)
+            catch (Exception ex)
             {
-                _vanillaGamePath = folderPath;
-                _vanillaGamePathTextBox.Text = _vanillaGamePath;
-                SaveConfigData();
-            }
-            else
-            {
-                // エラーメッセージ表示ロジックをここに追加（ダイアログ表示など）
-                Console.WriteLine("選択されたディレクトリは有効なHOI4インストールディレクトリではありません。");
-                
-                // あとでダイアログに変更する例
-                /*
-                var messageBox = new Window
-                {
-                    Title = "エラー",
-                    Width = 300,
-                    Height = 150,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-                
-                var messagePanel = new StackPanel
-                {
-                    Margin = new Thickness(20)
-                };
-                
-                messagePanel.Children.Add(new TextBlock
-                {
-                    Text = "選択されたディレクトリは有効なHOI4インストールディレクトリではありません。",
-                    TextWrapping = TextWrapping.Wrap
-                });
-                
-                var okButton = new Button
-                {
-                    Content = "OK",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 10, 0, 0)
-                };
-                okButton.Click += (s, e) => messageBox.Close();
-                
-                messagePanel.Children.Add(okButton);
-                messageBox.Content = messagePanel;
-                
-                await messageBox.ShowDialog(TopLevel.GetTopLevel(this));
-                */
+                Console.WriteLine($"設定ファイルの読み込み中にエラーが発生しました: {ex.Message}");
             }
         }
-    }
-    
-    private async void OnBrowseLogPathButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null) return;
 
-        var folderDialog = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        private async void OnBrowseGamePathButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            Title = "Hearts of Iron IV のデータログフォルダを選択",
-            AllowMultiple = false
-        });
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null) return;
 
-        if (folderDialog != null && folderDialog.Count > 0)
-        {
-            var folderPath = folderDialog[0].Path.LocalPath;
+            var folderDialog = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Hearts of Iron IV のインストールフォルダを選択",
+                AllowMultiple = false
+            });
+
+            if (folderDialog != null && folderDialog.Count > 0)
+            {
+                var folderPath = folderDialog[0].Path.LocalPath;
             
-            // ログディレクトリの検証（通常は Paradox Interactive/Hearts of Iron IV フォルダ）
-            bool isValidLogDir = Directory.Exists(folderPath);
+                // ゲームディレクトリの検証（executable または特定のディレクトリの存在確認）
+                bool isValidGameDir = Directory.Exists(Path.Combine(folderPath, "common")) && 
+                                      Directory.Exists(Path.Combine(folderPath, "history")) &&
+                                      File.Exists(Path.Combine(folderPath, "hoi4.exe"));
             
-            if (isValidLogDir)
-            {
-                _vanillaLogPath = folderPath;
-                _vanillaLogPathTextBox.Text = _vanillaLogPath;
-                SaveConfigData();
-            }
-            else
-            {
-                Console.WriteLine("選択されたディレクトリが見つかりません。");
-            }
-        }
-    }
-
-    private async void OnAddButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null) return;
-
-        var folderDialog = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "MODフォルダを選択",
-            AllowMultiple = false
-        });
-
-        if (folderDialog != null && folderDialog.Count > 0)
-        {
-            var folderPath = folderDialog[0].Path.LocalPath;
-            var descriptorPath = Path.Combine(folderPath, "descriptor.mod");
-
-            string modName = Path.GetFileName(folderPath);
-            string modVersion = "Unknown";
-            string thumbnailPath = Path.Combine(folderPath, "thumbnail.png");
-
-            if (File.Exists(descriptorPath))
-            {
-                var lines = File.ReadAllLines(descriptorPath);
-                foreach (var line in lines)
+                if (isValidGameDir)
                 {
-                    if (line.StartsWith("name="))
+                    _vanillaGamePath = folderPath;
+                    _vanillaGamePathTextBox.Text = _vanillaGamePath;
+                    SaveConfigData();
+                }
+                else
+                {
+                    // エラーメッセージ表示ロジックをここに追加（ダイアログ表示など）
+                    Console.WriteLine("選択されたディレクトリは有効なHOI4インストールディレクトリではありません。");
+                
+                    // あとでダイアログに変更する例
+                    /*
+                    var messageBox = new Window
                     {
-                        modName = line.Split('=')[1].Trim('"');
-                    }
-                    else if (line.StartsWith("version="))
+                        Title = "エラー",
+                        Width = 300,
+                        Height = 150,
+                        WindowStartupLocation = WindowStartupLocation.CenterOwner
+                    };
+
+                    var messagePanel = new StackPanel
                     {
-                        modVersion = line.Split('=')[1].Trim('"');
-                    }
-                    else if (line.StartsWith("picture="))
+                        Margin = new Thickness(20)
+                    };
+
+                    messagePanel.Children.Add(new TextBlock
                     {
-                        thumbnailPath = Path.Combine(folderPath, line.Split('=')[1].Trim('"'));
-                    }
+                        Text = "選択されたディレクトリは有効なHOI4インストールディレクトリではありません。",
+                        TextWrapping = TextWrapping.Wrap
+                    });
+
+                    var okButton = new Button
+                    {
+                        Content = "OK",
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(0, 10, 0, 0)
+                    };
+                    okButton.Click += (s, e) => messageBox.Close();
+
+                    messagePanel.Children.Add(okButton);
+                    messageBox.Content = messagePanel;
+
+                    await messageBox.ShowDialog(TopLevel.GetTopLevel(this));
+                    */
                 }
             }
+        }
+    
+        private async void OnBrowseLogPathButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null) return;
 
-            // 1つもアクティブなMODがなければ、このMODをアクティブにする
-            bool setActive = !_modList.Any(m => m.IsActive);
-
-            var modInfo = new ModInfo
+            var folderDialog = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Name = modName,
-                Version = modVersion,
-                Path = folderPath,
-                ThumbnailPath = File.Exists(thumbnailPath) ? thumbnailPath : null,
-                IsActive = setActive // 既存のMODがない場合のみアクティブに
-            };
+                Title = "Hearts of Iron IV のデータログフォルダを選択",
+                AllowMultiple = false
+            });
 
-            _modList.Add(modInfo);
+            if (folderDialog != null && folderDialog.Count > 0)
+            {
+                var folderPath = folderDialog[0].Path.LocalPath;
+            
+                // ログディレクトリの検証（通常は Paradox Interactive/Hearts of Iron IV フォルダ）
+                bool isValidLogDir = Directory.Exists(folderPath);
+            
+                if (isValidLogDir)
+                {
+                    _vanillaLogPath = folderPath;
+                    _vanillaLogPathTextBox.Text = _vanillaLogPath;
+                    SaveConfigData();
+                }
+                else
+                {
+                    Console.WriteLine("選択されたディレクトリが見つかりません。");
+                }
+            }
+        }
+
+        private async void OnAddButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null) return;
+
+            var folderDialog = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "MODフォルダを選択",
+                AllowMultiple = false
+            });
+
+            if (folderDialog != null && folderDialog.Count > 0)
+            {
+                var folderPath = folderDialog[0].Path.LocalPath;
+                var descriptorPath = Path.Combine(folderPath, "descriptor.mod");
+
+                string modName = Path.GetFileName(folderPath);
+                string modVersion = "Unknown";
+                string thumbnailPath = Path.Combine(folderPath, "thumbnail.png");
+
+                if (File.Exists(descriptorPath))
+                {
+                    var lines = File.ReadAllLines(descriptorPath);
+                    foreach (var line in lines)
+                    {
+                        if (line.StartsWith("name="))
+                        {
+                            modName = line.Split('=')[1].Trim('"');
+                        }
+                        else if (line.StartsWith("version="))
+                        {
+                            modVersion = line.Split('=')[1].Trim('"');
+                        }
+                        else if (line.StartsWith("picture="))
+                        {
+                            thumbnailPath = Path.Combine(folderPath, line.Split('=')[1].Trim('"'));
+                        }
+                    }
+                }
+
+                // 1つもアクティブなMODがなければ、このMODをアクティブにする
+                bool setActive = !_modList.Any(m => m.IsActive);
+
+                var modInfo = new ModInfo
+                {
+                    Name = modName,
+                    Version = modVersion,
+                    Path = folderPath,
+                    ThumbnailPath = File.Exists(thumbnailPath) ? thumbnailPath : null,
+                    IsActive = setActive // 既存のMODがない場合のみアクティブに
+                };
+
+                _modList.Add(modInfo);
+                SaveConfigData();
+            }
+        }
+
+        private void OnRemoveButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            var selectedItems = _modListBox.SelectedItems.Cast<ModInfo>().ToList();
+            if (selectedItems.Any())
+            {
+                foreach (var item in selectedItems)
+                {
+                    _modList.Remove(item);
+                }
+                SaveConfigData();
+            }
+
+            _removeButton.IsEnabled = _modListBox.SelectedItems.Count > 0;
+        }
+
+        private void OnModSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _removeButton.IsEnabled = _modListBox.SelectedItems.Count > 0;
+        }
+
+        private void OnSaveButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
             SaveConfigData();
         }
-    }
 
-    private void OnRemoveButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var selectedItems = _modListBox.SelectedItems.Cast<ModInfo>().ToList();
-        if (selectedItems.Any())
+        private void SaveConfigData()
         {
-            foreach (var item in selectedItems)
+            try
             {
-                _modList.Remove(item);
+                var configDir = Path.GetDirectoryName(_configFilePath);
+                if (!Directory.Exists(configDir))
+                {
+                    Directory.CreateDirectory(configDir);
+                }
+
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                var config = new ModConfig
+                {
+                    VanillaGamePath = _vanillaGamePath ?? _vanillaGamePathTextBox.Text,
+                    VanillaLogPath = _vanillaLogPath ?? _vanillaLogPathTextBox.Text,
+                    Mods = _modList.ToList()
+                };
+
+                var json = JsonSerializer.Serialize(config, options);
+
+                File.WriteAllText(_configFilePath, json);
+                Console.WriteLine("設定を保存しました");
             }
-            SaveConfigData();
-        }
-
-        _removeButton.IsEnabled = _modListBox.SelectedItems.Count > 0;
-    }
-
-    private void OnModSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        _removeButton.IsEnabled = _modListBox.SelectedItems.Count > 0;
-    }
-
-    private void OnSaveButtonClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        SaveConfigData();
-    }
-
-    private void SaveConfigData()
-    {
-        try
-        {
-            var configDir = Path.GetDirectoryName(_configFilePath);
-            if (!Directory.Exists(configDir))
+            catch (Exception ex)
             {
-                Directory.CreateDirectory(configDir);
+                Console.WriteLine($"設定ファイルの保存中にエラーが発生しました: {ex.Message}");
             }
-
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-
-            var config = new ModConfig
-            {
-                VanillaGamePath = _vanillaGamePath ?? _vanillaGamePathTextBox.Text,
-                VanillaLogPath = _vanillaLogPath ?? _vanillaLogPathTextBox.Text,
-                Mods = _modList.ToList()
-            };
-
-            var json = JsonSerializer.Serialize(config, options);
-
-            File.WriteAllText(_configFilePath, json);
-            Console.WriteLine("設定を保存しました");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"設定ファイルの保存中にエラーが発生しました: {ex.Message}");
         }
     }
-}
 
 }

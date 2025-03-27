@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -42,6 +44,10 @@ namespace HOI4NavalModder
         // CountryListManagerのインスタンスを追加
         private CountryListManager _countryListManager;
         private List<CountryListManager.CountryInfo> _countryInfoList;
+        private string? _configFilePath;
+        private string _vanillaPath;
+        private string _activeMod;
+
         public GunDesignView(NavalEquipment equipment, Dictionary<string, NavalCategory> categories,
             Dictionary<int, string> tierYears)
         {
@@ -289,7 +295,9 @@ namespace HOI4NavalModder
                 _calculatedBuildCostText.Text =
                     _originalEquipment.AdditionalProperties["CalculatedBuildCost"].ToString();
         }
+        
 
+        
         public GunDesignView(Dictionary<string, object> rawGunData, Dictionary<string, NavalCategory> categories,
             Dictionary<int, string> tierYears)
         {
@@ -329,7 +337,7 @@ namespace HOI4NavalModder
             _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
 
             // UI項目の選択肢を初期化
-            InitializeUIOptions();
+            InitializeUiOptions();
             // 2番目のコンストラクタの InitializeUIOptions() の後に以下を追加
             _descriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
             // 生データから値を設定
@@ -381,7 +389,7 @@ namespace HOI4NavalModder
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "HOI4NavalModder");
             
-                string settingsPath = Path.Combine(appDataPath, "idesettings.json");
+                string settingsPath = Path.Combine(appDataPath, "modpaths.json");
         
                 // 設定ファイルからパスを直接読み込む（CountryListManagerでも行われるが明示的に行う）
                 string modPath = string.Empty;
@@ -392,11 +400,20 @@ namespace HOI4NavalModder
                     try
                     {
                         string settingsJson = File.ReadAllText(settingsPath);
-                        var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(settingsJson);
+                        var settings = System.Text.Json.JsonSerializer.Deserialize<ModConfig>(settingsJson);
                         if (settings != null)
-                        {
-                            modPath = settings.ModPath ?? string.Empty;
-                            gamePath = settings.GamePath ?? string.Empty;
+                        { 
+                            var activeMod = settings.Mods?.FirstOrDefault(m => m.IsActive);
+                            if (activeMod != null)
+                            {
+                                Console.WriteLine($"アクティブMOD: {activeMod.Name}");
+                                modPath =  activeMod.Path;
+                            
+                            }else
+                            {
+                                Console.WriteLine($"設定のMODパスが存在しません");
+                            }
+                            gamePath = settings.VanillaGamePath ?? string.Empty;
                             Console.WriteLine($"設定から読み込んだパス - MOD: {modPath}, ゲーム: {gamePath}");
                         }
                     }
@@ -567,7 +584,7 @@ namespace HOI4NavalModder
 #endif
         }
 
-        private void InitializeUIOptions()
+        private void InitializeUiOptions()
         {
             // カテゴリの設定（砲関連のもののみフィルタリング）
             var filteredCategories = new Dictionary<string, NavalCategory>();
@@ -708,7 +725,6 @@ namespace HOI4NavalModder
         }
 
         // ヘルパーメソッド: Dictionaryから安全にdouble値を取得
-// ヘルパーメソッド: Dictionaryから安全にdouble値を取得
         private static decimal GetDoubleValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
@@ -735,7 +751,7 @@ namespace HOI4NavalModder
             }
         }
 
-// ヘルパーメソッド: Dictionaryから安全にint値を取得
+        // ヘルパーメソッド: Dictionaryから安全にint値を取得
         private static decimal GetIntValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return 0;
@@ -761,6 +777,7 @@ namespace HOI4NavalModder
                 return 0;
             }
         }
+        
         // ヘルパーメソッド: Dictionaryから安全にdecimal値を取得
         private static decimal GetDecimalValue(Dictionary<string, object> data, string key)
         {
@@ -782,7 +799,8 @@ namespace HOI4NavalModder
                 return 0;
             }
         }
-// ヘルパーメソッド: Dictionaryから安全にString値を取得
+        
+        // ヘルパーメソッド: Dictionaryから安全にString値を取得
         private static string GetStringValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return string.Empty;
@@ -1139,7 +1157,7 @@ namespace HOI4NavalModder
             NavalEquipment processedEquipment = GunCalculator.Gun_Processing(gunData);
 
             // 砲の生データも保存
-            GunDataToDB.SaveGunData(processedEquipment, gunData);
+            GunDataToDb.SaveGunData(processedEquipment, gunData);
 
             // 処理結果を返して画面を閉じる
             Close(processedEquipment);

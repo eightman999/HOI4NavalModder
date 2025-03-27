@@ -8,7 +8,7 @@ namespace HOI4NavalModder
     /// <summary>
     /// Gun Design View と DB の間でデータを転送する中間クラス
     /// </summary>
-    public static class GunDataToDB
+    public static class GunDataToDb
     {
         /// <summary>
         /// 砲の生データをデータベースに保存する
@@ -64,7 +64,7 @@ namespace HOI4NavalModder
             // 基本情報
             moduleData.Info = new ModuleInfo
             {
-                ID = equipment.Id,
+                Id = equipment.Id,
                 Name = equipment.Name,
                 Gfx = equipment.AdditionalProperties.ContainsKey("Gfx") 
                     ? equipment.AdditionalProperties["Gfx"].ToString() 

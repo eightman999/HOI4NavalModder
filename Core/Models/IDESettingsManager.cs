@@ -9,7 +9,7 @@ namespace HOI4NavalModder
     /// <summary>
     /// アプリケーション設定を管理するクラス
     /// </summary>
-    public class IDESettingsManager
+    public class IdeSettingsManager
     {
         /// <summary>
         /// 設定ファイルのパス
@@ -31,7 +31,7 @@ namespace HOI4NavalModder
         /// 設定データの取得
         /// </summary>
         /// <returns>IDESettings オブジェクト</returns>
-        public static IDESettings GetSettings()
+        public static IdeSettings GetSettings()
         {
             try
             {
@@ -46,12 +46,12 @@ namespace HOI4NavalModder
                 if (File.Exists(SettingsFilePath))
                 {
                     string json = File.ReadAllText(SettingsFilePath);
-                    var settings = JsonSerializer.Deserialize<IDESettings>(json);
+                    var settings = JsonSerializer.Deserialize<IdeSettings>(json);
                     
                     // NULLチェック
                     if (settings == null)
                     {
-                        settings = new IDESettings();
+                        settings = new IdeSettings();
                     }
 
                     return settings;
@@ -59,7 +59,7 @@ namespace HOI4NavalModder
                 else
                 {
                     // デフォルト設定を返す
-                    var defaultSettings = new IDESettings
+                    var defaultSettings = new IdeSettings
                     {
                         IsJapanese = true
                     };
@@ -77,7 +77,7 @@ namespace HOI4NavalModder
             catch (Exception ex)
             {
                 Console.WriteLine($"設定読み込みエラー: {ex.Message}");
-                return new IDESettings();
+                return new IdeSettings();
             }
         }
 
@@ -86,7 +86,7 @@ namespace HOI4NavalModder
         /// </summary>
         /// <param name="settings">保存する設定</param>
         /// <returns>保存成功の場合はtrue</returns>
-        public static bool SaveSettings(IDESettings settings)
+        public static bool SaveSettings(IdeSettings settings)
         {
             try
             {
@@ -328,17 +328,8 @@ namespace HOI4NavalModder
     /// <summary>
     /// アプリケーション設定クラス
     /// </summary>
-    public class IDESettings
+    public class IdeSettings
     {
-        /// <summary>
-        /// HOI4ゲームのインストールパス
-        /// </summary>
-        public string GamePath { get; set; } = string.Empty;
-
-        /// <summary>
-        /// アクティブなMODのパス
-        /// </summary>
-        public string ModPath { get; set; } = string.Empty;
 
         /// <summary>
         /// 日本語UIを使用するかどうか
@@ -364,6 +355,7 @@ namespace HOI4NavalModder
         public string FontFamily { get; set; }
         public object? FontSize { get; set; }
         public bool? IsEquipmentFileIntegrated { get; set; }
+        public string GamePath { get; set; }
     }
 
     /// <summary>

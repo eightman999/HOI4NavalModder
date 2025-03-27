@@ -397,7 +397,7 @@ namespace HOI4NavalModder
                                     INSERT OR REPLACE INTO module_info (ID, name, gfx, sfx, year, manpower, country, critical_parts)
                                     VALUES (@ID, @name, @gfx, @sfx, @year, @manpower, @country, @critical_parts);";
 
-                                command.Parameters.AddWithValue("@ID", moduleInfo.ID);
+                                command.Parameters.AddWithValue("@ID", moduleInfo.Id);
                                 command.Parameters.AddWithValue("@name", moduleInfo.Name);
                                 command.Parameters.AddWithValue("@gfx", moduleInfo.Gfx);
                                 command.Parameters.AddWithValue("@sfx", moduleInfo.Sfx);
@@ -410,13 +410,13 @@ namespace HOI4NavalModder
                             }
 
                             // module_add_statsテーブルに挿入/更新
-                            SaveModuleStats(connection, "module_add_stats", moduleInfo.ID, addStats);
+                            SaveModuleStats(connection, "module_add_stats", moduleInfo.Id, addStats);
 
                             // module_multiply_statsテーブルに挿入/更新
-                            SaveModuleStats(connection, "module_multiply_stats", moduleInfo.ID, multiplyStats);
+                            SaveModuleStats(connection, "module_multiply_stats", moduleInfo.Id, multiplyStats);
 
                             // module_add_average_statsテーブルに挿入/更新
-                            SaveModuleStats(connection, "module_add_average_stats", moduleInfo.ID, addAverageStats);
+                            SaveModuleStats(connection, "module_add_average_stats", moduleInfo.Id, addAverageStats);
 
                             // module_resourcesテーブルに挿入/更新
                             using (var command = new SQLiteCommand(connection))
@@ -425,7 +425,7 @@ namespace HOI4NavalModder
                                     INSERT OR REPLACE INTO module_resources (ID, aluminium, oil, steel, chromium, tungsten, rubber)
                                     VALUES (@ID, @aluminium, @oil, @steel, @chromium, @tungsten, @rubber);";
 
-                                command.Parameters.AddWithValue("@ID", moduleInfo.ID);
+                                command.Parameters.AddWithValue("@ID", moduleInfo.Id);
                                 command.Parameters.AddWithValue("@aluminium", resources.Aluminium);
                                 command.Parameters.AddWithValue("@oil", resources.Oil);
                                 command.Parameters.AddWithValue("@steel", resources.Steel);
@@ -440,7 +440,7 @@ namespace HOI4NavalModder
                             using (var command = new SQLiteCommand(connection))
                             {
                                 command.CommandText = "DELETE FROM module_can_convert WHERE ID = @ID;";
-                                command.Parameters.AddWithValue("@ID", moduleInfo.ID);
+                                command.Parameters.AddWithValue("@ID", moduleInfo.Id);
                                 command.ExecuteNonQuery();
                             }
 
@@ -455,7 +455,7 @@ namespace HOI4NavalModder
                                             INSERT INTO module_can_convert (ID, module, category)
                                             VALUES (@ID, @module, @category);";
 
-                                        command.Parameters.AddWithValue("@ID", moduleInfo.ID);
+                                        command.Parameters.AddWithValue("@ID", moduleInfo.Id);
                                         command.Parameters.AddWithValue("@module", convert.Module);
                                         command.Parameters.AddWithValue("@category", convert.Category);
 
@@ -465,7 +465,7 @@ namespace HOI4NavalModder
                             }
 
                             transaction.Commit();
-                            Console.WriteLine($"モジュール {moduleInfo.ID} のデータを保存しました。");
+                            Console.WriteLine($"モジュール {moduleInfo.Id} のデータを保存しました。");
                         }
                         catch (Exception ex)
                         {
@@ -559,7 +559,7 @@ namespace HOI4NavalModder
                             {
                                 moduleData.Info = new ModuleInfo
                                 {
-                                    ID = reader["ID"].ToString(),
+                                    Id = reader["ID"].ToString(),
                                     Name = reader["name"].ToString(),
                                     Gfx = reader["gfx"].ToString(),
                                     Sfx = reader["sfx"].ToString(),
@@ -736,7 +736,7 @@ namespace HOI4NavalModder
                             {
                                 modules.Add(new ModuleBasicInfo
                                 {
-                                    ID = reader["ID"].ToString(),
+                                    Id = reader["ID"].ToString(),
                                     Name = reader["name"].ToString(),
                                     Year = Convert.ToInt32(reader["year"])
                                 });
@@ -1448,7 +1448,7 @@ public List<string> GetAllEquipmentIds()
     // モジュール基本情報クラス
     public class ModuleInfo
     {
-        public string ID { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
         public string Gfx { get; set; }
         public string Sfx { get; set; }
@@ -1504,7 +1504,7 @@ public List<string> GetAllEquipmentIds()
 // モジュール基本情報（リスト表示用）
     public class ModuleBasicInfo
     {
-        public string ID { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
         public int Year { get; set; }
     }

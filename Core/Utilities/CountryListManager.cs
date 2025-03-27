@@ -131,17 +131,17 @@ namespace HOI4NavalModder
                 if (File.Exists(settingsPath))
                 {
                     string settingsJson = File.ReadAllText(settingsPath);
-                    var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(settingsJson);
-                    if (settings != null && !string.IsNullOrEmpty(settings.GamePath))
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<ModConfig>(settingsJson);
+                    if (settings != null && !string.IsNullOrEmpty(settings.VanillaGamePath))
                     {
                         // 設定から取得したパスが実際に存在するか確認
-                        if (Directory.Exists(settings.GamePath))
+                        if (Directory.Exists(settings.VanillaGamePath))
                         {
-                            return settings.GamePath;
+                            return settings.VanillaGamePath;
                         }
                         else
                         {
-                            Console.WriteLine($"設定のゲームパスが存在しません: {settings.GamePath}");
+                            Console.WriteLine($"設定のゲームパスが存在しません: {settings.VanillaGamePath}");
                         }
                     }
                 }
@@ -242,17 +242,19 @@ namespace HOI4NavalModder
                 if (File.Exists(settingsPath))
                 {
                     string settingsJson = File.ReadAllText(settingsPath);
-                    var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(settingsJson);
-                    if (settings != null && !string.IsNullOrEmpty(settings.ModPath))
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<ModConfig>(settingsJson);
+                    
+                    if (settings != null)
                     {
-                        // 設定から取得したパスが実際に存在するか確認
-                        if (Directory.Exists(settings.ModPath))
+                        var activeMod = settings.Mods?.FirstOrDefault(m => m.IsActive);
+                        if (activeMod != null)
                         {
-                            return settings.ModPath;
-                        }
-                        else
+                            Console.WriteLine($"アクティブMOD: {activeMod.Name}");
+                            return activeMod.Path;
+                            
+                        }else
                         {
-                            Console.WriteLine($"設定のMODパスが存在しません: {settings.ModPath}");
+                            Console.WriteLine($"設定のMODパスが存在しません");
                         }
                     }
                 }
@@ -591,7 +593,7 @@ namespace HOI4NavalModder
                 try
                 {
                     var json = File.ReadAllText(ideSettingsPath);
-                    var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(json);
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<IdeSettings>(json);
                     if (settings != null)
                     {
                         isJapanese = settings.IsJapanese;
@@ -810,14 +812,7 @@ namespace HOI4NavalModder
             }
         }
 
-        private class IDESettings
-        {
-            public string GamePath { get; set; }
-            public string ModPath { get; set; }
 
-            public bool IsJapanese { get; set; } = true;
-            // その他の設定プロパティ
-        }
     }
     
 }

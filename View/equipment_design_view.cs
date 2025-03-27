@@ -342,7 +342,7 @@ namespace HOI4NavalModder
             // 基本情報
             moduleData.Info = new ModuleInfo
             {
-                ID = equipment.Id,
+                Id = equipment.Id,
                 Name = equipment.Name,
                 Gfx = equipment.AdditionalProperties.ContainsKey("Gfx")
                     ? equipment.AdditionalProperties["Gfx"].ToString()
@@ -565,7 +565,7 @@ namespace HOI4NavalModder
                         else
                         {
                             // データベースから生データを取得
-                            rawGunData = GunDataToDB.GetRawGunData(equipment.Id);
+                            rawGunData = GunDataToDb.GetRawGunData(equipment.Id);
                         }
                     }
 
