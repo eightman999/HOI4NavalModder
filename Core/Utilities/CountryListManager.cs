@@ -5,11 +5,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Microsoft.Win32;
 
 namespace HOI4NavalModder
 {
     /// <summary>
-    /// HOI4の国家情報を読み込み・管理するためのクラス
+    /// HOI4の国家情報を読み込み・管理するためのクラス（改良版）
     /// </summary>
     public class CountryListManager
     {
@@ -23,20 +24,217 @@ namespace HOI4NavalModder
             public bool IsSelected { get; set; }
         }
 
-        private readonly string _modPath;
-        private readonly string _vanillaPath;
+        private string _modPath;
+        private string _vanillaPath;
         private bool _hasReplaceTags;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        /// <param name="modPath">MODのパス</param>
-        /// <param name="vanillaPath">バニラのパス</param>
-        public CountryListManager(string modPath, string vanillaPath)
+        /// <param name="modPath">MODのパス（null可）</param>
+        /// <param name="gamePath">バニラのパス（null可）</param>
+        public CountryListManager(string modPath, string gamePath)
         {
             _modPath = modPath;
-            _vanillaPath = vanillaPath;
+            _vanillaPath = gamePath;
             _hasReplaceTags = false;
+            
+            // modPathまたはvanillaPathがnullまたは空の場合、自動的に探索
+            if (string.IsNullOrEmpty(_modPath) || string.IsNullOrEmpty(_vanillaPath))
+            {
+                AutoDetectPaths();
+            }
+        }
+
+        /// <summary>
+        /// 必要なパスを自動検出する
+        /// </summary>
+        private void AutoDetectPaths()
+        {
+            Console.WriteLine("パスの自動探索を開始します");
+            
+            // まずゲームパスを探索
+            if (string.IsNullOrEmpty(_vanillaPath))
+            {
+                _vanillaPath = FindGamePath();
+                Console.WriteLine($"探索したゲームパス: {_vanillaPath}");
+            }
+            
+            // MODパスがない場合はIDESettingsから取得を試みる
+            if (string.IsNullOrEmpty(_modPath))
+            {
+                _modPath = FindModPath();
+                Console.WriteLine($"設定から取得したMODパス: {_modPath}");
+            }
+        }
+
+        /// <summary>
+        /// ゲームパスを探索する
+        /// </summary>
+        private string FindGamePath()
+        {
+            // IDESettingsからゲームパスを取得
+            string settingsGamePath = GetGamePathFromSettings();
+            if (!string.IsNullOrEmpty(settingsGamePath))
+            {
+                return settingsGamePath;
+            }
+            
+            // レジストリからSteamパスを取得してHOI4を探す
+            string registryGamePath = FindGamePathFromRegistry();
+            if (!string.IsNullOrEmpty(registryGamePath))
+            {
+                return registryGamePath;
+            }
+            
+            // 一般的なインストールパスをチェック
+            string[] commonPaths = {
+                @"C:\Program Files (x86)\Steam\steamapps\common\Hearts of Iron IV",
+                @"C:\Program Files\Steam\steamapps\common\Hearts of Iron IV",
+                @"D:\Steam\steamapps\common\Hearts of Iron IV",
+                @"E:\Steam\steamapps\common\Hearts of Iron IV"
+            };
+
+            foreach (var path in commonPaths)
+            {
+                if (Directory.Exists(path))
+                {
+                    return path;
+                }
+            }
+            
+            return string.Empty;
+        }
+        
+        /// <summary>
+        /// アプリケーション設定からゲームパスを取得
+        /// </summary>
+        private string GetGamePathFromSettings()
+        {
+            try
+            {
+                string appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HOI4NavalModder");
+                    
+                string settingsPath = Path.Combine(appDataPath, "idesettings.json");
+                
+                if (File.Exists(settingsPath))
+                {
+                    string settingsJson = File.ReadAllText(settingsPath);
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(settingsJson);
+                    if (settings != null && !string.IsNullOrEmpty(settings.GamePath))
+                    {
+                        return settings.GamePath;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"設定からのゲームパス取得エラー: {ex.Message}");
+            }
+            
+            return string.Empty;
+        }
+        
+        /// <summary>
+        /// レジストリからゲームパスを探索
+        /// </summary>
+        private string FindGamePathFromRegistry()
+        {
+            try
+            {
+                // Steamのインストールパスを取得（64ビット版）
+                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Valve\Steam"))
+                {
+                    if (key != null)
+                    {
+                        string steamPath = key.GetValue("InstallPath") as string;
+                        if (!string.IsNullOrEmpty(steamPath))
+                        {
+                            // libraryfolders.vdfからゲームライブラリを探す
+                            string libraryFoldersPath = Path.Combine(steamPath, "steamapps", "libraryfolders.vdf");
+                            if (File.Exists(libraryFoldersPath))
+                            {
+                                string[] lines = File.ReadAllLines(libraryFoldersPath);
+                                foreach (var line in lines)
+                                {
+                                    if (line.Contains("\"path\""))
+                                    {
+                                        string libraryPath = line.Split('"')[3].Replace("\\\\", "\\");
+                                        string hoi4Path = Path.Combine(libraryPath, "steamapps", "common", "Hearts of Iron IV");
+                                        if (Directory.Exists(hoi4Path))
+                                        {
+                                            return hoi4Path;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // デフォルトのSteamライブラリを確認
+                            string defaultHoi4Path = Path.Combine(steamPath, "steamapps", "common", "Hearts of Iron IV");
+                            if (Directory.Exists(defaultHoi4Path))
+                            {
+                                return defaultHoi4Path;
+                            }
+                        }
+                    }
+                }
+                
+                // 32ビット版も確認
+                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Valve\Steam"))
+                {
+                    if (key != null)
+                    {
+                        string steamPath = key.GetValue("InstallPath") as string;
+                        if (!string.IsNullOrEmpty(steamPath))
+                        {
+                            string defaultHoi4Path = Path.Combine(steamPath, "steamapps", "common", "Hearts of Iron IV");
+                            if (Directory.Exists(defaultHoi4Path))
+                            {
+                                return defaultHoi4Path;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"レジストリからのゲームパス取得エラー: {ex.Message}");
+            }
+            
+            return string.Empty;
+        }
+        
+        /// <summary>
+        /// MODパスを設定ファイルから取得
+        /// </summary>
+        private string FindModPath()
+        {
+            try
+            {
+                string appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HOI4NavalModder");
+                    
+                string settingsPath = Path.Combine(appDataPath, "idesettings.json");
+                
+                if (File.Exists(settingsPath))
+                {
+                    string settingsJson = File.ReadAllText(settingsPath);
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<IDESettings>(settingsJson);
+                    if (settings != null && !string.IsNullOrEmpty(settings.ModPath))
+                    {
+                        return settings.ModPath;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"設定からのMODパス取得エラー: {ex.Message}");
+            }
+            
+            return string.Empty;
         }
 
         /// <summary>
@@ -49,11 +247,17 @@ namespace HOI4NavalModder
             return await Task.Run(() => {
                 try
                 {
-                    // MODパスのチェック - バニラパスがあれば国家データ読み込みを続行
+                    // パスが設定されているか確認、なければ自動探索
                     if (string.IsNullOrEmpty(_modPath) && string.IsNullOrEmpty(_vanillaPath))
                     {
-                        Console.WriteLine("MODパスまたはバニラパスが設定されていません。");
-                        return new List<CountryInfo>();
+                        AutoDetectPaths();
+                    }
+                    
+                    // バニラパスが必要（MODだけでは不十分）
+                    if (string.IsNullOrEmpty(_vanillaPath))
+                    {
+                        Console.WriteLine("バニラゲームパスが設定されていません。");
+                        return GetDefaultCountryList();
                     }
 
                     List<string> countryTags = new List<string>();
@@ -77,15 +281,36 @@ namespace HOI4NavalModder
                 catch (Exception ex)
                 {
                     Console.WriteLine($"国家データ読み込みエラー: {ex.Message}");
-                    return new List<CountryInfo>();
+                    return GetDefaultCountryList();
                 }
             });
+        }
+        
+        /// <summary>
+        /// デフォルトの国家リストを取得
+        /// </summary>
+        private List<CountryInfo> GetDefaultCountryList()
+        {
+            var defaultList = new List<CountryInfo>
+            {
+                new CountryInfo { Tag = "JAP", Name = "日本", IsSelected = false },
+                new CountryInfo { Tag = "USA", Name = "アメリカ", IsSelected = false },
+                new CountryInfo { Tag = "ENG", Name = "イギリス", IsSelected = false },
+                new CountryInfo { Tag = "GER", Name = "ドイツ", IsSelected = false },
+                new CountryInfo { Tag = "SOV", Name = "ソ連", IsSelected = false },
+                new CountryInfo { Tag = "ITA", Name = "イタリア", IsSelected = false },
+                new CountryInfo { Tag = "FRA", Name = "フランス", IsSelected = false },
+                new CountryInfo { Tag = "CHI", Name = "中国", IsSelected = false },
+                new CountryInfo { Tag = "OTH", Name = "その他", IsSelected = false }
+            };
+            
+            return defaultList;
         }
 
         /// <summary>
         /// MODのdescriptor.modで replace_path="common/country_tags" の設定があるか確認
         /// </summary>
-        private void CheckReplaceTags()
+        public void CheckReplaceTags()
         {
             _hasReplaceTags = false;
             
@@ -104,7 +329,7 @@ namespace HOI4NavalModder
         /// <summary>
         /// 国家タグを収集する
         /// </summary>
-        private void CollectCountryTags(List<string> countryTags, Dictionary<string, string> tagDescriptions)
+        public void CollectCountryTags(List<string> countryTags, Dictionary<string, string> tagDescriptions)
         {
             // MODから国家タグを取得
             if (!string.IsNullOrEmpty(_modPath))
@@ -132,7 +357,9 @@ namespace HOI4NavalModder
                 }
             }
         }
-
+        /// <summary>
+        /// MODのdescriptor.modで replace_path="common/country_tags" の設定があるか確認
+        /// </summary>
         /// <summary>
         /// ファイルから国家タグを読み取る
         /// </summary>
@@ -430,6 +657,13 @@ namespace HOI4NavalModder
                     return null;
                 }
             });
+        }
+        private class IDESettings
+        {
+            public string GamePath { get; set; }
+            public string ModPath { get; set; }
+            public bool IsJapanese { get; set; } = true;
+            // その他の設定プロパティ
         }
     }
 }
