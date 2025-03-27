@@ -1157,11 +1157,6 @@ namespace HOI4NavalModder
             // エラーメッセージを表示（実際の実装ではダイアログを表示する）
             Console.WriteLine($"エラー: {message}");
         }
-        private class IDESettings
-        {
-            public string GamePath { get; set; }
-            public string ModPath { get; set; }
-            public bool IsJapanese { get; set; } = true;
-        }
+
     }
 }

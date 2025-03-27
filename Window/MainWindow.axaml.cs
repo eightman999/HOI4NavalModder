@@ -935,15 +935,7 @@ public class IDESettingsView : UserControl
         }
     }
     
-    // IDE設定を保持するクラス
-    public class IDESettings
-    {
-        public bool IsDarkTheme { get; set; } = true;
-        public string FontFamily { get; set; } = "Yu Gothic UI";
-        public double FontSize { get; set; } = 12;
-        public bool IsEquipmentFileIntegrated { get; set; } = true;
-        public bool IsJapanese { get; set; } = true;
-    }
+
 public class ModSettingsView : UserControl
 {
     private ObservableCollection<ModInfo> _modList = new ObservableCollection<ModInfo>();
@@ -1606,24 +1598,4 @@ public class ModSettingsView : UserControl
     }
 }
 
-// MOD情報を保持するクラス
-public class ModInfo
-{
-    public string Name { get; set; }
-    public string Version { get; set; }
-    public string Path { get; set; }
-    public string ThumbnailPath { get; set; }
-    public bool IsActive { get; set; } = false;
-
-    public ModInfo() { }
-}
-
-// 設定情報を保持するクラス
-public class ModConfig
-{
-    public string VanillaGamePath { get; set; }
-    public string VanillaLogPath { get; set; }
-    public List<ModInfo> Mods { get; set; } = new List<ModInfo>();
-}
- 
 }
