@@ -54,79 +54,87 @@ public static class GunCalculator
     /// </summary>
     private static void CalculateAndStorePerformanceValues(Dictionary<string, object> gunData, NavalEquipment equipment)
     {
-        // パラメータを取得
-        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);               // 砲弾重量 (kg)
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);         // 初速 (m/s)
-        var rpm = Convert.ToDouble(gunData["RPM"]);                               // 毎分発射数
-        var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);                // 砲身数
-        
-        // 口径関連の処理
-        var calibre = Convert.ToDouble(gunData["Calibre"]);                       // 口径
-        var calibreType = gunData["CalibreType"].ToString();                      // 口径単位
-        var calibreInMm = ConvertCalibreToMm(calibre, calibreType);               // 口径をmmに統一
-        
-        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);         // 最大仰俯角
-        var turretWeight = Convert.ToDouble(gunData["TurretWeight"]);             // 砲塔重量
-        var year = (int)gunData["Year"];                                          // 開発年
-        var isAsw = gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]); // 対潜攻撃可能フラグ
-        
-        // 攻撃力を計算 (m*v^2/4000000*RoF)
-        // 砲弾重量 * 初速の二乗 / 4,000,000 * 毎分発射数
-        var attackBase = shellWeight * Math.Pow(muzzleVelocity, 2) / 4000000 * rpm;
-        
-        // 口径範囲によって攻撃タイプを決定 (14cm-24cm間はグラデーション)
-        double lgAttackValue = 0;
-        double hgAttackValue = 0;
-        
-        if (calibreInMm < 140) {
-            // 完全に軽砲攻撃
-            lgAttackValue = attackBase;
-        } else if (calibreInMm > 240) {
-            // 完全に重砲攻撃
-            hgAttackValue = attackBase;
-        } else {
-            // 14cm～24cmの間は線形補間でグラデーション
-            var heavyRatio = (calibreInMm - 140) / 100.0; // 14cmで0%、24cmで100%
-            lgAttackValue = attackBase * (1 - heavyRatio);
-            hgAttackValue = attackBase * heavyRatio;
-        }
-        
-        // 砲身数による倍率
-        lgAttackValue *= barrelCount;
-        hgAttackValue *= barrelCount;
-        
-        // 装甲貫通値を計算 (攻撃力/口径の二乗)
-        var lgArmorPiercing = lgAttackValue > 0 ? lgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
-        var hgArmorPiercing = hgAttackValue > 0 ? hgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
-        
-        // 対空攻撃力を計算 (RoF/8.5)*(v*750)*(θ_max/75)*(100/d)
-        var antiAirAttack = (rpm / 8.5) * (muzzleVelocity / 750) * (elevationAngle / 75) * (100 / calibreInMm);
-        
-        // 建造コストを計算 (d^1.5+Wt/10d+RoF*0.75+(Y-1920)/10)
-        var buildCost = Math.Pow(calibreInMm / 10, 1.5) + turretWeight / (10 * calibreInMm / 10) + rpm * 0.75 + (year - 1920) / 10;
-        
-        // 対潜攻撃力を計算（対潜攻撃可能フラグがある場合のみ）
-        var subAttack = isAsw ? (shellWeight / 35) * (870 / muzzleVelocity) * (rpm / 5) * 1.25 : 0;
+        try
+        {
+            // パラメータを取得
+            var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);               // 砲弾重量 (kg)
+            var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);         // 初速 (m/s)
+            var rpm = Convert.ToDouble(gunData["RPM"]);                               // 毎分発射数
+            var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);                // 砲身数
+            
+            // 口径関連の処理
+            var calibre = Convert.ToDouble(gunData["Calibre"]);                       // 口径
+            var calibreType = gunData["CalibreType"].ToString();                      // 口径単位
+            var calibreInMm = ConvertCalibreToMm(calibre, calibreType);               // 口径をmmに統一
+            
+            var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);         // 最大仰俯角
+            var barrelLength = Convert.ToDouble(gunData["BarrelLength"]);             // 砲身長
+            var turretWeight = Convert.ToDouble(gunData["TurretWeight"]);             // 砲塔重量
+            var year = (int)gunData["Year"];                                          // 開発年
+            var isAsw = gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]); // 対潜攻撃可能フラグ
+            
+            // 攻撃力を計算 (m*v^2/4000000*RoF)
+            var attackBase = shellWeight * Math.Pow(muzzleVelocity, 2) / 4000000 * rpm;
+            
+            // 口径範囲によって攻撃タイプを決定 (14cm-24cm間はグラデーション)
+            double lgAttackValue = 0;
+            double hgAttackValue = 0;
+            
+            if (calibreInMm < 140) {
+                // 完全に軽砲攻撃
+                lgAttackValue = attackBase;
+            } else if (calibreInMm > 240) {
+                // 完全に重砲攻撃
+                hgAttackValue = attackBase;
+            } else {
+                // 14cm～24cmの間は線形補間でグラデーション
+                var heavyRatio = (calibreInMm - 140) / 100.0; // 14cmで0%、24cmで100%
+                lgAttackValue = attackBase * (1 - heavyRatio);
+                hgAttackValue = attackBase * heavyRatio;
+            }
+            
+            // 砲身数による倍率
+            lgAttackValue *= barrelCount;
+            hgAttackValue *= barrelCount;
+            
+            // 装甲貫通値を計算 (攻撃力/口径の二乗)
+            var lgArmorPiercing = lgAttackValue > 0 ? lgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
+            var hgArmorPiercing = hgAttackValue > 0 ? hgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
+            
+            // 射程計算（新しい計算式: 口径(mm) * 初速 * 砲身長 * 仰角 / 80000）
+            var rangeValue = calibreInMm * muzzleVelocity * barrelLength * elevationAngle / 80000;
+            
+            // 対空攻撃力を計算 (RoF/8.5)*(v*750)*(θ_max/75)*(100/d)
+            var antiAirAttack = (rpm / 8.5) * (muzzleVelocity / 750) * (elevationAngle / 75) * (100 / calibreInMm) * barrelCount;
+            
+            // 建造コストを計算 (d^1.5+Wt/10d+RoF*0.75+(Y-1920)/10)
+            var buildCost = Math.Pow(calibreInMm / 10, 1.5) + turretWeight / (10 * calibreInMm / 10) + rpm * 0.75 + (year - 1920) / 10;
+            
+            // 対潜攻撃力を計算（対潜攻撃可能フラグがある場合のみ）
+            var subAttack = isAsw ? (shellWeight / 35) * (870 / muzzleVelocity) * (rpm / 5) * 1.25 * barrelCount : 0;
 
-        // 計算結果を装備のAdditionalPropertiesに保存
-        equipment.AdditionalProperties["CalculatedLgAttack"] = Math.Round(lgAttackValue, 1);
-        equipment.AdditionalProperties["CalculatedHgAttack"] = Math.Round(hgAttackValue, 1);
-        equipment.AdditionalProperties["CalculatedLgArmorPiercing"] = Math.Round(lgArmorPiercing, 1);
-        equipment.AdditionalProperties["CalculatedHgArmorPiercing"] = Math.Round(hgArmorPiercing, 1);
-        equipment.AdditionalProperties["CalculatedAntiAirAttack"] = Math.Round(antiAirAttack, 1);
-        equipment.AdditionalProperties["CalculatedBuildCost"] = Math.Round(buildCost, 1);
-        equipment.AdditionalProperties["CalculatedSubAttack"] = Math.Round(subAttack, 1);
-        
-        // 計算値を直接保存
-        equipment.AdditionalProperties["CalculatedAttack"] = Math.Round(attackBase * barrelCount, 1);
-        
-        // 射程値を計算（新しい計算式: 口径(mm) * 初速 * 仰角 / 10000）
-        var rangeValue = calibreInMm * muzzleVelocity * elevationAngle / 10000;
-        equipment.AdditionalProperties["CalculatedRange"] = Math.Round(rangeValue, 1);
-        
-        // 装甲貫通値（合計値）
-        var armorPiercingValue = lgArmorPiercing + hgArmorPiercing;
-        equipment.AdditionalProperties["CalculatedArmorPiercing"] = Math.Round(armorPiercingValue, 1);
+            // 計算結果を装備のAdditionalPropertiesに保存
+            equipment.AdditionalProperties["CalculatedLgAttack"] = lgAttackValue;
+            equipment.AdditionalProperties["CalculatedHgAttack"] = hgAttackValue;
+            equipment.AdditionalProperties["CalculatedLgArmorPiercing"] = lgArmorPiercing;
+            equipment.AdditionalProperties["CalculatedHgArmorPiercing"] = hgArmorPiercing;
+            equipment.AdditionalProperties["CalculatedAntiAirAttack"] = antiAirAttack;
+            equipment.AdditionalProperties["CalculatedBuildCost"] = buildCost;
+            equipment.AdditionalProperties["CalculatedSubAttack"] = subAttack;
+            
+            // 計算値を直接保存
+            equipment.AdditionalProperties["CalculatedAttack"] = attackBase * barrelCount;
+            equipment.AdditionalProperties["CalculatedRange"] = rangeValue;
+            
+            // 装甲貫通値（合計値）
+            var armorPiercingValue = lgArmorPiercing + hgArmorPiercing;
+            equipment.AdditionalProperties["CalculatedArmorPiercing"] = armorPiercingValue;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"性能値計算中にエラーが発生しました: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
     /// <summary>
@@ -206,8 +214,8 @@ public static class GunCalculator
             // リソース要件用のデータ作成
             var resources = new ModuleResources
             {
-                Steel = Convert.ToInt32(gunData["Steel"]),
-                Chromium = Convert.ToInt32(gunData["Chromium"]),
+                Steel = (int)Math.Round(Convert.ToDouble(gunData["Steel"])),
+                Chromium = (int)Math.Round(Convert.ToDouble(gunData["Chromium"])),
                 Aluminium = 0,
                 Oil = 0,
                 Tungsten = 0,
@@ -239,31 +247,48 @@ public static class GunCalculator
     // 新しい計算式に基づく攻撃値の計算
     private static double CalculateAttackValue(Dictionary<string, object> gunData)
     {
-        // パラメータを取得
-        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);              
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);        
-        var rpm = Convert.ToDouble(gunData["RPM"]);                              
-        var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);               
-        
-        // 攻撃力計算: m*v^2/4000000*RoF*barrelCount
-        return Math.Round(shellWeight * Math.Pow(muzzleVelocity, 2) / 4000000 * rpm * barrelCount, 1);
+        try
+        {
+            // パラメータを取得
+            var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);              
+            var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);        
+            var rpm = Convert.ToDouble(gunData["RPM"]);                              
+            var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);               
+            
+            // 攻撃力計算: m*v^2/4000000*RoF*barrelCount
+            return shellWeight * Math.Pow(muzzleVelocity, 2) / 4000000 * rpm * barrelCount;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"攻撃値計算中にエラーが発生しました: {ex.Message}");
+            return 0;
+        }
     }
 
     // 新しい計算式に基づく防御値の計算
     private static double CalculateDefenseValue(Dictionary<string, object> gunData)
     {
-        // 対空攻撃力を防御値として使用
-        var rpm = Convert.ToDouble(gunData["RPM"]);
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
-        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);
-        
-        // 口径をmmに統一
-        var calibre = Convert.ToDouble(gunData["Calibre"]);
-        var calibreType = gunData["CalibreType"].ToString();
-        var calibreInMm = ConvertCalibreToMm(calibre, calibreType);
-        
-        // 対空攻撃力計算: (RoF/8.5)*(v*750)*(θ_max/75)*(100/d)
-        return Math.Round((rpm / 8.5) * (muzzleVelocity / 750) * (elevationAngle / 75) * (100 / calibreInMm), 1);
+        try
+        {
+            // 対空攻撃力を防御値として使用
+            var rpm = Convert.ToDouble(gunData["RPM"]);
+            var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
+            var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);
+            var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);
+            
+            // 口径をmmに統一
+            var calibre = Convert.ToDouble(gunData["Calibre"]);
+            var calibreType = gunData["CalibreType"].ToString();
+            var calibreInMm = ConvertCalibreToMm(calibre, calibreType);
+            
+            // 対空攻撃力計算: (RoF/8.5)*(v*750)*(θ_max/75)*(100/d)*barrelCount
+            return (rpm / 8.5) * (muzzleVelocity / 750) * (elevationAngle / 75) * (100 / calibreInMm) * barrelCount;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"防御値計算中にエラーが発生しました: {ex.Message}");
+            return 0;
+        }
     }
 
     // Determine special abilities based on gun parameters
@@ -278,6 +303,7 @@ public static class GunCalculator
         // 特殊能力がない場合
         return "なし";
     }
+    
     /// <summary>
     /// カテゴリに応じたcritical_partsを返す
     /// </summary>

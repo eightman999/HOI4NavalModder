@@ -1,5 +1,4 @@
-﻿<!-- 基本情報セクションに追加するチェックボックスと砲身長入力 -->
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -80,8 +79,9 @@
                                 <TextBlock Text="サブカテゴリ:" />
                                 <ComboBox x:Name="SubCategoryComboBox" HorizontalAlignment="Stretch" />
 
+                                <!-- 開発年をコンボボックスから数値入力に変更 -->
                                 <TextBlock Text="開発年:" />
-                                <ComboBox x:Name="YearComboBox" HorizontalAlignment="Stretch" />
+                                <NumericUpDown x:Name="YearNumeric" Minimum="1880" Maximum="2050" Increment="1" FormatString="F0" Value="1936" />
 
                                 <TextBlock Text="開発国:" />
                                 <ComboBox x:Name="CountryComboBox" HorizontalAlignment="Stretch" />
@@ -94,22 +94,22 @@
                                 <TextBlock Text="砲の詳細" FontWeight="Bold" Margin="0,0,0,10" />
 
                                 <TextBlock Text="砲弾重量 (kg):" />
-                                <NumericUpDown x:Name="ShellWeightNumeric" Minimum="0" Maximum="500" Increment="1"
-                                               FormatString="F1" />
+                                <NumericUpDown x:Name="ShellWeightNumeric" Minimum="0" Maximum="2000" Increment="0.1"
+                                               FormatString="F3" />
 
                                 <TextBlock Text="初速 (m/s):" />
-                                <NumericUpDown x:Name="MuzzleVelocityNumeric" Minimum="0" Maximum="2000" Increment="10"
-                                               FormatString="F0" />
+                                <NumericUpDown x:Name="MuzzleVelocityNumeric" Minimum="0" Maximum="2000" Increment="0.1"
+                                               FormatString="F2" />
 
                                 <TextBlock Text="毎分発射数:" />
-                                <NumericUpDown x:Name="RPMNumeric" Minimum="0" Maximum="30" Increment="0.5"
-                                               FormatString="F1" />
+                                <NumericUpDown x:Name="RPMNumeric" Minimum="0" Maximum="100" Increment="0.01"
+                                               FormatString="F2" />
 
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel Grid.Column="0" Margin="0,0,5,0">
                                         <TextBlock Text="砲口口径:" />
-                                        <NumericUpDown x:Name="CalibreNumeric" Minimum="0" Maximum="50" Increment="0.5"
-                                                       FormatString="F1" />
+                                        <NumericUpDown x:Name="CalibreNumeric" Minimum="0" Maximum="100" Increment="0.1"
+                                                       FormatString="F3" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Width="80">
                                         <TextBlock Text="単位:" />
@@ -122,19 +122,19 @@
 
                                 <!-- 砲身長（口径倍数）フィールドを追加 -->
                                 <TextBlock Text="砲身長 (L/口径):" />
-                                <NumericUpDown x:Name="BarrelLengthNumeric" Minimum="20" Maximum="100" Increment="1"
-                                               FormatString="F0" Value="45" />
+                                <NumericUpDown x:Name="BarrelLengthNumeric" Minimum="20" Maximum="100" Increment="0.1"
+                                               FormatString="F2" Value="45" />
 
                                 <TextBlock Text="最大仰俯角 (度):" />
-                                <NumericUpDown x:Name="ElevationAngleNumeric" Minimum="0" Maximum="90" Increment="1"
-                                               FormatString="F0" />
+                                <NumericUpDown x:Name="ElevationAngleNumeric" Minimum="0" Maximum="90" Increment="0.1"
+                                               FormatString="F2" />
 
                                 <TextBlock Text="砲塔重量 (トン):" />
-                                <NumericUpDown x:Name="TurretWeightNumeric" Minimum="0" Maximum="500" Increment="1"
-                                               FormatString="F1" />
+                                <NumericUpDown x:Name="TurretWeightNumeric" Minimum="0" Maximum="2000" Increment="0.1"
+                                               FormatString="F3" />
 
                                 <TextBlock Text="必要人員:" />
-                                <NumericUpDown x:Name="ManpowerNumeric" Minimum="0" Maximum="100" Increment="1"
+                                <NumericUpDown x:Name="ManpowerNumeric" Minimum="0" Maximum="500" Increment="1"
                                                FormatString="F0" />
                             </StackPanel>
                         </Border>
@@ -145,10 +145,10 @@
                                 <TextBlock Text="リソース要件" FontWeight="Bold" Margin="0,0,0,10" />
 
                                 <TextBlock Text="鋼材:" />
-                                <NumericUpDown x:Name="SteelNumeric" Minimum="0" Maximum="10" Increment="1" FormatString="F0" />
+                                <NumericUpDown x:Name="SteelNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" />
 
                                 <TextBlock Text="クロム:" />
-                                <NumericUpDown x:Name="ChromiumNumeric" Minimum="0" Maximum="5" Increment="1" FormatString="F0" />
+                                <NumericUpDown x:Name="ChromiumNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" />
         
                                 <!-- 対潜攻撃可能チェックボックスを追加 -->
                                 <CheckBox x:Name="IsAswCheckBox" Content="対潜攻撃可能" Margin="0,10,0,0" />
@@ -163,7 +163,7 @@
                             <StackPanel>
                                 <TextBlock Text="計算された性能値" FontWeight="Bold" Margin="0,0,0,10" />
 
-                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                                     <TextBlock Grid.Column="0" Grid.Row="0" Text="攻撃力:" Margin="0,5,10,5" />
                                     <TextBlock Grid.Column="1" Grid.Row="0" x:Name="CalculatedAttackText" Text="0.0"
                                                Margin="0,5,0,5" />
@@ -178,6 +178,18 @@
 
                                     <TextBlock Grid.Column="0" Grid.Row="3" Text="建造コスト:" Margin="0,5,10,5" />
                                     <TextBlock Grid.Column="1" Grid.Row="3" x:Name="CalculatedBuildCostText" Text="0.0"
+                                               Margin="0,5,0,5" />
+                                               
+                                    <TextBlock Grid.Column="0" Grid.Row="4" Text="軽砲攻撃:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="4" x:Name="CalculatedLgAttackText" Text="0.0"
+                                               Margin="0,5,0,5" />
+                                               
+                                    <TextBlock Grid.Column="0" Grid.Row="5" Text="重砲攻撃:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CalculatedHgAttackText" Text="0.0"
+                                               Margin="0,5,0,5" />
+                                               
+                                    <TextBlock Grid.Column="0" Grid.Row="6" Text="対空攻撃:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="6" x:Name="CalculatedAntiAirText" Text="0.0"
                                                Margin="0,5,0,5" />
                                 </Grid>
                             </StackPanel>
