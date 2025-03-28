@@ -207,6 +207,7 @@ public static class GunCalculator
             Console.WriteLine($"module_add_stats.SubAttack: {addStats.SubAttack}");
             Console.WriteLine($"module_add_average_stats.LgArmorPiercing: {addAverageStats.LgArmorPiercing}");
             Console.WriteLine($"module_add_average_stats.HgArmorPiercing: {addAverageStats.HgArmorPiercing}");
+            Console.WriteLine($"=== 保存データ終了({equipment.Id}) ===");
             
             // module_multiply_stats用のデータ作成（乗算ステータス）
             var multiplyStats = new ModuleStats();

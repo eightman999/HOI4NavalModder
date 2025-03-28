@@ -1159,25 +1159,25 @@ public partial class GunDesignView : Avalonia.Controls.Window
         // 入力バリデーション
         if (string.IsNullOrWhiteSpace(_idTextBox.Text))
         {
-            ShowError("IDを入力してください");
+            UiHelper.ShowError("IDを入力してください");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
         {
-            ShowError("名前を入力してください");
+            UiHelper.ShowError("名前を入力してください");
             return;
         }
 
         if (_categoryComboBox.SelectedItem == null)
         {
-            ShowError("カテゴリを選択してください");
+            UiHelper.ShowError("カテゴリを選択してください");
             return;
         }
 
         if (_subCategoryComboBox.SelectedItem == null)
         {
-            ShowError("サブカテゴリを選択してください");
+            UiHelper.ShowError("サブカテゴリを選択してください");
             return;
         }
 
@@ -1246,7 +1246,7 @@ public partial class GunDesignView : Avalonia.Controls.Window
                           "\nElevationAngle: " + _elevationAngleNumeric.Value);
                           
         // Tier（開発世代）を年度から計算
-        int tier = GetTierFromYear((int)_yearNumeric.Value);
+        int tier = NavalUtility.GetTierFromYear((int)_yearNumeric.Value);
         
         var gunData = new Dictionary<string, object>
         {
@@ -1277,7 +1277,7 @@ public partial class GunDesignView : Avalonia.Controls.Window
         try
         {
             // 口径をmmに変換
-            var calibreInMm = ConvertCalibreToMm((double)_calibreNumeric.Value, _calibreTypeComboBox.SelectedItem.ToString());
+            var calibreInMm = NavalUtility.ConvertCalibreToMm((double)_calibreNumeric.Value, _calibreTypeComboBox.SelectedItem.ToString());
             
             // 攻撃力計算
             var shellWeight = (double)_shellWeightNumeric.Value;
@@ -1357,40 +1357,5 @@ public partial class GunDesignView : Avalonia.Controls.Window
         Close();
     }
 
-    private void ShowError(string message)
-    {
-        // エラーメッセージを表示（実際の実装ではダイアログを表示する）
-        Console.WriteLine($"エラー: {message}");
-    }
     
-    // 年からティア（開発世代）を計算するメソッド
-    private int GetTierFromYear(int year)
-    {
-        // 年に最も近いティアを返す
-        if (year <= 1890) return 0;
-        if (year <= 1895) return 1;
-        if (year <= 1900) return 2;
-        if (year <= 1905) return 3;
-        if (year <= 1910) return 4;
-        if (year <= 1915) return 5;
-        if (year <= 1920) return 6;
-        if (year <= 1925) return 7;
-        if (year <= 1930) return 8;
-        if (year <= 1935) return 9;
-        if (year <= 1940) return 10;
-        if (year <= 1945) return 11;
-        if (year <= 1950) return 12;
-        if (year <= 1955) return 13;
-        if (year <= 1960) return 14;
-        if (year <= 1965) return 15;
-        if (year <= 1970) return 16;
-        if (year <= 1975) return 17;
-        if (year <= 1980) return 18;
-        if (year <= 1985) return 19;
-        if (year <= 1990) return 20;
-        if (year <= 1995) return 21;
-        if (year <= 2000) return 22;
-
-        return 23; // 2000年以降
-    }
 }

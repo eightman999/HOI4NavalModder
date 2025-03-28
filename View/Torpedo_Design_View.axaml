@@ -1,0 +1,204 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="720"
+        x:Class="HOI4NavalModder.View.Torpedo_Design_View"
+        Title="魚雷の設計"
+        Width="800" Height="720"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,5,0,2" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="#333337" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#555555" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="#333337" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#555555" />
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="#333337" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#555555" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="Background" Value="#3E3E42" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#555555" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+    </Window.Styles>
+    <Border Background="#2D2D30" Padding="20">
+        <Grid RowDefinitions="Auto,*,Auto">
+            <!-- ヘッダー -->
+            <TextBlock Grid.Row="0" Text="設計" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" />
+
+            <!-- コンテンツ -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid ColumnDefinitions="*,*">
+                    <!-- 左側：基本情報 -->
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <!-- 基本情報 -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="基本情報" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <!-- ID自動生成チェックボックスを追加 -->
+                                <CheckBox x:Name="AutoGenerateIdCheckBox" Content="IDを自動生成" IsChecked="True" />
+
+                                <TextBlock Text="ID:" />
+                                <TextBox x:Name="IdTextBox" Watermark="例: smmg_152mm_mk12" IsEnabled="False" />
+
+                                <TextBlock Text="名前:" />
+                                <TextBox x:Name="NameTextBox" Watermark="例: 152mm Mk.12連装砲" />
+
+                                <TextBlock Text="カテゴリ:" />
+                                <ComboBox x:Name="CategoryComboBox" HorizontalAlignment="Stretch" />
+
+                                <TextBlock Text="サブカテゴリ:" />
+                                <ComboBox x:Name="SubCategoryComboBox" HorizontalAlignment="Stretch" />
+
+                                <!-- 開発年をコンボボックスから数値入力に変更 -->
+                                <TextBlock Text="開発年:" />
+                                <NumericUpDown x:Name="YearNumeric" Minimum="1880" Maximum="2050" Increment="1"
+                                               FormatString="F0" Value="1936" />
+
+                                <TextBlock Text="開発国:" />
+                                <ComboBox x:Name="CountryComboBox" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Border>
+                        <!-- 砲の詳細パラメータ -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="詳細" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <TextBlock Text="重量 (kg):" />
+                                <NumericUpDown x:Name="WeightNumeric" Minimum="0" Maximum="2000" Increment="0.1"
+                                               FormatString="F3" />
+
+                                <TextBlock Text="雷速 (kt):" />
+                                <NumericUpDown x:Name="TorpedoSpeedNumeric" Minimum="0" Maximum="2000" Increment="0.1"
+                                               FormatString="F2" />
+
+                                <TextBlock Text="弾頭重量 (kg):" />
+                                <NumericUpDown x:Name="ExplosionWeightNumeric" Minimum="0" Maximum="100"
+                                               Increment="0.01"
+                                               FormatString="F2" />
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                        <TextBlock Text="直径:" />
+                                        <NumericUpDown x:Name="DiameterNumeric" Minimum="0" Maximum="100"
+                                                       Increment="0.1"
+                                                       FormatString="F3" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Width="80">
+                                        <TextBlock Text="単位:" />
+                                        <ComboBox x:Name="DiameterTypeComboBox" />
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                        <TextBlock Text="全長:" />
+                                        <NumericUpDown x:Name="LengthNumeric" Minimum="0" Maximum="100" Increment="0.1"
+                                                       FormatString="F3" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Width="80">
+                                        <TextBlock Text="単位:" />
+                                        <ComboBox x:Name="LengthTypeComboBox" />
+                                    </StackPanel>
+                                </Grid>
+
+
+                                <TextBlock Text="射程 (m):" />
+                                <NumericUpDown x:Name="RangeNumeric" Minimum="0" Maximum="100" Increment="0.01"
+                                               FormatString="F2" />
+                                <!-- 対潜攻撃可能チェックボックスを追加 -->
+                                <CheckBox x:Name="IsAswCheckBox" Content="対潜攻撃可能" Margin="0,10,0,0" />
+                                <!-- 対潜攻撃可能チェックボックスを追加 -->
+                                <CheckBox x:Name="IsAipCheckBox" Content="閉サイクル蒸気タービン" Margin="0,10,0,0" />
+                                <!-- 対潜攻撃可能チェックボックスを追加 -->
+                                <CheckBox x:Name="IsOxiCheckBox" Content="酸素魚雷" Margin="0,10,0,0" />
+                                <!-- 対潜攻撃可能チェックボックスを追加 -->
+                                <CheckBox x:Name="IsWalCheckBox" Content="ヴァルターエンジン" Margin="0,10,0,0" />
+                                <!-- 対潜攻撃可能チェックボックスを追加 -->
+                                <CheckBox x:Name="IsLineCheckBox" Content="有線誘導" Margin="0,10,0,0" />
+                                <!-- 対潜攻撃可能チェックボックスを追加 -->
+                                <CheckBox x:Name="IsHomingCheckBox" Content="音響ホーミング" Margin="0,10,0,0" />
+
+
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <!-- 右側：計算された性能値と詳細設定 -->
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <!-- 計算された性能値 -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="計算された性能値" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="魚雷攻撃力:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="0" x:Name="CalculatedTorpAttackText"
+                                               Text="0.0"
+                                               Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="1" Text="射程:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="CalculatedRangeText" Text="0.0 km"
+                                               Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="2" Text="装甲貫通:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="2" x:Name="CalculatedArmorPiercingText"
+                                               Text="0.0" Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="3" Text="建造コスト:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="3" x:Name="CalculatedBuildCostText" Text="0.0"
+                                               Margin="0,5,0,5" />
+
+
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+
+                        <!-- 備考 -->
+                        <Border Background="#252526" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="備考" FontWeight="Bold" Margin="0,0,0,10" />
+                                <!-- 備考欄 -->
+                                <TextBox x:Name="DescriptionTextBox" AcceptsReturn="True" Height="150"
+                                         Watermark="装備に関する追加情報や特記事項を入力してください" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- フッターボタン -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button Content="キャンセル" Margin="0,0,10,0" Click="On_Cancel_Click" />
+                <Button Content="保存" Background="#0078D7" Click="On_Save_Click" />
+
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
