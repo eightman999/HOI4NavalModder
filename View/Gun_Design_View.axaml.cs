@@ -22,6 +22,8 @@ public partial class GunDesignView : Avalonia.Controls.Window
 
     private readonly ComboBox _barrelCountComboBox;
 
+    // クラスのフィールド宣言部分に追加
+    private readonly CheckBox _isAswCheckBox;
     // 追加されたコントロール
     private readonly NumericUpDown _barrelLengthNumeric;
     private readonly TextBlock _calculatedArmorPiercingText;
@@ -97,7 +99,8 @@ public partial class GunDesignView : Avalonia.Controls.Window
         // 追加されたコントロールの取得
         _barrelLengthNumeric = this.FindControl<NumericUpDown>("BarrelLengthNumeric");
         _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
-
+        // コンストラクタ内のUI取得部分に追加 (両方のコンストラクタに追加する)
+        _isAswCheckBox = this.FindControl<CheckBox>("IsAswCheckBox");
         // カテゴリの設定（砲関連のもののみフィルタリング）
         var filteredCategories = new Dictionary<string, NavalCategory>();
         if (_categories.ContainsKey("SMLG")) filteredCategories.Add("SMLG", _categories["SMLG"]);
@@ -234,7 +237,8 @@ public partial class GunDesignView : Avalonia.Controls.Window
         // 追加されたコントロールの取得
         _barrelLengthNumeric = this.FindControl<NumericUpDown>("BarrelLengthNumeric");
         _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
-
+        // コンストラクタ内のUI取得部分に追加 (両方のコンストラクタに追加する)
+        _isAswCheckBox = this.FindControl<CheckBox>("IsAswCheckBox");
         // UI項目の選択肢を初期化
         InitializeUiOptions();
         // 2番目のコンストラクタの InitializeUIOptions() の後に以下を追加
@@ -372,6 +376,9 @@ public partial class GunDesignView : Avalonia.Controls.Window
         if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedBuildCost"))
             _calculatedBuildCostText.Text =
                 _originalEquipment.AdditionalProperties["CalculatedBuildCost"].ToString();
+        if (_originalEquipment.AdditionalProperties.ContainsKey("IsAsw"))
+            _isAswCheckBox.IsChecked = Convert.ToBoolean(_originalEquipment.AdditionalProperties["IsAsw"]);
+
     }
 
     private async void InitializeCountryList()
@@ -657,8 +664,33 @@ public partial class GunDesignView : Avalonia.Controls.Window
 
         if (rawGunData.ContainsKey("CalculatedBuildCost"))
             _calculatedBuildCostText.Text = rawGunData["CalculatedBuildCost"].ToString();
+        if (rawGunData.ContainsKey("IsAsw"))
+            _isAswCheckBox.IsChecked = GetBooleanValue(rawGunData, "IsAsw");
     }
+    private static bool GetBooleanValue(Dictionary<string, object> data, string key)
+    {
+        if (!data.ContainsKey(key)) return false;
 
+        try
+        {
+            if (data[key] is JsonElement jsonElement)
+            {
+                if (jsonElement.ValueKind == JsonValueKind.True)
+                    return true;
+                if (jsonElement.ValueKind == JsonValueKind.False)
+                    return false;
+                if (jsonElement.ValueKind == JsonValueKind.String &&
+                    bool.TryParse(jsonElement.GetString(), out var result))
+                    return result;
+            }
+
+            return Convert.ToBoolean(data[key]);
+        }
+        catch
+        {
+            return false;
+        }
+    }
     // ヘルパーメソッド: ComboBoxの項目を選択
     private void SelectComboBoxItem(ComboBox comboBox, string propertyName, object value)
     {
@@ -1110,7 +1142,8 @@ public partial class GunDesignView : Avalonia.Controls.Window
             { "Manpower", (int)_manpowerNumeric.Value },
             { "Steel", (int)_steelNumeric.Value },
             { "Chromium", (int)_chromiumNumeric.Value },
-            { "Description", _descriptionTextBox?.Text ?? "" }
+            { "Description", _descriptionTextBox?.Text ?? "" },
+            { "IsAsw", _isAswCheckBox.IsChecked ?? false }
         };
 
         // Gun_Processingクラスに全てのデータを渡して処理を行う

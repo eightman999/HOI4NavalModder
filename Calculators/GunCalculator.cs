@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HOI4NavalModder.Core.Models;
+using HOI4NavalModder.Core.Services;
 
 namespace HOI4NavalModder.Calculators;
 
@@ -24,7 +25,7 @@ public static class GunCalculator
             Tier = (int)gunData["Tier"],
             Country = gunData["Country"].ToString(),
 
-            // Calculate attack and defense values based on the gun parameters
+            // 攻撃値と防御値は新しい計算式で算出
             Attack = CalculateAttackValue(gunData),
             Defense = CalculateDefenseValue(gunData),
             SpecialAbility = DetermineSpecialAbility(gunData),
@@ -39,179 +40,260 @@ public static class GunCalculator
                 item.Key != "SubCategory" && item.Key != "Year" && item.Key != "Tier")
                 equipment.AdditionalProperties[item.Key] = item.Value;
 
-        // Calculate and add performance values
-        var attackValue = CalculateAttackValue(gunData);
-        var rangeValue = CalculateRangeValue(gunData);
-        var armorPiercingValue = CalculateArmorPiercingValue(gunData);
-        var buildCostValue = CalculateBuildCostValue(gunData);
+        // 新しい計算式で各性能値を計算
+        CalculateAndStorePerformanceValues(gunData, equipment);
 
-        equipment.AdditionalProperties["CalculatedAttack"] = attackValue;
-        equipment.AdditionalProperties["CalculatedRange"] = rangeValue;
-        equipment.AdditionalProperties["CalculatedArmorPiercing"] = armorPiercingValue;
-        equipment.AdditionalProperties["CalculatedBuildCost"] = buildCostValue;
+        // データベースに性能値を保存
+        SaveToDatabase(equipment, gunData);
 
         return equipment;
     }
 
-    // Calculate attack value based on gun parameters
-    private static double CalculateAttackValue(Dictionary<string, object> gunData)
+    /// <summary>
+    /// 新しい計算式で各性能値を計算し、装備のAdditionalPropertiesに保存
+    /// </summary>
+    private static void CalculateAndStorePerformanceValues(Dictionary<string, object> gunData, NavalEquipment equipment)
     {
-        // 計算式
-        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
-        var rpm = Convert.ToDouble(gunData["RPM"]);
-        var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);
-
-        // 砲のカテゴリに応じて計算を調整
-        var category = gunData["Category"].ToString();
-        var categoryMultiplier = 1.0;
-
-        switch (category)
-        {
-            case "SMLG": // 小口径砲
-                categoryMultiplier = 0.8;
-                break;
-            case "SMMG": // 中口径砲
-                categoryMultiplier = 1.0;
-                break;
-            case "SMHG": // 大口径砲
-                categoryMultiplier = 1.2;
-                break;
-            case "SMSHG": // 超大口径砲
-                categoryMultiplier = 1.5;
-                break;
+        // パラメータを取得
+        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);               // 砲弾重量 (kg)
+        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);         // 初速 (m/s)
+        var rpm = Convert.ToDouble(gunData["RPM"]);                               // 毎分発射数
+        var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);                // 砲身数
+        
+        // 口径関連の処理
+        var calibre = Convert.ToDouble(gunData["Calibre"]);                       // 口径
+        var calibreType = gunData["CalibreType"].ToString();                      // 口径単位
+        var calibreInMm = ConvertCalibreToMm(calibre, calibreType);               // 口径をmmに統一
+        
+        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);         // 最大仰俯角
+        var turretWeight = Convert.ToDouble(gunData["TurretWeight"]);             // 砲塔重量
+        var year = (int)gunData["Year"];                                          // 開発年
+        var isAsw = gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]); // 対潜攻撃可能フラグ
+        
+        // 攻撃力を計算 (m*v^2/4000000*RoF)
+        // 砲弾重量 * 初速の二乗 / 4,000,000 * 毎分発射数
+        var attackBase = shellWeight * Math.Pow(muzzleVelocity, 2) / 4000000 * rpm;
+        
+        // 口径範囲によって攻撃タイプを決定 (14cm-24cm間はグラデーション)
+        double lgAttackValue = 0;
+        double hgAttackValue = 0;
+        
+        if (calibreInMm < 140) {
+            // 完全に軽砲攻撃
+            lgAttackValue = attackBase;
+        } else if (calibreInMm > 240) {
+            // 完全に重砲攻撃
+            hgAttackValue = attackBase;
+        } else {
+            // 14cm～24cmの間は線形補間でグラデーション
+            var heavyRatio = (calibreInMm - 140) / 100.0; // 14cmで0%、24cmで100%
+            lgAttackValue = attackBase * (1 - heavyRatio);
+            hgAttackValue = attackBase * heavyRatio;
         }
+        
+        // 砲身数による倍率
+        lgAttackValue *= barrelCount;
+        hgAttackValue *= barrelCount;
+        
+        // 装甲貫通値を計算 (攻撃力/口径の二乗)
+        var lgArmorPiercing = lgAttackValue > 0 ? lgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
+        var hgArmorPiercing = hgAttackValue > 0 ? hgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
+        
+        // 対空攻撃力を計算 (RoF/8.5)*(v*750)*(θ_max/75)*(100/d)
+        var antiAirAttack = (rpm / 8.5) * (muzzleVelocity / 750) * (elevationAngle / 75) * (100 / calibreInMm);
+        
+        // 建造コストを計算 (d^1.5+Wt/10d+RoF*0.75+(Y-1920)/10)
+        var buildCost = Math.Pow(calibreInMm / 10, 1.5) + turretWeight / (10 * calibreInMm / 10) + rpm * 0.75 + (year - 1920) / 10;
+        
+        // 対潜攻撃力を計算（対潜攻撃可能フラグがある場合のみ）
+        var subAttack = isAsw ? (shellWeight / 35) * (870 / muzzleVelocity) * (rpm / 5) * 1.25 : 0;
 
-        // 攻撃力計算: (砲弾重量 * 初速 * 毎分発射数 * 砲身数 * カテゴリ補正) / 10000
-        return Math.Round(shellWeight * muzzleVelocity * rpm * barrelCount * categoryMultiplier / 10000, 1);
+        // 計算結果を装備のAdditionalPropertiesに保存
+        equipment.AdditionalProperties["CalculatedLgAttack"] = Math.Round(lgAttackValue, 1);
+        equipment.AdditionalProperties["CalculatedHgAttack"] = Math.Round(hgAttackValue, 1);
+        equipment.AdditionalProperties["CalculatedLgArmorPiercing"] = Math.Round(lgArmorPiercing, 1);
+        equipment.AdditionalProperties["CalculatedHgArmorPiercing"] = Math.Round(hgArmorPiercing, 1);
+        equipment.AdditionalProperties["CalculatedAntiAirAttack"] = Math.Round(antiAirAttack, 1);
+        equipment.AdditionalProperties["CalculatedBuildCost"] = Math.Round(buildCost, 1);
+        equipment.AdditionalProperties["CalculatedSubAttack"] = Math.Round(subAttack, 1);
+        
+        // 計算値を直接保存
+        equipment.AdditionalProperties["CalculatedAttack"] = Math.Round(attackBase * barrelCount, 1);
+        
+        // 射程値を計算（新しい計算式: 口径(mm) * 初速 * 仰角 / 10000）
+        var rangeValue = calibreInMm * muzzleVelocity * elevationAngle / 10000;
+        equipment.AdditionalProperties["CalculatedRange"] = Math.Round(rangeValue, 1);
+        
+        // 装甲貫通値（合計値）
+        var armorPiercingValue = lgArmorPiercing + hgArmorPiercing;
+        equipment.AdditionalProperties["CalculatedArmorPiercing"] = Math.Round(armorPiercingValue, 1);
     }
 
-    // Calculate defense value based on gun parameters
-    private static double CalculateDefenseValue(Dictionary<string, object> gunData)
+    /// <summary>
+    /// 各種口径単位をmmに変換
+    /// </summary>
+    private static double ConvertCalibreToMm(double calibre, string calibreType)
     {
-        // 防御力は主に対空能力に関連
-        var calibre = Convert.ToDouble(gunData["Calibre"]);
-        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);
-        var rpm = Convert.ToDouble(gunData["RPM"]);
-
-        // 口径による補正
-        double defenseBase = 0;
-        if (calibre <= 12) // 12cm以下は対空に有効
-            defenseBase = rpm * elevationAngle / 50;
-        else if (calibre <= 18) // 18cm以下は中程度の対空能力
-            defenseBase = rpm * elevationAngle / 100;
-        else // それ以上は対空にあまり適さない
-            defenseBase = rpm * elevationAngle / 200;
-
-        return Math.Round(defenseBase, 1);
-    }
-
-    // Calculate range value based on gun parameters
-    private static double CalculateRangeValue(Dictionary<string, object> gunData)
-    {
-        var calibre = Convert.ToDouble(gunData["Calibre"]);
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
-        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);
-
-        // 口径タイプに応じた補正
-        var calibreType = gunData["CalibreType"].ToString();
-        var calibreMultiplier = 1.0;
-
         switch (calibreType)
         {
             case "cm":
-                calibreMultiplier = 1.0;
-                break;
+                return calibre * 10;
             case "inch":
-                // インチをcmに変換して計算
-                calibre = calibre * 2.54;
-                calibreMultiplier = 1.0;
-                break;
+                return calibre * 25.4;
             case "mm":
-                // mmをcmに変換して計算
-                calibre = calibre / 10;
-                calibreMultiplier = 1.0;
-                break;
+                return calibre;
+            default:
+                return calibre * 10; // デフォルトはcmとして扱う
         }
-
-        // 射程計算: (口径 * 初速 * 仰角 * 補正) / 1000
-        return Math.Round(calibre * muzzleVelocity * elevationAngle * calibreMultiplier / 1000, 1);
     }
 
-    // Calculate armor piercing value based on gun parameters
-    private static double CalculateArmorPiercingValue(Dictionary<string, object> gunData)
+    /// <summary>
+    /// 計算されたパラメータをデータベースに保存
+    /// </summary>
+    private static void SaveToDatabase(NavalEquipment equipment, Dictionary<string, object> gunData)
     {
-        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
-        var calibre = Convert.ToDouble(gunData["Calibre"]);
-
-        // 口径タイプに応じた補正
-        var calibreType = gunData["CalibreType"].ToString();
-
-        switch (calibreType)
+        try
         {
-            case "inch":
-                calibre = calibre * 2.54; // インチをcmに変換
-                break;
-            case "mm":
-                calibre = calibre / 10; // mmをcmに変換
-                break;
+            var dbManager = new DatabaseManager();
+            
+            // 基本情報用のデータ作成 (module_info)
+            var moduleInfo = new ModuleInfo
+            {
+                Id = equipment.Id,
+                Name = equipment.Name,
+                Gfx = $"gfx_{equipment.Category.ToLower()}_{equipment.Id}", // GFXパスを生成
+                Sfx = "sfx_ui_sd_module_installed",                         // デフォルトSFX
+                Year = equipment.Year,
+                Manpower = Convert.ToInt32(gunData["Manpower"]),
+                Country = equipment.Country,
+                CriticalParts = GetCriticalPartsForCategory(equipment.Category) // カテゴリに応じたcritical_partsを設定
+            };
+            
+            // module_add_stats用のデータ作成（加算ステータス）
+            var addStats = new ModuleStats();
+            
+            // 軽重攻撃力、対空攻撃力、建造コスト、対潜攻撃力、射程
+            addStats.LgAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgAttack"]);
+            addStats.HgAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgAttack"]);
+            addStats.AntiAirAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedAntiAirAttack"]);
+            addStats.BuildCostIc = Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"]);
+            addStats.FireRange = Convert.ToDouble(equipment.AdditionalProperties["CalculatedRange"]);
+            
+            if (gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]))
+                addStats.SubAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedSubAttack"]);
+            
+            // module_add_average_stats用のデータ作成（平均加算ステータス）
+            var addAverageStats = new ModuleStats();
+            
+            // 装甲貫通力
+            addAverageStats.LgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgArmorPiercing"]);
+            addAverageStats.HgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgArmorPiercing"]);
+            
+            // デバッグ用：保存される値のログ出力
+            Console.WriteLine($"=== 保存データ確認 ({equipment.Id}) ===");
+            Console.WriteLine($"module_add_stats.LgAttack: {addStats.LgAttack}");
+            Console.WriteLine($"module_add_stats.HgAttack: {addStats.HgAttack}");
+            Console.WriteLine($"module_add_stats.AntiAirAttack: {addStats.AntiAirAttack}");
+            Console.WriteLine($"module_add_stats.BuildCostIc: {addStats.BuildCostIc}");
+            Console.WriteLine($"module_add_stats.FireRange: {addStats.FireRange}");
+            Console.WriteLine($"module_add_stats.SubAttack: {addStats.SubAttack}");
+            Console.WriteLine($"module_add_average_stats.LgArmorPiercing: {addAverageStats.LgArmorPiercing}");
+            Console.WriteLine($"module_add_average_stats.HgArmorPiercing: {addAverageStats.HgArmorPiercing}");
+            
+            // module_multiply_stats用のデータ作成（乗算ステータス）
+            var multiplyStats = new ModuleStats();
+            
+            // リソース要件用のデータ作成
+            var resources = new ModuleResources
+            {
+                Steel = Convert.ToInt32(gunData["Steel"]),
+                Chromium = Convert.ToInt32(gunData["Chromium"]),
+                Aluminium = 0,
+                Oil = 0,
+                Tungsten = 0,
+                Rubber = 0
+            };
+            
+            // 変換可能モジュール情報（砲には特にないため空リスト）
+            var convertModules = new List<ModuleConvert>();
+            
+            // データベースに保存
+            dbManager.SaveModuleData(
+                moduleInfo,
+                addStats,
+                multiplyStats,
+                addAverageStats,
+                resources,
+                convertModules
+            );
+            
+            Console.WriteLine($"装備 {equipment.Id} のデータをデータベースに保存しました。");
         }
-
-        // 装甲貫通計算: (砲弾重量 * 初速) / (口径 * 100)
-        return Math.Round(shellWeight * muzzleVelocity / (calibre * 100), 1);
+        catch (Exception ex)
+        {
+            Console.WriteLine($"データベース保存中にエラーが発生しました: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
-    // Calculate build cost value based on gun parameters
-    private static double CalculateBuildCostValue(Dictionary<string, object> gunData)
+    // 新しい計算式に基づく攻撃値の計算
+    private static double CalculateAttackValue(Dictionary<string, object> gunData)
     {
-        var turretWeight = Convert.ToDouble(gunData["TurretWeight"]);
-        var steel = Convert.ToInt32(gunData["Steel"]);
-        var chromium = Convert.ToInt32(gunData["Chromium"]);
-        var manpower = Convert.ToInt32(gunData["Manpower"]);
+        // パラメータを取得
+        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);              
+        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);        
+        var rpm = Convert.ToDouble(gunData["RPM"]);                              
+        var barrelCount = Convert.ToInt32(gunData["BarrelCount"]);               
+        
+        // 攻撃力計算: m*v^2/4000000*RoF*barrelCount
+        return Math.Round(shellWeight * Math.Pow(muzzleVelocity, 2) / 4000000 * rpm * barrelCount, 1);
+    }
 
-        // 開発年による補正（新しい技術ほど高コスト）
-        var year = (int)gunData["Year"];
-        var yearMultiplier = 1.0 + (year - 1890) / 200.0; // 1890年を基準にして年ごとに上昇
-
-        if (year < 1890) yearMultiplier = 0.9; // 1890年以前の旧式技術
-
-        // 建造コスト計算: 砲塔重量 * (鋼材 + クロム * 2 + 人員 / 10) * 年補正 / 10
-        return Math.Round(turretWeight * (steel + chromium * 2 + manpower / 10) * yearMultiplier / 10, 1);
+    // 新しい計算式に基づく防御値の計算
+    private static double CalculateDefenseValue(Dictionary<string, object> gunData)
+    {
+        // 対空攻撃力を防御値として使用
+        var rpm = Convert.ToDouble(gunData["RPM"]);
+        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
+        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);
+        
+        // 口径をmmに統一
+        var calibre = Convert.ToDouble(gunData["Calibre"]);
+        var calibreType = gunData["CalibreType"].ToString();
+        var calibreInMm = ConvertCalibreToMm(calibre, calibreType);
+        
+        // 対空攻撃力計算: (RoF/8.5)*(v*750)*(θ_max/75)*(100/d)
+        return Math.Round((rpm / 8.5) * (muzzleVelocity / 750) * (elevationAngle / 75) * (100 / calibreInMm), 1);
     }
 
     // Determine special abilities based on gun parameters
     private static string DetermineSpecialAbility(Dictionary<string, object> gunData)
     {
-        // パラメータに基づいて特殊能力を決定
-        var calibre = Convert.ToDouble(gunData["Calibre"]);
-        var rpm = Convert.ToDouble(gunData["RPM"]);
-        var shellWeight = Convert.ToDouble(gunData["ShellWeight"]);
-        var muzzleVelocity = Convert.ToDouble(gunData["MuzzleVelocity"]);
-        var elevationAngle = Convert.ToDouble(gunData["ElevationAngle"]);
-        var year = (int)gunData["Year"];
+        // 対潜攻撃可能フラグのみを確認
+        var isAsw = gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]);
 
-        List<string> abilities = new List<string>();
-
-        // 口径に基づく特性
-        if (calibre <= 8 && rpm >= 12) abilities.Add("高射撃速度");
-
-        if (calibre >= 30) abilities.Add("重装甲破壊");
-
-        // 仰角に基づく特性
-        if (elevationAngle >= 70) abilities.Add("対空射撃可能");
-
-        // 初速に基づく特性
-        if (muzzleVelocity >= 900) abilities.Add("高貫通");
-
-        // 開発年に基づく特性
-        if (year >= 1940)
-            abilities.Add("近代的");
-        else if (year <= 1900) abilities.Add("旧式");
+        // 対潜能力
+        if (isAsw) return "対潜攻撃可能";
 
         // 特殊能力がない場合
-        if (abilities.Count == 0) return "なし";
-
-        return string.Join(", ", abilities);
+        return "なし";
+    }
+    /// <summary>
+    /// カテゴリに応じたcritical_partsを返す
+    /// </summary>
+    private static string GetCriticalPartsForCategory(string category)
+    {
+        switch (category)
+        {
+            case "SMLG": // 小口径砲
+                return "damaged_light_guns";
+            case "SMMG": // 中口径砲
+                return "damaged_secondaries";
+            case "SMHG": // 大口径砲
+            case "SMSHG": // 超大口径砲
+                return "damaged_heavy_guns";
+            default:
+                return "";
+        }
     }
 }
