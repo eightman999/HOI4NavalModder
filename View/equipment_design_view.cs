@@ -565,7 +565,35 @@ public partial class EquipmentDesignView : UserControl
 
             case "SMTP": // 魚雷
             case "SMSTP": // 潜水艦魚雷
-                editorWindow = new Torpedo_Design_View(equipment, _categories, _tierYears);
+                Dictionary<string, object> rawTorpedoData = null;
+
+                // 既存の装備の場合は生データを取得
+                if (!string.IsNullOrEmpty(equipment.Id))
+                {
+                    // 装備がJSONファイルからのデータかチェック
+                    if (equipment.AdditionalProperties.ContainsKey("FilePath") &&
+                        File.Exists(equipment.AdditionalProperties["FilePath"].ToString()))
+                    {
+                        // JSONファイルから直接データを読み込む
+                        var jsonFilePath = equipment.AdditionalProperties["FilePath"].ToString();
+                        var jsonContent = File.ReadAllText(jsonFilePath);
+                        rawTorpedoData = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                            jsonContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+                    }
+                    else
+                    {
+                        // データベースから生データを取得
+                        rawTorpedoData = GunDataToDb.GetRawGunData(equipment.Id);
+                    }
+                }
+
+                // Torpedo_Design_Viewを開く（生データがある場合はそれを使用）
+                if (rawTorpedoData != null)
+                    editorWindow = new Torpedo_Design_View(rawTorpedoData, _categories, _tierYears);
+                else
+                    editorWindow = new Torpedo_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMSP": // 水上機
             case "SMCR": // 艦上偵察機

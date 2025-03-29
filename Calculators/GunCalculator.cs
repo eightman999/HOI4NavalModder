@@ -98,8 +98,8 @@ public static class GunCalculator
             hgAttackValue *= barrelCount;
             
             // 装甲貫通値を計算 (攻撃力/口径の二乗)
-            var lgArmorPiercing = lgAttackValue > 0 ? lgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
-            var hgArmorPiercing = hgAttackValue > 0 ? hgAttackValue / Math.Pow(calibreInMm / 10, 2) : 0;
+            var lgArmorPiercing = lgAttackValue > 0 ? lgAttackValue / Math.Pow(calibreInMm / 10, 2)*30 : 0;
+            var hgArmorPiercing = hgAttackValue > 0 ? hgAttackValue / Math.Pow(calibreInMm / 10, 2)*30 : 0;
             
             // 射程計算（新しい計算式: 口径(mm) * 初速 * 砲身長 * 仰角 / 80000）
             var rangeValue = calibreInMm * muzzleVelocity * barrelLength * elevationAngle / 80000;
