@@ -602,10 +602,12 @@ public partial class EquipmentDesignView : UserControl
             case "SMLSP": // 大型飛行艇
                 //editorWindow = new SMSP_Design_View(equipment, _categories, _tierYears);
                 break;
-            case "SMDCL": // 爆雷投射機
+            
             case "SMSO": // ソナー
             case "SMLSO": // 大型ソナー
+            //editorWindow = new SMSO_Design_View(equipment, _categories, _tierYears);
             case "SMDC": // 爆雷
+            case "SMDCL": // 爆雷投射機
                 //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMLR": // 小型電探

@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Styling;
 
 namespace HOI4NavalModder;
 
@@ -24,6 +25,8 @@ public class App : Application
             desktop.MainWindow = new Window.MainWindow();
 
         base.OnFrameworkInitializationCompleted();
+        // アプリケーション全体でダークテーマを強制
+        RequestedThemeVariant = ThemeVariant.Dark;
     }
 
     private void RegisterFonts()

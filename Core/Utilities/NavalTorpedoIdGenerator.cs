@@ -24,8 +24,11 @@ public static class NavalTorpedoIdGenerator
         // 国家タグがある場合は挿入、ない場合は省略
         var tagPart = string.IsNullOrEmpty(countryTag) ? "" : $"{countryTag.ToLower()}_";
 
-        // ID形式: category_tag_year_diameter
-        return $"{category.ToLower()}_{tagPart}{year}_{diameter}".ToLower();
+        // ID形式: category_tag_year_diametermm
+        // 直径の最後にmmを追加（すでにあれば追加しない）
+        var formattedDiameter = diameter.EndsWith("mm") ? diameter : $"{diameter}mm";
+        
+        return $"{category.ToLower()}_{tagPart}{year}_{formattedDiameter}".ToLower();
     }
 
     /// <summary>

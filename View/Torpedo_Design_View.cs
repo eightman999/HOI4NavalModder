@@ -639,21 +639,20 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
             _yearNumeric.Value.HasValue &&
             _subCategoryComboBox.SelectedItem != null)
         {
-            var category = categoryItem.Id.ToLower();
+            var category = categoryItem.Id;
             var year = (int)_yearNumeric.Value.Value;
             var diameter = _subCategoryComboBox.SelectedItem.ToString();
-        
+    
             // 国家タグを取得
             var countryTag = GetSelectedCountryTag();
-        
+    
             // 直径から"mm"を取り除く
             if (diameter.EndsWith("mm"))
                 diameter = diameter.Substring(0, diameter.Length - 2);
-        
-            // ID形式: category_tag_year_diametermmなど
-            // 国家タグが空白でなければ挿入
-            var tagPart = string.IsNullOrEmpty(countryTag) ? "" : $"{countryTag.ToLower()}_";
-            var generatedId = $"{category}_{tagPart}{year}_{diameter}mm";
+    
+            // NavalTorpedoIdGeneratorを使用してIDを生成
+            var generatedId = NavalTorpedoIdGenerator.GenerateTorpedoId(
+                category, countryTag, year, diameter);
 
             // テキストボックスに設定
             _idTextBox.Text = generatedId;
@@ -821,8 +820,10 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
         // オリジナルの装備を編集している場合は衝突としない
         var isEditingOriginal = _originalEquipment != null &&
                                 _originalEquipment.Id == equipmentId;
-                                
-        var countryValue = GetSelectedCountryValue();
+                            
+        // 国家タグを正しく取得
+        var countryTag = GetSelectedCountryTag();
+        var countryValue = string.IsNullOrEmpty(countryTag) ? "" : countryTag;
 
         if (idExists && !isEditingOriginal)
         {
@@ -850,7 +851,7 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
 
         // Tier（開発世代）を年度から計算
         int tier = NavalUtility.GetTierFromYear((int)_yearNumeric.Value);
-        
+    
         // 魚雷データを収集
         var torpedoData = new Dictionary<string, object>
         {
@@ -860,7 +861,7 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
             { "SubCategory", _subCategoryComboBox.SelectedItem.ToString() },
             { "Year", (int)_yearNumeric.Value },
             { "Tier", tier },
-            { "Country", countryValue },
+            { "Country", countryValue }, // 国家タグを正しく設定
             { "Weight", (double)_weightNumeric.Value },
             { "TorpedoSpeed", (double)_torpedoSpeedNumeric.Value },
             { "ExplosionWeight", (double)_explosionWeightNumeric.Value },
@@ -875,7 +876,7 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
             { "IsHoming", _isHomingCheckBox.IsChecked ?? false },
             { "Description", _descriptionTextBox?.Text ?? "" }
         };
-        
+    
         // 計算された性能値も追加
         try
         {
@@ -884,14 +885,14 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
             var torpedoSpeed = (double)_torpedoSpeedNumeric.Value;
             var explosionWeight = (double)_explosionWeightNumeric.Value;
             var range = (double)_rangeNumeric.Value;
-            
+        
             var isAsw = _isAswCheckBox.IsChecked ?? false;
             var isAip = _isAipCheckBox.IsChecked ?? false;
             var isOxi = _isOxiCheckBox.IsChecked ?? false;
             var isWal = _isWalCheckBox.IsChecked ?? false;
             var isLine = _isLineCheckBox.IsChecked ?? false;
             var isHoming = _isHomingCheckBox.IsChecked ?? false;
-            
+        
             // サブカテゴリから口径を取得
             var calibre = 0.0;
             if (_subCategoryComboBox.SelectedItem != null)
@@ -904,35 +905,35 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
                         calibre = diameter;
                 }
             }
-            
+        
             // 魚雷攻撃力計算
             var speedModifier = torpedoSpeed / 40.0;
             var explosionEfficiency = 0.075;
-            
+        
             if (isOxi) explosionEfficiency *= 1.25;
             if (isWal) explosionEfficiency *= 1.3;
             if (isAip) explosionEfficiency *= 1.15;
-            
+        
             if (isLine) speedModifier *= 0.9;
             if (isHoming) explosionEfficiency *= 1.2;
-            
+        
             var torpedoAttack = explosionWeight * explosionEfficiency * speedModifier;
-            
+        
             if (isAsw) torpedoAttack *= 1.5;
-            
+        
             // 装甲貫通力計算
             var armorPiercing = torpedoSpeed * explosionWeight / calibre * 0.05;
-            
+        
             // 射程をkm単位に変換
             var rangeKm = range / 1000.0;
-            
+        
             // 建造コスト計算
             var buildCost = torpedoWeight * 0.001 + explosionWeight * 0.0003;
-            
+        
             if (isLine) buildCost += 1.0;
             if (isHoming) buildCost += 1.5;
             if (isWal) buildCost += 2.0;
-            
+        
             // 計算結果をデータに追加
             torpedoData["CalculatedTorpedoAttack"] = torpedoAttack;
             torpedoData["CalculatedArmorPiercing"] = armorPiercing;
@@ -943,17 +944,16 @@ public partial class Torpedo_Design_View : Avalonia.Controls.Window
         {
             Console.WriteLine($"計算値の設定中にエラーが発生しました: {ex.Message}");
         }
-        
+    
         // NavalEquipmentオブジェクトを作成
         var equipment = TorpedoCalculator.Torpedo_Processing(torpedoData);
 
         // 魚雷の生データも保存
         dbManager.SaveRawGunData(equipmentId, torpedoData);
-        
+    
         // 処理結果を返して画面を閉じる
         Close(equipment);
     }
-    
     private string GetSelectedCountryValue()
     {
         if (_countryComboBox.SelectedIndex <= 0 || _countryComboBox.SelectedItem == null)

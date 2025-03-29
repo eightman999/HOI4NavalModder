@@ -57,79 +57,102 @@ public static class GunDataToDb
     /// <summary>
     ///     NavalEquipmentからModuleDataに変換する
     /// </summary>
-    private static ModuleData ConvertToModuleData(NavalEquipment equipment)
+/// <summary>
+///     NavalEquipmentからModuleDataに変換する
+/// </summary>
+private static ModuleData ConvertToModuleData(NavalEquipment equipment)
+{
+    var moduleData = new ModuleData();
+
+    // 基本情報
+    moduleData.Info = new ModuleInfo
     {
-        var moduleData = new ModuleData();
+        Id = equipment.Id,
+        Name = equipment.Name,
+        Gfx = equipment.AdditionalProperties.ContainsKey("Gfx")
+            ? equipment.AdditionalProperties["Gfx"].ToString()
+            : $"gfx_{equipment.Category.ToLower()}_{equipment.Id.ToLower()}",
+        Sfx = equipment.AdditionalProperties.ContainsKey("Sfx")
+            ? equipment.AdditionalProperties["Sfx"].ToString()
+            : "",
+        Year = equipment.Year,
+        Manpower = equipment.AdditionalProperties.ContainsKey("Manpower")
+            ? Convert.ToInt32(equipment.AdditionalProperties["Manpower"])
+            : 0,
+        Country = equipment.Country,
+        CriticalParts = equipment.SpecialAbility
+    };
 
-        // 基本情報
-        moduleData.Info = new ModuleInfo
-        {
-            Id = equipment.Id,
-            Name = equipment.Name,
-            Gfx = equipment.AdditionalProperties.ContainsKey("Gfx")
-                ? equipment.AdditionalProperties["Gfx"].ToString()
-                : $"gfx_{equipment.Category.ToLower()}_{equipment.Id.ToLower()}",
-            Sfx = equipment.AdditionalProperties.ContainsKey("Sfx")
-                ? equipment.AdditionalProperties["Sfx"].ToString()
-                : "",
-            Year = equipment.Year,
-            Manpower = equipment.AdditionalProperties.ContainsKey("Manpower")
-                ? Convert.ToInt32(equipment.AdditionalProperties["Manpower"])
-                : 0,
-            Country = equipment.Country,
-            CriticalParts = equipment.SpecialAbility
-        };
+    // 加算ステータス - カテゴリに応じた適切なステータス設定
+    moduleData.AddStats = new ModuleStats();
 
-        // 加算ステータス - カテゴリに応じた適切なステータス設定
-        moduleData.AddStats = new ModuleStats();
+    // 計算されたステータス値を適切なフィールドに設定
+    switch (equipment.Category)
+    {
+        case "SMLG": // 小口径砲
+        case "SMMG": // 中口径砲
+            moduleData.AddStats.LgAttack = equipment.Attack;
+            break;
+        case "SMHG": // 大口径砲
+        case "SMSHG": // 超大口径砲
+            moduleData.AddStats.HgAttack = equipment.Attack;
+            break;
+    }
 
-        // 計算されたステータス値を適切なフィールドに設定
+    // 共通のステータス
+    moduleData.AddStats.FireRange = equipment.AdditionalProperties.ContainsKey("CalculatedRange")
+        ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedRange"])
+        : 0;
+    moduleData.AddStats.BuildCostIc = equipment.AdditionalProperties.ContainsKey("CalculatedBuildCost")
+        ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"])
+        : 0;
+    moduleData.AddStats.ShoreBombardment = equipment.Attack * 0.5; // 砲撃力の半分を海岸砲撃力として設定
+
+    // 乗算ステータスは空のオブジェクトを使用
+    moduleData.MultiplyStats = new ModuleStats();
+    
+    // 平均加算ステータス - 装甲貫通力をここに設定（修正）
+    moduleData.AddAverageStats = new ModuleStats();
+    
+    // 装甲貫通力を平均加算に移動
+    if (equipment.AdditionalProperties.ContainsKey("CalculatedLgArmorPiercing"))
+        moduleData.AddAverageStats.LgArmorPiercing = 
+            Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgArmorPiercing"]);
+    
+    if (equipment.AdditionalProperties.ContainsKey("CalculatedHgArmorPiercing"))
+        moduleData.AddAverageStats.HgArmorPiercing = 
+            Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgArmorPiercing"]);
+    
+    if (equipment.AdditionalProperties.ContainsKey("CalculatedArmorPiercing"))
+    {
+        double armorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedArmorPiercing"]);
+        
+        // カテゴリによって適切なフィールドに配分
         switch (equipment.Category)
         {
             case "SMLG": // 小口径砲
             case "SMMG": // 中口径砲
-                moduleData.AddStats.LgAttack = equipment.Attack;
-                moduleData.AddStats.LgArmorPiercing =
-                    equipment.AdditionalProperties.ContainsKey("CalculatedArmorPiercing")
-                        ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedArmorPiercing"])
-                        : 0;
+                moduleData.AddAverageStats.LgArmorPiercing = armorPiercing;
                 break;
             case "SMHG": // 大口径砲
             case "SMSHG": // 超大口径砲
-                moduleData.AddStats.HgAttack = equipment.Attack;
-                moduleData.AddStats.HgArmorPiercing =
-                    equipment.AdditionalProperties.ContainsKey("CalculatedArmorPiercing")
-                        ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedArmorPiercing"])
-                        : 0;
+                moduleData.AddAverageStats.HgArmorPiercing = armorPiercing;
                 break;
         }
-
-        // 共通のステータス
-        moduleData.AddStats.FireRange = equipment.AdditionalProperties.ContainsKey("CalculatedRange")
-            ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedRange"])
-            : 0;
-        moduleData.AddStats.BuildCostIc = equipment.AdditionalProperties.ContainsKey("CalculatedBuildCost")
-            ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"])
-            : 0;
-        moduleData.AddStats.ShoreBombardment = equipment.Attack * 0.5; // 砲撃力の半分を海岸砲撃力として設定
-
-        // 乗算ステータスと平均加算ステータスは空のオブジェクトを使用
-        moduleData.MultiplyStats = new ModuleStats();
-        moduleData.AddAverageStats = new ModuleStats();
-
-        // リソース
-        moduleData.Resources = new ModuleResources();
-        if (equipment.AdditionalProperties.ContainsKey("Steel"))
-            moduleData.Resources.Steel = Convert.ToInt32(equipment.AdditionalProperties["Steel"]);
-        if (equipment.AdditionalProperties.ContainsKey("Chromium"))
-            moduleData.Resources.Chromium = Convert.ToInt32(equipment.AdditionalProperties["Chromium"]);
-
-        // 変換モジュール情報は空のリストを使用
-        moduleData.ConvertModules = new List<ModuleConvert>();
-
-        return moduleData;
     }
 
+    // リソース
+    moduleData.Resources = new ModuleResources();
+    if (equipment.AdditionalProperties.ContainsKey("Steel"))
+        moduleData.Resources.Steel = Convert.ToInt32(equipment.AdditionalProperties["Steel"]);
+    if (equipment.AdditionalProperties.ContainsKey("Chromium"))
+        moduleData.Resources.Chromium = Convert.ToInt32(equipment.AdditionalProperties["Chromium"]);
+
+    // 変換モジュール情報は空のリストを使用
+    moduleData.ConvertModules = new List<ModuleConvert>();
+
+    return moduleData;
+}
     /// <summary>
     ///     DBからGun_Design_View用の生データを取得する
     /// </summary>

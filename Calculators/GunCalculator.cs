@@ -158,93 +158,98 @@ public static class GunCalculator
     /// <summary>
     /// 計算されたパラメータをデータベースに保存
     /// </summary>
-    private static void SaveToDatabase(NavalEquipment equipment, Dictionary<string, object> gunData)
+/// <summary>
+/// 計算されたパラメータをデータベースに保存
+/// </summary>
+/// <summary>
+/// 計算されたパラメータをデータベースに保存
+/// </summary>
+private static void SaveToDatabase(NavalEquipment equipment, Dictionary<string, object> gunData)
+{
+    try
     {
-        try
+        var dbManager = new DatabaseManager();
+        
+        // 基本情報用のデータ作成 (module_info)
+        var moduleInfo = new ModuleInfo
         {
-            var dbManager = new DatabaseManager();
-            
-            // 基本情報用のデータ作成 (module_info)
-            var moduleInfo = new ModuleInfo
-            {
-                Id = equipment.Id,
-                Name = equipment.Name,
-                Gfx = $"gfx_{equipment.Category.ToLower()}_{equipment.Id}", // GFXパスを生成
-                Sfx = "sfx_ui_sd_module_installed",                         // デフォルトSFX
-                Year = equipment.Year,
-                Manpower = Convert.ToInt32(gunData["Manpower"]),
-                Country = equipment.Country,
-                CriticalParts = GetCriticalPartsForCategory(equipment.Category) // カテゴリに応じたcritical_partsを設定
-            };
-            
-            // module_add_stats用のデータ作成（加算ステータス）
-            var addStats = new ModuleStats();
-            
-            // 軽重攻撃力、対空攻撃力、建造コスト、対潜攻撃力、射程
-            addStats.LgAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgAttack"]);
-            addStats.HgAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgAttack"]);
-            addStats.AntiAirAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedAntiAirAttack"]);
-            addStats.BuildCostIc = Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"]);
-            addStats.FireRange = Convert.ToDouble(equipment.AdditionalProperties["CalculatedRange"]);
-            
-            if (gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]))
-                addStats.SubAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedSubAttack"]);
-            
-            // module_add_average_stats用のデータ作成（平均加算ステータス）
-            var addAverageStats = new ModuleStats();
-            
-            // 装甲貫通力
-            addAverageStats.LgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgArmorPiercing"]);
-            addAverageStats.HgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgArmorPiercing"]);
-            
-            // デバッグ用：保存される値のログ出力
-            Console.WriteLine($"=== 保存データ確認 ({equipment.Id}) ===");
-            Console.WriteLine($"module_add_stats.LgAttack: {addStats.LgAttack}");
-            Console.WriteLine($"module_add_stats.HgAttack: {addStats.HgAttack}");
-            Console.WriteLine($"module_add_stats.AntiAirAttack: {addStats.AntiAirAttack}");
-            Console.WriteLine($"module_add_stats.BuildCostIc: {addStats.BuildCostIc}");
-            Console.WriteLine($"module_add_stats.FireRange: {addStats.FireRange}");
-            Console.WriteLine($"module_add_stats.SubAttack: {addStats.SubAttack}");
-            Console.WriteLine($"module_add_average_stats.LgArmorPiercing: {addAverageStats.LgArmorPiercing}");
-            Console.WriteLine($"module_add_average_stats.HgArmorPiercing: {addAverageStats.HgArmorPiercing}");
-            Console.WriteLine($"=== 保存データ終了({equipment.Id}) ===");
-            
-            // module_multiply_stats用のデータ作成（乗算ステータス）
-            var multiplyStats = new ModuleStats();
-            
-            // リソース要件用のデータ作成
-            var resources = new ModuleResources
-            {
-                Steel = (int)Math.Round(Convert.ToDouble(gunData["Steel"])),
-                Chromium = (int)Math.Round(Convert.ToDouble(gunData["Chromium"])),
-                Aluminium = 0,
-                Oil = 0,
-                Tungsten = 0,
-                Rubber = 0
-            };
-            
-            // 変換可能モジュール情報（砲には特にないため空リスト）
-            var convertModules = new List<ModuleConvert>();
-            
-            // データベースに保存
-            dbManager.SaveModuleData(
-                moduleInfo,
-                addStats,
-                multiplyStats,
-                addAverageStats,
-                resources,
-                convertModules
-            );
-            
-            Console.WriteLine($"装備 {equipment.Id} のデータをデータベースに保存しました。");
-        }
-        catch (Exception ex)
+            Id = equipment.Id,
+            Name = equipment.Name,
+            Gfx = $"gfx_{equipment.Category.ToLower()}_{equipment.Id}", // GFXパスを生成
+            Sfx = "sfx_ui_sd_module_installed",                         // デフォルトSFX
+            Year = equipment.Year,
+            Manpower = Convert.ToInt32(gunData["Manpower"]),
+            Country = equipment.Country,
+            CriticalParts = GetCriticalPartsForCategory(equipment.Category) // カテゴリに応じたcritical_partsを設定
+        };
+        
+        // module_add_stats用のデータ作成（加算ステータス）
+        var addStats = new ModuleStats();
+        
+        // 軽重攻撃力、対空攻撃力、建造コスト、対潜攻撃力、射程
+        addStats.LgAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgAttack"]);
+        addStats.HgAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgAttack"]);
+        addStats.AntiAirAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedAntiAirAttack"]);
+        addStats.BuildCostIc = Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"]);
+        addStats.FireRange = Convert.ToDouble(equipment.AdditionalProperties["CalculatedRange"]);
+        
+        if (gunData.ContainsKey("IsAsw") && Convert.ToBoolean(gunData["IsAsw"]))
+            addStats.SubAttack = Convert.ToDouble(equipment.AdditionalProperties["CalculatedSubAttack"]);
+        
+        // module_add_average_stats用のデータ作成（平均加算ステータス）
+        var addAverageStats = new ModuleStats();
+        
+        // 装甲貫通力 - 修正：これをmodule_add_statsからmodule_add_average_statsに移動
+        addAverageStats.LgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedLgArmorPiercing"]);
+        addAverageStats.HgArmorPiercing = Convert.ToDouble(equipment.AdditionalProperties["CalculatedHgArmorPiercing"]);
+        
+        // デバッグ用：保存される値のログ出力
+        Console.WriteLine($"=== 保存データ確認 ({equipment.Id}) ===");
+        Console.WriteLine($"module_add_stats.LgAttack: {addStats.LgAttack}");
+        Console.WriteLine($"module_add_stats.HgAttack: {addStats.HgAttack}");
+        Console.WriteLine($"module_add_stats.AntiAirAttack: {addStats.AntiAirAttack}");
+        Console.WriteLine($"module_add_stats.BuildCostIc: {addStats.BuildCostIc}");
+        Console.WriteLine($"module_add_stats.FireRange: {addStats.FireRange}");
+        Console.WriteLine($"module_add_stats.SubAttack: {addStats.SubAttack}");
+        Console.WriteLine($"module_add_average_stats.LgArmorPiercing: {addAverageStats.LgArmorPiercing}");
+        Console.WriteLine($"module_add_average_stats.HgArmorPiercing: {addAverageStats.HgArmorPiercing}");
+        Console.WriteLine($"=== 保存データ終了({equipment.Id}) ===");
+        
+        // module_multiply_stats用のデータ作成（乗算ステータス）
+        var multiplyStats = new ModuleStats();
+        
+        // リソース要件用のデータ作成
+        var resources = new ModuleResources
         {
-            Console.WriteLine($"データベース保存中にエラーが発生しました: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
-        }
+            Steel = (int)Math.Round(Convert.ToDouble(gunData["Steel"])),
+            Chromium = (int)Math.Round(Convert.ToDouble(gunData["Chromium"])),
+            Aluminium = 0,
+            Oil = 0,
+            Tungsten = 0,
+            Rubber = 0
+        };
+        
+        // 変換可能モジュール情報（砲には特にないため空リスト）
+        var convertModules = new List<ModuleConvert>();
+        
+        // データベースに保存
+        dbManager.SaveModuleData(
+            moduleInfo,
+            addStats,
+            multiplyStats,
+            addAverageStats,
+            resources,
+            convertModules
+        );
+        
+        Console.WriteLine($"装備 {equipment.Id} のデータをデータベースに保存しました。");
     }
-
+    catch (Exception ex)
+    {
+        Console.WriteLine($"データベース保存中にエラーが発生しました: {ex.Message}");
+        Console.WriteLine(ex.StackTrace);
+    }
+}
     // 新しい計算式に基づく攻撃値の計算
     private static double CalculateAttackValue(Dictionary<string, object> gunData)
     {
