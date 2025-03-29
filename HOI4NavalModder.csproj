@@ -53,6 +53,9 @@
         <Compile Update="View\Torpedo_Design_View.cs">
           <DependentUpon>Torpedo_Design_View.axaml</DependentUpon>
         </Compile>
+        <Compile Update="View\Sonar_Design_View.cs">
+          <DependentUpon>Sonar_Design_View.axaml</DependentUpon>
+        </Compile>
     </ItemGroup>
 
     <ItemGroup>

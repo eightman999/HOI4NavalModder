@@ -605,7 +605,8 @@ public partial class EquipmentDesignView : UserControl
             
             case "SMSO": // ソナー
             case "SMLSO": // 大型ソナー
-            //editorWindow = new SMSO_Design_View(equipment, _categories, _tierYears);
+                editorWindow = new Sonar_Design_View(equipment, _categories, _tierYears);
+                break;
             case "SMDC": // 爆雷
             case "SMDCL": // 爆雷投射機
                 //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);

@@ -1418,6 +1418,7 @@ public class ModuleStats
     public double PortCapacityUsage { get; set; }
     public double SearchAndDestroyCoordination { get; set; }
     public double ConvoyRaidingCoordination { get; set; }
+    public double Reliability { get; set; }
 }
 
 // モジュールリソースクラス
