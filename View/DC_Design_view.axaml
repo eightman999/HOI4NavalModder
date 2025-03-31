@@ -99,9 +99,6 @@
                                 <TextBlock Text="炸薬エネルギー密度 (MJ/kg):" />
                                 <NumericUpDown x:Name="ExplosiveEnergyDensityNumeric" Minimum="1" Maximum="20" Increment="0.1" FormatString="F1" Value="5" />
 
-                                <TextBlock Text="探知範囲 (m):" />
-                                <NumericUpDown x:Name="DetectionRangeNumeric" Minimum="0" Maximum="500" Increment="1" FormatString="F0" Value="50" />
-
                                 <TextBlock Text="重量 (kg):" />
                                 <NumericUpDown x:Name="WeightNumeric" Minimum="10" Maximum="1000" Increment="1" FormatString="F0" Value="150" />
 

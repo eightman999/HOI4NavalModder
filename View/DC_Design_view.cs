@@ -29,7 +29,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
     // 爆雷特有のパラメータコントロール
     private readonly NumericUpDown _explosiveWeightNumeric;
     private readonly NumericUpDown _explosiveEnergyDensityNumeric;
-    private readonly NumericUpDown _detectionRangeNumeric;
     private readonly NumericUpDown _weightNumeric;
     private readonly NumericUpDown _manpowerNumeric;
 
@@ -82,7 +81,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
         // 爆雷特有のパラメータUI要素の取得
         _explosiveWeightNumeric = this.FindControl<NumericUpDown>("ExplosiveWeightNumeric");
         _explosiveEnergyDensityNumeric = this.FindControl<NumericUpDown>("ExplosiveEnergyDensityNumeric");
-        _detectionRangeNumeric = this.FindControl<NumericUpDown>("DetectionRangeNumeric");
         _weightNumeric = this.FindControl<NumericUpDown>("WeightNumeric");
         _manpowerNumeric = this.FindControl<NumericUpDown>("ManpowerNumeric");
 
@@ -155,7 +153,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
             // 爆雷のデフォルト値
             _explosiveWeightNumeric.Value = 100; // 100kg
             _explosiveEnergyDensityNumeric.Value = 5; // 5 MJ/kg (TNT相当)
-            _detectionRangeNumeric.Value = 50; // 50m
             _weightNumeric.Value = 150; // 150kg
             _manpowerNumeric.Value = 3; // 3人
         }
@@ -173,7 +170,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
         // 性能値計算のためのイベントハンドラ
         _explosiveWeightNumeric.ValueChanged += UpdateCalculatedValues;
         _explosiveEnergyDensityNumeric.ValueChanged += UpdateCalculatedValues;
-        _detectionRangeNumeric.ValueChanged += UpdateCalculatedValues;
         _weightNumeric.ValueChanged += UpdateCalculatedValues;
         _yearNumeric.ValueChanged += UpdateCalculatedValues;
         
@@ -214,7 +210,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
         // 爆雷特有のパラメータUI要素の取得
         _explosiveWeightNumeric = this.FindControl<NumericUpDown>("ExplosiveWeightNumeric");
         _explosiveEnergyDensityNumeric = this.FindControl<NumericUpDown>("ExplosiveEnergyDensityNumeric");
-        _detectionRangeNumeric = this.FindControl<NumericUpDown>("DetectionRangeNumeric");
         _weightNumeric = this.FindControl<NumericUpDown>("WeightNumeric");
         _manpowerNumeric = this.FindControl<NumericUpDown>("ManpowerNumeric");
 
@@ -265,7 +260,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
         // 性能値計算のためのイベントハンドラ
         _explosiveWeightNumeric.ValueChanged += UpdateCalculatedValues;
         _explosiveEnergyDensityNumeric.ValueChanged += UpdateCalculatedValues;
-        _detectionRangeNumeric.ValueChanged += UpdateCalculatedValues;
         _weightNumeric.ValueChanged += UpdateCalculatedValues;
         _yearNumeric.ValueChanged += UpdateCalculatedValues;
         
@@ -438,9 +432,6 @@ public partial class DC_Design_View : Avalonia.Controls.Window
         if (_originalEquipment.AdditionalProperties.ContainsKey("ExplosiveEnergyDensity"))
             _explosiveEnergyDensityNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["ExplosiveEnergyDensity"]);
 
-        if (_originalEquipment.AdditionalProperties.ContainsKey("DetectionRange"))
-            _detectionRangeNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["DetectionRange"]);
-
         if (_originalEquipment.AdditionalProperties.ContainsKey("Weight"))
             _weightNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["Weight"]);
 
@@ -518,7 +509,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
         // 爆雷パラメータの設定
         UiHelper.SetNumericValue(_explosiveWeightNumeric, NavalUtility.GetDecimalValue(rawDCData, "ExplosiveWeight"));
         UiHelper.SetNumericValue(_explosiveEnergyDensityNumeric, NavalUtility.GetDecimalValue(rawDCData, "ExplosiveEnergyDensity"));
-        UiHelper.SetNumericValue(_detectionRangeNumeric, NavalUtility.GetDecimalValue(rawDCData, "DetectionRange"));
+        // UiHelper.SetNumericValue(_detectionRangeNumeric, NavalUtility.GetDecimalValue(rawDCData, "DetectionRange"));
         UiHelper.SetNumericValue(_weightNumeric, NavalUtility.GetDecimalValue(rawDCData, "Weight"));
         UiHelper.SetNumericValue(_manpowerNumeric, NavalUtility.GetDecimalValue(rawDCData, "Manpower"));
         
@@ -607,7 +598,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
                     break;
                 case "対潜型":
                     // 対潜型の場合は探知範囲を強化
-                    _detectionRangeNumeric.Value = Math.Max(_detectionRangeNumeric.Value ?? 0, 80m);
+                    // _detectionRangeNumeric.Value = Math.Max(_detectionRangeNumeric.Value ?? 0, 80m);
                     break;
                 case "特殊型":
                     // 特殊型は指向性や多層などの特殊機能を持つ可能性が高い
@@ -707,7 +698,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
             case "SMDC": // 爆雷
                 _explosiveWeightNumeric.Value = 100; // 100kg
                 _explosiveEnergyDensityNumeric.Value = 5; // 5 MJ/kg
-                _detectionRangeNumeric.Value = 50; // 50m
+                // _detectionRangeNumeric.Value = 50; // 50m
                 _weightNumeric.Value = 150; // 150kg
                 _manpowerNumeric.Value = 3; // 3人
                 break;
@@ -715,7 +706,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
             case "SMDCL": // 爆雷投射機
                 _explosiveWeightNumeric.Value = 80; // 80kg
                 _explosiveEnergyDensityNumeric.Value = 5; // 5 MJ/kg
-                _detectionRangeNumeric.Value = 70; // 70m (投射機なので射程が長い)
+                // _detectionRangeNumeric.Value = 70; // 70m (投射機なので射程が長い)
                 _weightNumeric.Value = 250; // 250kg
                 _manpowerNumeric.Value = 5; // 5人
                 break;
@@ -746,7 +737,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
             // パラメータの取得
             var explosiveWeight = (double)(_explosiveWeightNumeric.Value ?? 0);
             var explosiveEnergyDensity = (double)(_explosiveEnergyDensityNumeric.Value ?? 0);
-            var detectionRange = (double)(_detectionRangeNumeric.Value ?? 0);
+            // var detectionRange = (double)(_detectionRangeNumeric.Value ?? 0);
             var weight = (double)(_weightNumeric.Value ?? 0);
             var year = (int)(_yearNumeric.Value ?? 1936);
             
@@ -916,7 +907,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
             { "Country", countryValue },
             { "ExplosiveWeight", (double)_explosiveWeightNumeric.Value },
             { "ExplosiveEnergyDensity", (double)_explosiveEnergyDensityNumeric.Value },
-            { "DetectionRange", (double)_detectionRangeNumeric.Value },
+            // { "DetectionRange", (double)_detectionRangeNumeric.Value },
             { "Weight", (double)_weightNumeric.Value },
             { "Manpower", (int)_manpowerNumeric.Value },
             { "Steel", (double)_steelNumeric.Value },
@@ -935,7 +926,7 @@ public partial class DC_Design_View : Avalonia.Controls.Window
             // パラメータの取得
             var explosiveWeight = (double)_explosiveWeightNumeric.Value;
             var explosiveEnergyDensity = (double)_explosiveEnergyDensityNumeric.Value;
-            var detectionRange = (double)_detectionRangeNumeric.Value;
+            // var detectionRange = (double)_detectionRangeNumeric.Value;
             var weight = (double)_weightNumeric.Value;
             var year = (int)_yearNumeric.Value;
             
