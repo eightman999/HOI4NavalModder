@@ -673,8 +673,10 @@ public partial class EquipmentDesignView : UserControl
                 //editorWindow = new SMLR_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMAA": // 対空砲
-            case "SMHAA": // 高射装置
                 //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
+                break;
+            case "SMHAA": // 高射装置
+                //editorWindow = new SMHAA_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMTR": // 機関
                 //editorWindow = new SMTR_Design_View(equipment, _categories, _tierYears);
