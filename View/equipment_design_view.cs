@@ -609,7 +609,7 @@ public partial class EquipmentDesignView : UserControl
                 break;
             case "SMDC": // 爆雷
             case "SMDCL": // 爆雷投射機
-                //editorWindow = new SMDC_Design_View(equipment, _categories, _tierYears);
+                editorWindow = new DC_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMLR": // 小型電探
             case "SMHR": // 大型電探
