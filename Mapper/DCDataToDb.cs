@@ -6,7 +6,7 @@ using HOI4NavalModder.Core.Services;
 namespace HOI4NavalModder.Mapper;
 
 /// <summary>
-///     爆雷設計ビューとDBの間でデータを転送する中間クラス
+///     爆雷設計ビューとデータベースの間でデータを転送する中間クラス
 /// </summary>
 public static class DCDataToDb
 {
@@ -80,34 +80,31 @@ public static class DCDataToDb
             CriticalParts = equipment.SpecialAbility
         };
 
-        // 加算ステータス - 爆雷特有のステータス設定
+        // 加算ステータス
         moduleData.AddStats = new ModuleStats();
-
-        // 対潜攻撃力を設定
+        
+        // 爆雷のステータスを設定
         moduleData.AddStats.SubAttack = equipment.Attack;
-
-        // 爆雷の場合は建造コストを設定
-        if (equipment.AdditionalProperties.ContainsKey("CalculatedBuildCost"))
-            moduleData.AddStats.BuildCostIc = Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"]);
+        moduleData.AddStats.BuildCostIc = equipment.AdditionalProperties.ContainsKey("CalculatedBuildCost")
+            ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"])
+            : 1.0;
+            
+        // 共通のステータス
+        if (equipment.AdditionalProperties.ContainsKey("CalculatedReliability"))
+            moduleData.AddStats.Reliability = Convert.ToDouble(equipment.AdditionalProperties["CalculatedReliability"]);
 
         // 乗算ステータスは空のオブジェクトを使用
         moduleData.MultiplyStats = new ModuleStats();
         
-        // 平均加算ステータスは空のオブジェクトを使用
+        // 平均加算ステータスも空のオブジェクトを使用
         moduleData.AddAverageStats = new ModuleStats();
 
         // リソース
         moduleData.Resources = new ModuleResources();
-        
         if (equipment.AdditionalProperties.ContainsKey("Steel"))
             moduleData.Resources.Steel = Convert.ToInt32(equipment.AdditionalProperties["Steel"]);
-            
         if (equipment.AdditionalProperties.ContainsKey("Explosives"))
-        {
-            // 爆薬リソースは特別なケースとして処理
-            // ゲーム内では油や他のリソースにマッピングする必要があるかもしれない
-            moduleData.Resources.Oil = Convert.ToInt32(equipment.AdditionalProperties["Explosives"]);
-        }
+            moduleData.Resources.Chromium = Convert.ToInt32(equipment.AdditionalProperties["Explosives"]);
 
         // 変換モジュール情報は空のリストを使用
         moduleData.ConvertModules = new List<ModuleConvert>();
@@ -116,7 +113,7 @@ public static class DCDataToDb
     }
 
     /// <summary>
-    ///     DBから爆雷設計ビュー用の生データを取得する
+    ///     DBからDC_Design_View用の生データを取得する
     /// </summary>
     /// <param name="equipmentId">装備ID</param>
     /// <returns>爆雷パラメータの生データ</returns>

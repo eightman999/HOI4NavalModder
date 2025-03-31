@@ -34,13 +34,18 @@ namespace HOI4NavalModder.Calculators
                 var weight = Convert.ToDouble(rawDCData["Weight"]);
                 var manpower = Convert.ToInt32(rawDCData["Manpower"]);
                 
-                // リソースの取得
-                var steel = rawDCData.ContainsKey("Steel") ? Convert.ToDouble(rawDCData["Steel"]) : 0;
-                var explosives = rawDCData.ContainsKey("Explosives") ? Convert.ToDouble(rawDCData["Explosives"]) : 0;
+                // 特殊機能の取得
+                var isReactive = rawDCData.ContainsKey("IsReactive") && Convert.ToBoolean(rawDCData["IsReactive"]);
+                var isMultiLayer = rawDCData.ContainsKey("IsMultiLayer") && Convert.ToBoolean(rawDCData["IsMultiLayer"]);
+                var isDirectional = rawDCData.ContainsKey("IsDirectional") && Convert.ToBoolean(rawDCData["IsDirectional"]);
+                var isAdvancedFuse = rawDCData.ContainsKey("IsAdvancedFuse") && Convert.ToBoolean(rawDCData["IsAdvancedFuse"]);
+                var isDeepWater = rawDCData.ContainsKey("IsDeepWater") && Convert.ToBoolean(rawDCData["IsDeepWater"]);
                 
-                // 特殊機能はなし
+                // カテゴリによる基本補正
+                double categoryModifier = 1.0;
+                if (category == "SMDCL") // 爆雷投射機の場合
+                    categoryModifier = 1.1;
                 
-                // 性能計算
                 // 年代による技術補正
                 double techModifier = 1.0;
                 if (year < 1930) 
@@ -56,16 +61,36 @@ namespace HOI4NavalModder.Calculators
                 else 
                     techModifier = 1.5;
                 
-                // カテゴリによる基本補正
-                double categoryModifier = 1.0;
-                if (category == "SMDCL") // 爆雷投射機の場合
-                    categoryModifier = 1.1;
+                // 特殊機能による補正
+                double specialModifier = 1.0;
+                
+                if (isReactive)
+                    specialModifier *= 1.3; // 反応型爆雷ボーナス
                     
-                // 爆発力の計算 = 炸薬重量 × エネルギー密度 × 各種修正
-                var explosivePower = explosiveWeight * explosiveEnergyDensity * techModifier * categoryModifier;
+                if (isMultiLayer)
+                    specialModifier *= 1.2; // 多層爆雷ボーナス
+                    
+                if (isDirectional)
+                    specialModifier *= 1.5; // 指向性ボーナス（方向を絞った分、威力増加）
+                    
+                if (isAdvancedFuse)
+                    specialModifier *= 1.15; // 高性能信管ボーナス
+                    
+                if (isDeepWater)
+                    specialModifier *= 1.25; // 深海型ボーナス
+                
+                // 爆発力の計算
+                var explosivePower = explosiveWeight * explosiveEnergyDensity * techModifier * categoryModifier * specialModifier;
                 
                 // 対潜攻撃力の計算
                 var subAttack = explosivePower * 0.1; // 係数は適宜調整
+                
+                // 被害範囲の計算 (meters)
+                var damageRadius = Math.Pow(explosiveWeight * explosiveEnergyDensity, 1/3.0) * 2.5; // 立方根に比例
+                
+                // 指向性爆雷は半径が小さい
+                if (isDirectional)
+                    damageRadius *= 0.7;
                 
                 // 建造コスト計算
                 var buildCost = 0.5 + (weight * 0.002) + (explosiveWeight * explosiveEnergyDensity * 0.0005);
@@ -73,13 +98,40 @@ namespace HOI4NavalModder.Calculators
                 // 信頼性計算（0.0～1.0）
                 var reliability = 0.8 + (techModifier * 0.1);
                 
+                if (isAdvancedFuse)
+                    reliability -= 0.05; // 高性能信管は複雑で信頼性が下がる
+                    
+                if (isMultiLayer)
+                    reliability -= 0.05; // 多層構造も複雑で信頼性が下がる
+                    
                 // 最大1.0に制限
                 reliability = Math.Min(Math.Max(reliability, 0.6), 1.0);
                 
                 // 計算結果をデータに追加
                 rawDCData["CalculatedSubAttack"] = subAttack;
+                rawDCData["CalculatedDamageRadius"] = damageRadius;
                 rawDCData["CalculatedBuildCost"] = buildCost;
                 rawDCData["CalculatedReliability"] = reliability;
+                
+                // 特殊能力の設定
+                var specialAbilities = new List<string>();
+                
+                if (isReactive)
+                    specialAbilities.Add("反応型");
+                    
+                if (isMultiLayer)
+                    specialAbilities.Add("多層構造");
+                    
+                if (isDirectional)
+                    specialAbilities.Add("指向性");
+                    
+                if (isAdvancedFuse)
+                    specialAbilities.Add("高性能信管");
+                    
+                if (isDeepWater)
+                    specialAbilities.Add("深海対応");
+                
+                var specialAbilityText = string.Join(", ", specialAbilities);
                 
                 // NavalEquipmentオブジェクトを作成
                 var equipment = new NavalEquipment
@@ -91,11 +143,9 @@ namespace HOI4NavalModder.Calculators
                     Year = year,
                     Tier = tier,
                     Country = country,
-                    // 対潜攻撃力を攻撃値として設定
-                    Attack = subAttack,
-                    // 防御値はなし（攻撃兵器のため）
-                    Defense = 0,
-                    // パラメータとデータをそのままコピー
+                    Attack = subAttack,  // 対潜攻撃力
+                    Defense = 0,         // 爆雷は防御値を持たない
+                    SpecialAbility = specialAbilityText,
                     AdditionalProperties = new Dictionary<string, object>(rawDCData)
                 };
                 

@@ -605,11 +605,68 @@ public partial class EquipmentDesignView : UserControl
             
             case "SMSO": // ソナー
             case "SMLSO": // 大型ソナー
-                editorWindow = new Sonar_Design_View(equipment, _categories, _tierYears);
+                Dictionary<string, object> rawSonarData = null;
+
+                // 既存の装備の場合は生データを取得
+                if (!string.IsNullOrEmpty(equipment.Id))
+                {
+                    // 装備がJSONファイルからのデータかチェック
+                    if (equipment.AdditionalProperties.ContainsKey("FilePath") &&
+                        File.Exists(equipment.AdditionalProperties["FilePath"].ToString()))
+                    {
+                        // JSONファイルから直接データを読み込む
+                        var jsonFilePath = equipment.AdditionalProperties["FilePath"].ToString();
+                        var jsonContent = File.ReadAllText(jsonFilePath);
+                        rawSonarData = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                            jsonContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+                    }
+                    else
+                    {
+                        // データベースから生データを取得
+                        rawSonarData = SonarDataToDb.GetRawSonarData(equipment.Id);
+                    }
+                }
+
+                // Sonar_Design_Viewを開く（生データがある場合はそれを使用）
+                if (rawSonarData != null)
+                    editorWindow = new Sonar_Design_View(rawSonarData, _categories, _tierYears);
+                else
+                    editorWindow = new Sonar_Design_View(equipment, _categories, _tierYears);
                 break;
+                
             case "SMDC": // 爆雷
             case "SMDCL": // 爆雷投射機
-                editorWindow = new DC_Design_View(equipment, _categories, _tierYears);
+                Dictionary<string, object> rawDCData = null;
+
+                // 既存の装備の場合は生データを取得
+                if (!string.IsNullOrEmpty(equipment.Id))
+                {
+                    // 装備がJSONファイルからのデータかチェック
+                    if (equipment.AdditionalProperties.ContainsKey("FilePath") &&
+                        File.Exists(equipment.AdditionalProperties["FilePath"].ToString()))
+                    {
+                        // JSONファイルから直接データを読み込む
+                        var jsonFilePath = equipment.AdditionalProperties["FilePath"].ToString();
+                        var jsonContent = File.ReadAllText(jsonFilePath);
+                        rawDCData = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                            jsonContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+                    }
+                    else
+                    {
+                        // データベースから生データを取得
+                        rawDCData = DCDataToDb.GetRawDCData(equipment.Id);
+                    }
+                }
+
+                // DC_Design_Viewを開く（生データがある場合はそれを使用）
+                if (rawDCData != null)
+                    editorWindow = new DC_Design_View(rawDCData, _categories, _tierYears);
+                else
+                    editorWindow = new DC_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMLR": // 小型電探
             case "SMHR": // 大型電探
