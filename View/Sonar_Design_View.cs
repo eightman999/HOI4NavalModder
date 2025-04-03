@@ -201,6 +201,9 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
     /// <summary>
     /// 生データから作成するコンストラクタ
     /// </summary>
+    /// <summary>
+    /// 生データから作成するコンストラクタ
+    /// </summary>
     public Sonar_Design_View(Dictionary<string, object> rawSonarData, Dictionary<string, NavalCategory> categories, Dictionary<int, string> tierYears)
     {
         InitializeComponent();
@@ -250,18 +253,29 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
         // UI項目の選択肢を初期化
         InitializeUiOptions();
         
-        // 生データから値を設定
+        // 国家リストを初期化（これは非同期操作）
+        InitializeCountryList();
+    
+        // 生データから基本的な値を設定（国家以外）
         if (rawSonarData != null)
         {
             PopulateFromRawData(rawSonarData);
-            
+        
             // 編集モードでは自動生成をオフに
             _autoGenerateIdCheckBox.IsChecked = false;
             _idTextBox.IsEnabled = true;
-        }
-
-        InitializeCountryList();
         
+            // 国家を設定する（これは国家リスト初期化後に行われる必要があるため、
+            // InitializeCountryListメソッド内で行うようにしてもよい）
+            if (rawSonarData.ContainsKey("Country") && rawSonarData["Country"] != null)
+            {
+                string countryValue = rawSonarData["Country"].ToString();
+                // 初期状態では国家リストがないので、ここではデフォルト選択のみ行う
+                // 実際の国家設定はInitializeCountryList完了後に行われる
+                _countryComboBox.SelectedIndex = 0;
+            }
+        }
+    
         // イベントハンドラを設定
         _categoryComboBox.SelectionChanged += OnCategoryChanged;
         _subCategoryComboBox.SelectionChanged += OnSubCategoryChanged;
@@ -280,7 +294,7 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
         _weightNumeric.ValueChanged += UpdateCalculatedValues;
         _sonarTypeComboBox.SelectionChanged += UpdateCalculatedValues;
         _yearNumeric.ValueChanged += UpdateCalculatedValues;
-        
+    
         // 特殊機能チェックボックスのイベントハンドラ
         _isNoiseReductionCheckBox.IsCheckedChanged += UpdateCalculatedValues;
         _isHighFrequencyCheckBox.IsCheckedChanged += UpdateCalculatedValues;
@@ -288,7 +302,6 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
         _isDigitalCheckBox.IsCheckedChanged += UpdateCalculatedValues;
         _isTowedArrayCheckBox.IsCheckedChanged += UpdateCalculatedValues;
     }
-
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
@@ -382,9 +395,20 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
             // デフォルトで「未設定」を選択
             _countryComboBox.SelectedIndex = 0;
 
-            // 装備データがある場合は適切な国家を選択
+            // 国家の選択処理
+            // 元の装備データから国家を設定
             if (_originalEquipment != null && !string.IsNullOrEmpty(_originalEquipment.Country))
+            {
                 SetCountrySelection(_originalEquipment.Country);
+            }
+            // 生データから国家を設定（コンストラクタで渡された値がある場合）
+            else if (this.DataContext is Dictionary<string, object> rawData && 
+                     rawData.ContainsKey("Country") && 
+                     rawData["Country"] != null)
+            {
+                string countryValue = rawData["Country"].ToString();
+                SetCountrySelection(countryValue);
+            }
 
             Console.WriteLine($"国家リスト初期化完了: {_countryComboBox.Items.Count - 1}件");
         }
@@ -407,7 +431,6 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
             _countryInfoList = new List<CountryListManager.CountryInfo>();
         }
     }
-
     private void LoadEquipmentData()
     {
         if (_originalEquipment == null) return;
@@ -516,6 +539,106 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
             _descriptionTextBox.Text = _originalEquipment.AdditionalProperties["Description"].ToString();
     }
 
+
+    private string GetCategoryDisplayName(string categoryId)
+    {
+        if (_categories.ContainsKey(categoryId)) return _categories[categoryId].Name;
+        return categoryId == "SMSO" ? "ソナー" : "大型ソナー";
+    }
+
+    private void SetCountrySelection(string countryValue)
+    {
+        if (string.IsNullOrEmpty(countryValue))
+        {
+            // 値が空の場合は「未設定」を選択
+            _countryComboBox.SelectedIndex = 0;
+            return;
+        }
+
+        Console.WriteLine($"国家選択: {countryValue}");
+
+        // 1. 完全一致（タグが括弧内にある場合）
+        for (var i = 0; i < _countryComboBox.Items.Count; i++)
+        {
+            var item = _countryComboBox.Items[i].ToString();
+            if (item != null && item.EndsWith($"({countryValue})"))
+            {
+                _countryComboBox.SelectedIndex = i;
+                Console.WriteLine($"タグの完全一致で選択: {item}");
+                return;
+            }
+        }
+
+        // 2. 国家タグが直接マッチする場合
+        if (_countryInfoList != null)
+        {
+            foreach (var country in _countryInfoList)
+                if (country.Tag.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
+                    for (var i = 0; i < _countryComboBox.Items.Count; i++)
+                    {
+                        var item = _countryComboBox.Items[i].ToString();
+                        if (item != null && item.Contains($"({country.Tag})"))
+                        {
+                            _countryComboBox.SelectedIndex = i;
+                            Console.WriteLine($"タグの直接マッチで選択: {item}");
+                            return;
+                        }
+                    }
+
+            // 3. 国名が直接マッチする場合
+            foreach (var country in _countryInfoList)
+                if (country.Name.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
+                    for (var i = 0; i < _countryComboBox.Items.Count; i++)
+                    {
+                        var item = _countryComboBox.Items[i].ToString();
+                        if (item != null && item.StartsWith(country.Name))
+                        {
+                            _countryComboBox.SelectedIndex = i;
+                            Console.WriteLine($"国名の直接マッチで選択: {item}");
+                            return;
+                        }
+                    }
+        }
+
+        // 4. 部分一致を試みる
+        for (var i = 0; i < _countryComboBox.Items.Count; i++)
+        {
+            var item = _countryComboBox.Items[i].ToString();
+            if (item != null && item.Contains(countryValue, StringComparison.OrdinalIgnoreCase))
+            {
+                _countryComboBox.SelectedIndex = i;
+                Console.WriteLine($"部分一致で選択: {item}");
+                return;
+            }
+        }
+
+        // 5. 一致するものがなかった場合、mainとか一般的な接頭辞か判定
+        var lowerValue = countryValue.ToLower();
+        if (lowerValue == "main" || lowerValue == "generic" || lowerValue == "default")
+        {
+            // 未設定（デフォルト）を選択
+            _countryComboBox.SelectedIndex = 0;
+            Console.WriteLine("一般的な値のため「未設定」を選択");
+            return;
+        }
+
+        // それでも見つからない場合は「その他」を探す
+        for (var i = 0; i < _countryComboBox.Items.Count; i++)
+        {
+            var item = _countryComboBox.Items[i].ToString();
+            if (item != null && (item.Contains("その他") || item.Contains("(OTH)")))
+            {
+                _countryComboBox.SelectedIndex = i;
+                Console.WriteLine("一致しないため「その他」を選択");
+                return;
+            }
+        }
+
+        // 最後の手段として最初の項目を選択
+        Console.WriteLine($"一致する国家が見つからないため「未設定」を選択: {countryValue}");
+        _countryComboBox.SelectedIndex = 0;
+    }
+
     private void PopulateFromRawData(Dictionary<string, object> rawSonarData)
     {
         // ウィンドウタイトルをカテゴリに合わせて設定
@@ -528,20 +651,16 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
         _nameTextBox.Text = rawSonarData["Name"].ToString();
 
         // ComboBoxの選択
-        UiHelper.SelectComboBoxItem(_categoryComboBox, "Id", categoryId);
-        UiHelper.SelectComboBoxItem(_subCategoryComboBox, null, rawSonarData["SubCategory"].ToString());
-        
+        SelectComboBoxItem(_categoryComboBox, "Id", categoryId);
+        SelectComboBoxItem(_subCategoryComboBox, null, rawSonarData["SubCategory"].ToString());
+    
         // 開発年を設定
         if (rawSonarData.ContainsKey("Year"))
             _yearNumeric.Value = NavalUtility.GetDecimalValue(rawSonarData, "Year");
         else
             _yearNumeric.Value = 1936; // デフォルト値
-            
-        if (rawSonarData.ContainsKey("Country") && rawSonarData["Country"] != null)
-        {
-            var countryValue = rawSonarData["Country"].ToString();
-            SetCountrySelection(countryValue);
-        }
+    
+        // 国家選択は後で行う（InitializeCountryListが完了した後）
 
         // ソナーパラメータの設定
         UiHelper.SetNumericValue(_frequencyNumeric, NavalUtility.GetDecimalValue(rawSonarData, "Frequency"));
@@ -550,7 +669,7 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
         UiHelper.SetNumericValue(_weightNumeric, NavalUtility.GetDecimalValue(rawSonarData, "Weight"));
         UiHelper.SelectComboBoxItem(_sonarTypeComboBox, null, rawSonarData.ContainsKey("SonarType") ? rawSonarData["SonarType"].ToString() : "アクティブ");
         UiHelper.SetNumericValue(_manpowerNumeric, NavalUtility.GetDecimalValue(rawSonarData, "Manpower"));
-        
+    
         // リソース設定
         UiHelper.SetNumericValue(_steelNumeric, NavalUtility.GetDecimalValue(rawSonarData, "Steel"));
         UiHelper.SetNumericValue(_tungstenNumeric, NavalUtility.GetDecimalValue(rawSonarData, "Tungsten"));
@@ -581,31 +700,49 @@ public partial class Sonar_Design_View : Avalonia.Controls.Window
 
         if (rawSonarData.ContainsKey("CalculatedReliability"))
             _calculatedReliabilityText.Text = rawSonarData["CalculatedReliability"].ToString();
-            
+        
         // 備考欄の設定
         if (rawSonarData.ContainsKey("Description"))
             _descriptionTextBox.Text = NavalUtility.GetStringValue(rawSonarData, "Description");
     }
 
-    private string GetCategoryDisplayName(string categoryId)
+// SelectComboBoxItemヘルパーメソッドを追加
+    private void SelectComboBoxItem(ComboBox comboBox, string propertyName, object value)
     {
-        if (_categories.ContainsKey(categoryId)) return _categories[categoryId].Name;
-        return categoryId == "SMSO" ? "ソナー" : "大型ソナー";
-    }
+        if (comboBox.Items.Count == 0) return;
 
-    private void SetCountrySelection(string countryValue)
-    {
-        if (string.IsNullOrEmpty(countryValue))
+        if (propertyName == null)
         {
-            // 値が空の場合は「未設定」を選択
-            _countryComboBox.SelectedIndex = 0;
-            return;
+            // 単純な値比較
+            for (var i = 0; i < comboBox.Items.Count; i++)
+                if (comboBox.Items[i].ToString() == value.ToString())
+                {
+                    comboBox.SelectedIndex = i;
+                    return;
+                }
+        }
+        else
+        {
+            // プロパティによる比較
+            for (var i = 0; i < comboBox.Items.Count; i++)
+            {
+                var item = comboBox.Items[i];
+                var prop = item.GetType().GetProperty(propertyName);
+                if (prop != null)
+                {
+                    var propValue = prop.GetValue(item);
+                    if (propValue.ToString() == value.ToString())
+                    {
+                        comboBox.SelectedIndex = i;
+                        return;
+                    }
+                }
+            }
         }
 
-        // CountryListManagerのヘルパーを使用
-        UiHelper.SetCountrySelection(_countryComboBox, countryValue, _countryInfoList);
+        // 一致するものがなければ最初の項目を選択
+        comboBox.SelectedIndex = 0;
     }
-
     private void OnCategoryChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_categoryComboBox.SelectedItem is NavalCategoryItem category)

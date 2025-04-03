@@ -7,6 +7,7 @@
         <entry key="Category_Selection_Window.axaml" value="HOI4NavalModder.csproj" />
         <entry key="Gun_Design_View.axaml" value="HOI4NavalModder.csproj" />
         <entry key="MainWindow.axaml" value="HOI4NavalModder.csproj" />
+        <entry key="View/equipment_design_view.axaml" value="HOI4NavalModder.csproj" />
         <entry key="equipment_design_view.axaml" value="HOI4NavalModder.csproj" />
         <entry key="equipment_editor.axaml" value="HOI4NavalModder.csproj" />
       </map>

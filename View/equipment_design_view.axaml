@@ -23,7 +23,38 @@
                 <StackPanel Margin="10">
                     <TextBlock Text="フィルタ" Foreground="White" FontWeight="Bold" Margin="0,0,0,10" />
 
-                    <!-- フィルタ内容は省略 -->
+                    <!-- カテゴリフィルタ -->
+                    <TextBlock Text="カテゴリ" Foreground="White" Margin="0,5,0,2" />
+                    <ComboBox x:Name="CategoryFilterComboBox" 
+                              HorizontalAlignment="Stretch" 
+                              Margin="0,0,0,10" />
+
+                    <!-- 国家フィルタ -->
+                    <TextBlock Text="開発国" Foreground="White" Margin="0,5,0,2" />
+                    <ComboBox x:Name="CountryFilterComboBox" 
+                              HorizontalAlignment="Stretch" 
+                              Margin="0,0,0,10" />
+
+                    <!-- 検索ボックス -->
+                    <TextBlock Text="検索" Foreground="White" Margin="0,5,0,2" />
+                    <TextBox x:Name="SearchTextBox" 
+                             Watermark="装備名またはID" 
+                             HorizontalAlignment="Stretch" 
+                             Margin="0,0,0,10" />
+
+                    <!-- 表示オプション -->
+                    <CheckBox x:Name="ShowAllCheckBox" 
+                              Content="すべて表示" 
+                              IsChecked="True" 
+                              Foreground="White" 
+                              Margin="0,5,0,10" />
+
+                    <!-- フィルタクリアボタン -->
+                    <Button x:Name="ClearFilterButton" 
+                            Content="フィルタをクリア" 
+                            HorizontalAlignment="Stretch" 
+                            Margin="0,10,0,0" 
+                            Background="#0078D7" />
                 </StackPanel>
             </Border>
 
@@ -87,16 +118,13 @@
                     </StackPanel>
                 </Panel>
 
-                <!-- 装備リスト (ListBoxをXAMLで定義) -->
-                <!-- equipment_design_view.axaml ファイル内のListBox定義を修正（Avalonia構文） -->
-                <!-- equipment_design_view.axaml ファイル内のListBox定義を修正 -->
+                <!-- 装備リスト -->
                 <Grid Grid.Row="1">
                     <ListBox x:Name="EquipmentListBox"
                              Background="#1E1E1E"
                              BorderThickness="0"
                              Foreground="White"
                              Margin="5">
-                        <!-- ItemsSource はコードビハインドで設定されます (_equipmentListBox.ItemsSource = _equipmentList;) -->
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:NavalEquipment}">
                                 <Grid ColumnDefinitions="*,Auto" Margin="5">
@@ -132,6 +160,17 @@
                                                     </MultiBinding>
                                                 </TextBlock.Text>
                                             </TextBlock>
+                                        </StackPanel>
+                                        
+                                        <!-- カテゴリと特殊能力を3行目に表示 -->
+                                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding Category, Mode=OneWay}"
+                                                       Foreground="#CCCCCC"
+                                                       FontSize="12" />
+                                            <TextBlock Foreground="#CCCCCC"
+                                                       FontSize="12"
+                                                       Text="{Binding SpecialAbility, StringFormat=：{0}, Mode=OneWay}"
+                                                       IsVisible="{Binding SpecialAbility, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                         </StackPanel>
                                     </StackPanel>
 
