@@ -890,22 +890,16 @@ public partial class EquipmentDesignView : UserControl
             case "SMAA": // 対空砲
                 //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
                 break;
-            case "SMHAA": // 高射装置
-                //editorWindow = new SMHAA_Design_View(equipment, _categories, _tierYears);
-                break;
-            case "SMTR": // 機関
-                //editorWindow = new SMTR_Design_View(equipment, _categories, _tierYears);
-                break;
-            case "SMMBL": // 増設バルジ(中型艦)
-            case "SMHBL": // 増設バルジ(大型艦)
-                //editorWindow = new SMMBL_Design_View(equipment, _categories, _tierYears);
-                break;
             case "SMASM": // 対艦ミサイル
             case "SMSAM": // 対空ミサイル
                 //editorWindow = new SMASM_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMHNG": // 格納庫
                 //editorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
+                break;
+            default:
+                //
+                
                 break;
         }
 

@@ -1,0 +1,212 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="720"
+        x:Class="HOI4NavalModder.View.Radar_Design_View"
+        Title="レーダーの設計"
+        Width="800" Height="720"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,5,0,2" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="#333337" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#555555" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="#333337" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#555555" />
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="#333337" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#555555" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Padding" Value="15,8" />
+            <Setter Property="Background" Value="#3E3E42" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#555555" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+    </Window.Styles>
+
+    <Border Background="#2D2D30" Padding="20">
+        <Grid RowDefinitions="Auto,*,Auto">
+            <!-- ヘッダー -->
+            <TextBlock Grid.Row="0" Text="レーダーの設計" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" />
+
+            <!-- コンテンツ -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <Grid ColumnDefinitions="*,*">
+                    <!-- 左側：基本情報 -->
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <!-- 基本情報 -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="基本情報" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <!-- ID自動生成チェックボックス -->
+                                <CheckBox x:Name="AutoGenerateIdCheckBox" Content="IDを自動生成" IsChecked="True" />
+
+                                <TextBlock Text="ID:" />
+                                <TextBox x:Name="IdTextBox" Watermark="例: smlr_mk5" IsEnabled="False" />
+
+                                <TextBlock Text="名前:" />
+                                <TextBox x:Name="NameTextBox" Watermark="例: 5型レーダー" />
+
+                                <TextBlock Text="カテゴリ:" />
+                                <ComboBox x:Name="CategoryComboBox" HorizontalAlignment="Stretch" />
+
+                                <TextBlock Text="サブカテゴリ:" />
+                                <ComboBox x:Name="SubCategoryComboBox" HorizontalAlignment="Stretch" />
+
+                                <!-- 開発年 -->
+                                <TextBlock Text="開発年:" />
+                                <NumericUpDown x:Name="YearNumeric" Minimum="1880" Maximum="2050" Increment="1" FormatString="F0" Value="1936" />
+
+                                <TextBlock Text="開発国:" />
+                                <ComboBox x:Name="CountryComboBox" HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- レーダーの詳細パラメータ -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="詳細パラメータ" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <TextBlock Text="周波数帯:" />
+                                <ComboBox x:Name="FrequencyBandComboBox" HorizontalAlignment="Stretch">
+                                    <ComboBoxItem>HF帯</ComboBoxItem>
+                                    <ComboBoxItem>VHF帯</ComboBoxItem>
+                                    <ComboBoxItem>UHF帯</ComboBoxItem>
+                                    <ComboBoxItem>L帯</ComboBoxItem>
+                                    <ComboBoxItem>S帯</ComboBoxItem>
+                                    <ComboBoxItem>C帯</ComboBoxItem>
+                                    <ComboBoxItem>X帯</ComboBoxItem>
+                                    <ComboBoxItem>Ku帯</ComboBoxItem>
+                                </ComboBox>
+
+                                <TextBlock Text="出力 (kW):" />
+                                <NumericUpDown x:Name="PowerOutputNumeric" Minimum="0.1" Maximum="1000" Increment="0.1" FormatString="F1" Value="10" />
+
+                                <TextBlock Text="アンテナサイズ (m):" />
+                                <NumericUpDown x:Name="AntennaSizeNumeric" Minimum="0.1" Maximum="100" Increment="0.1" FormatString="F1" Value="2" />
+
+                                <TextBlock Text="PRF (Hz):" ToolTip.Tip="Pulse Repetition Frequency（パルス繰り返し周波数）" />
+                                <NumericUpDown x:Name="PrfNumeric" Minimum="10" Maximum="10000" Increment="10" FormatString="F0" Value="500" />
+
+                                <TextBlock Text="パルス幅 (μs):" />
+                                <NumericUpDown x:Name="PulseWidthNumeric" Minimum="0.1" Maximum="100" Increment="0.1" FormatString="F1" Value="1" />
+
+                                <TextBlock Text="重量 (kg):" />
+                                <NumericUpDown x:Name="WeightNumeric" Minimum="10" Maximum="10000" Increment="1" FormatString="F0" Value="250" />
+
+                                <TextBlock Text="必要人員:" />
+                                <NumericUpDown x:Name="ManpowerNumeric" Minimum="1" Maximum="100" Increment="1" FormatString="F0" Value="5" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- リソース要件 -->
+                        <Border Background="#252526" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="リソース要件" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <TextBlock Text="鋼材:" />
+                                <NumericUpDown x:Name="SteelNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" Value="1" />
+
+                                <TextBlock Text="タングステン:" />
+                                <NumericUpDown x:Name="TungstenNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" Value="1" />
+                                
+                                <TextBlock Text="電子部品:" />
+                                <NumericUpDown x:Name="ElectronicsNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" Value="1" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- 右側：計算された性能値と詳細設定 -->
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <!-- 計算された性能値 -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="計算された性能値" FontWeight="Bold" Margin="0,0,0,10" />
+
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="水上艦探知:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="0" x:Name="CalculatedSurfaceDetectionText" Text="0.0" Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="1" Text="空中機探知:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="CalculatedAirDetectionText" Text="0.0" Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="2" Text="探知範囲:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="2" x:Name="CalculatedDetectionRangeText" Text="0.0 km" Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="3" Text="射撃管制:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="3" x:Name="CalculatedFireControlText" Text="0.0" Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="4" Text="建造コスト:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="4" x:Name="CalculatedBuildCostText" Text="0.0" Margin="0,5,0,5" />
+
+                                    <TextBlock Grid.Column="0" Grid.Row="5" Text="信頼性:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CalculatedReliabilityText" Text="0.0" Margin="0,5,0,5" />
+                                    
+                                    <TextBlock Grid.Column="0" Grid.Row="6" Text="可視度ペナルティ:" Margin="0,5,10,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="6" x:Name="CalculatedVisibilityPenaltyText" Text="0.0" Margin="0,5,0,5" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 特殊機能 -->
+                        <Border Background="#252526" Padding="15" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="特殊機能" FontWeight="Bold" Margin="0,0,0,10" />
+                                <CheckBox x:Name="Is3DCheckBox" Content="3D探知機能" Margin="0,5,0,5" ToolTip.Tip="高度測定機能を含む" />
+                                <CheckBox x:Name="IsDigitalCheckBox" Content="デジタル信号処理" Margin="0,5,0,5" />
+                                <CheckBox x:Name="IsDopplerCheckBox" Content="ドップラー機能" Margin="0,5,0,5" ToolTip.Tip="目標速度検出機能" />
+                                <CheckBox x:Name="IsLongRangeCheckBox" Content="長距離探知" Margin="0,5,0,5" />
+                                <CheckBox x:Name="IsFireControlCheckBox" Content="射撃管制機能" Margin="0,5,0,5" />
+                                <CheckBox x:Name="IsStealthCheckBox" Content="低電波放射型" Margin="0,5,0,5" ToolTip.Tip="敵に発見されにくい" />
+                                <CheckBox x:Name="IsCompactCheckBox" Content="小型化設計" Margin="0,5,0,5" />
+                                <CheckBox x:Name="IsAllWeatherCheckBox" Content="全天候対応" Margin="0,5,0,5" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 備考 -->
+                        <Border Background="#252526" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="備考" FontWeight="Bold" Margin="0,0,0,10" />
+                                <!-- 備考欄 -->
+                                <TextBox x:Name="DescriptionTextBox" AcceptsReturn="True" Height="150"
+                                         Watermark="装備に関する追加情報や特記事項を入力してください" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- フッターボタン -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button Content="キャンセル" Margin="0,0,10,0" Click="On_Cancel_Click" />
+                <Button Content="保存" Background="#0078D7" Click="On_Save_Click" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
