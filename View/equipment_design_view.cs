@@ -885,7 +885,35 @@ public partial class EquipmentDesignView : UserControl
                 break;
             case "SMLR": // 小型電探
             case "SMHR": // 大型電探
-                editorWindow = new Radar_Design_View(equipment, _categories, _tierYears);
+                Dictionary<string, object> rawRadarData = null;
+
+                // 既存の装備の場合は生データを取得
+                if (!string.IsNullOrEmpty(equipment.Id))
+                {
+                    // 装備がJSONファイルからのデータかチェック
+                    if (equipment.AdditionalProperties.ContainsKey("FilePath") &&
+                        File.Exists(equipment.AdditionalProperties["FilePath"].ToString()))
+                    {
+                        // JSONファイルから直接データを読み込む
+                        var jsonFilePath = equipment.AdditionalProperties["FilePath"].ToString();
+                        var jsonContent = File.ReadAllText(jsonFilePath);
+                        rawRadarData = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                            jsonContent,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        );
+                    }
+                    else
+                    {
+                        // データベースから生データを取得
+                        rawRadarData = RadarDataToDb.GetRawRadarData(equipment.Id);
+                    }
+                }
+
+                // Radar_Design_Viewを開く（生データがある場合はそれを使用）
+                if (rawRadarData != null)
+                    editorWindow = new Radar_Design_View(rawRadarData, _categories, _tierYears);
+                else
+                    editorWindow = new Radar_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMAA": // 対空砲
                 //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
