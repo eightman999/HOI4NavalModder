@@ -885,7 +885,7 @@ public partial class EquipmentDesignView : UserControl
                 break;
             case "SMLR": // 小型電探
             case "SMHR": // 大型電探
-                //editorWindow = new SMLR_Design_View(equipment, _categories, _tierYears);
+                editorWindow = new Radar_Design_View(equipment, _categories, _tierYears);
                 break;
             case "SMAA": // 対空砲
                 //editorWindow = new SMAA_Design_View(equipment, _categories, _tierYears);
