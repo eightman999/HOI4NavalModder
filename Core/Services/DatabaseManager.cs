@@ -1380,6 +1380,213 @@ public class DatabaseManager
             return new List<string>(); // エラー時は空のリストを返す
         }
     }
+/// <summary>
+/// レーダーの生データをJSONファイルから取得する
+/// </summary>
+/// <param name="equipmentId">レーダー装備のID</param>
+/// <returns>レーダーパラメータの生データ</returns>
+public Dictionary<string, object> GetRawRadarData(string equipmentId)
+{
+    try
+    {
+        // 装備のベースディレクトリを取得
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HOI4NavalModder");
+            
+        var equipmentBasePath = Path.Combine(appDataPath, "equipments");
+        
+        // レーダーカテゴリのディレクトリを検索
+        var radarCategories = new[] { "SMLR", "SMHR" };
+        
+        foreach (var category in radarCategories)
+        {
+            var categoryPath = Path.Combine(equipmentBasePath, category);
+            
+            if (!Directory.Exists(categoryPath))
+                continue;
+            
+            // 指定されたIDと一致するJSONファイルを検索
+            var jsonFilePath = Path.Combine(categoryPath, $"{equipmentId}.json");
+            
+            if (File.Exists(jsonFilePath))
+            {
+                var jsonContent = File.ReadAllText(jsonFilePath);
+                
+                // JSONをDictionaryに変換（Systemに依存する一般的な方法で）
+                var result = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(jsonContent);
+                var convertedResult = new Dictionary<string, object>();
+                
+                // JsonElementをC#オブジェクトに変換
+                foreach (var pair in result)
+                {
+                    switch (pair.Value.ValueKind)
+                    {
+                        case JsonValueKind.String:
+                            convertedResult[pair.Key] = pair.Value.GetString();
+                            break;
+                        case JsonValueKind.Number:
+                            if (pair.Value.TryGetInt32(out int intValue))
+                                convertedResult[pair.Key] = intValue;
+                            else
+                                convertedResult[pair.Key] = pair.Value.GetDouble();
+                            break;
+                        case JsonValueKind.True:
+                            convertedResult[pair.Key] = true;
+                            break;
+                        case JsonValueKind.False:
+                            convertedResult[pair.Key] = false;
+                            break;
+                        case JsonValueKind.Null:
+                            convertedResult[pair.Key] = null;
+                            break;
+                        default:
+                            convertedResult[pair.Key] = pair.Value.ToString();
+                            break;
+                    }
+                }
+                
+                // ファイルパスを追加情報として保存
+                convertedResult["FilePath"] = jsonFilePath;
+                
+                return convertedResult;
+            }
+        }
+        
+        // SQLiteデータベースから検索（JSONファイルが見つからない場合）
+        using (var connection = new SQLiteConnection($"Data Source={_dbFilePath};Version=3;"))
+        {
+            connection.Open();
+            
+            // RAW_DATAテーブルからレーダーデータを検索
+            var command = new SQLiteCommand(
+                "SELECT DATA_JSON FROM RAW_DATA WHERE EQUIPMENT_ID = @id AND CATEGORY IN ('SMLR', 'SMHR')",
+                connection);
+                
+            command.Parameters.AddWithValue("@id", equipmentId);
+            
+            var result = command.ExecuteScalar() as string;
+            
+            if (!string.IsNullOrEmpty(result))
+            {
+                // JSONをDictionaryに変換
+                var jsonResult = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(result);
+                var convertedResult = new Dictionary<string, object>();
+                
+                // JsonElementをC#オブジェクトに変換
+                foreach (var pair in jsonResult)
+                {
+                    switch (pair.Value.ValueKind)
+                    {
+                        case JsonValueKind.String:
+                            convertedResult[pair.Key] = pair.Value.GetString();
+                            break;
+                        case JsonValueKind.Number:
+                            if (pair.Value.TryGetInt32(out int intValue))
+                                convertedResult[pair.Key] = intValue;
+                            else
+                                convertedResult[pair.Key] = pair.Value.GetDouble();
+                            break;
+                        case JsonValueKind.True:
+                            convertedResult[pair.Key] = true;
+                            break;
+                        case JsonValueKind.False:
+                            convertedResult[pair.Key] = false;
+                            break;
+                        case JsonValueKind.Null:
+                            convertedResult[pair.Key] = null;
+                            break;
+                        default:
+                            convertedResult[pair.Key] = pair.Value.ToString();
+                            break;
+                    }
+                }
+                
+                return convertedResult;
+            }
+        }
+        
+        // データが見つからない場合
+        Console.WriteLine($"指定されたID '{equipmentId}' のレーダーデータが見つかりませんでした");
+        return null;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"レーダーデータの取得中にエラーが発生しました: {ex.Message}");
+        Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+        return null;
+    }
+}
+
+/// <summary>
+/// レーダーの生データをデータベースに保存する
+/// </summary>
+/// <param name="equipmentId">レーダー装備のID</param>
+/// <param name="radarData">レーダーパラメータの生データ</param>
+/// <returns>保存に成功したかどうか</returns>
+public bool SaveRawRadarData(string equipmentId, Dictionary<string, object> radarData)
+{
+    try
+    {
+        // カテゴリ情報の取得
+        var category = radarData.ContainsKey("Category") ? radarData["Category"].ToString() : "SMLR";
+        
+        // JSONにシリアライズ
+        var jsonData = JsonSerializer.Serialize(radarData, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+        
+        // 装備のベースディレクトリを作成
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "HOI4NavalModder");
+            
+        var equipmentBasePath = Path.Combine(appDataPath, "equipments");
+        
+        if (!Directory.Exists(equipmentBasePath))
+            Directory.CreateDirectory(equipmentBasePath);
+            
+        // カテゴリディレクトリを作成
+        var categoryPath = Path.Combine(equipmentBasePath, category);
+        
+        if (!Directory.Exists(categoryPath))
+            Directory.CreateDirectory(categoryPath);
+            
+        // JSONファイルに保存
+        var jsonFilePath = Path.Combine(categoryPath, $"{equipmentId}.json");
+        File.WriteAllText(jsonFilePath, jsonData);
+        
+        // SQLiteデータベースにも保存
+        using (var connection = new SQLiteConnection($"Data Source={_dbFilePath};Version=3;"))
+        {
+            connection.Open();
+            
+            // RAW_DATAテーブルへの挿入または更新
+            var command = new SQLiteCommand(
+                @"INSERT OR REPLACE INTO RAW_DATA (EQUIPMENT_ID, CATEGORY, DATA_JSON, LAST_UPDATED)
+                  VALUES (@id, @category, @json, @updated)",
+                connection);
+                
+            command.Parameters.AddWithValue("@id", equipmentId);
+            command.Parameters.AddWithValue("@category", category);
+            command.Parameters.AddWithValue("@json", jsonData);
+            command.Parameters.AddWithValue("@updated", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            
+            command.ExecuteNonQuery();
+        }
+        
+        Console.WriteLine($"レーダーデータ {equipmentId} を保存しました");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"レーダーデータの保存中にエラーが発生しました: {ex.Message}");
+        Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+        return false;
+    }
+}
+
 }
 
 // モジュール基本情報クラス
