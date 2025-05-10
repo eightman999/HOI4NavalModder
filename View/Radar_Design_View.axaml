@@ -81,7 +81,8 @@
 
                                 <!-- 開発年 -->
                                 <TextBlock Text="開発年:" />
-                                <NumericUpDown x:Name="YearNumeric" Minimum="1880" Maximum="2050" Increment="1" FormatString="F0" Value="1936" />
+                                <NumericUpDown x:Name="YearNumeric" Minimum="1880" Maximum="2050" Increment="1"
+                                               FormatString="F0" Value="1936" />
 
                                 <TextBlock Text="開発国:" />
                                 <ComboBox x:Name="CountryComboBox" HorizontalAlignment="Stretch" />
@@ -106,22 +107,28 @@
                                 </ComboBox>
 
                                 <TextBlock Text="出力 (kW):" />
-                                <NumericUpDown x:Name="PowerOutputNumeric" Minimum="0.1" Maximum="1000" Increment="0.1" FormatString="F1" Value="10" />
+                                <NumericUpDown x:Name="PowerOutputNumeric" Minimum="0.1" Maximum="1000" Increment="0.1"
+                                               FormatString="F1" Value="10" />
 
                                 <TextBlock Text="アンテナサイズ (m):" />
-                                <NumericUpDown x:Name="AntennaSizeNumeric" Minimum="0.1" Maximum="100" Increment="0.1" FormatString="F1" Value="2" />
+                                <NumericUpDown x:Name="AntennaSizeNumeric" Minimum="0.1" Maximum="100" Increment="0.1"
+                                               FormatString="F1" Value="2" />
 
                                 <TextBlock Text="PRF (Hz):" ToolTip.Tip="Pulse Repetition Frequency（パルス繰り返し周波数）" />
-                                <NumericUpDown x:Name="PrfNumeric" Minimum="10" Maximum="10000" Increment="10" FormatString="F0" Value="500" />
+                                <NumericUpDown x:Name="PrfNumeric" Minimum="10" Maximum="10000" Increment="10"
+                                               FormatString="F0" Value="500" />
 
                                 <TextBlock Text="パルス幅 (μs):" />
-                                <NumericUpDown x:Name="PulseWidthNumeric" Minimum="0.1" Maximum="100" Increment="0.1" FormatString="F1" Value="1" />
+                                <NumericUpDown x:Name="PulseWidthNumeric" Minimum="0.1" Maximum="100" Increment="0.1"
+                                               FormatString="F1" Value="1" />
 
                                 <TextBlock Text="重量 (kg):" />
-                                <NumericUpDown x:Name="WeightNumeric" Minimum="10" Maximum="10000" Increment="1" FormatString="F0" Value="250" />
+                                <NumericUpDown x:Name="WeightNumeric" Minimum="10" Maximum="10000" Increment="1"
+                                               FormatString="F0" Value="250" />
 
                                 <TextBlock Text="必要人員:" />
-                                <NumericUpDown x:Name="ManpowerNumeric" Minimum="1" Maximum="100" Increment="1" FormatString="F0" Value="5" />
+                                <NumericUpDown x:Name="ManpowerNumeric" Minimum="1" Maximum="100" Increment="1"
+                                               FormatString="F0" Value="5" />
                             </StackPanel>
                         </Border>
 
@@ -131,13 +138,16 @@
                                 <TextBlock Text="リソース要件" FontWeight="Bold" Margin="0,0,0,10" />
 
                                 <TextBlock Text="鋼材:" />
-                                <NumericUpDown x:Name="SteelNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" Value="1" />
+                                <NumericUpDown x:Name="SteelNumeric" Minimum="0" Maximum="50" Increment="0.1"
+                                               FormatString="F1" Value="1" />
 
                                 <TextBlock Text="タングステン:" />
-                                <NumericUpDown x:Name="TungstenNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" Value="1" />
-                                
+                                <NumericUpDown x:Name="TungstenNumeric" Minimum="0" Maximum="50" Increment="0.1"
+                                               FormatString="F1" Value="1" />
+
                                 <TextBlock Text="電子部品:" />
-                                <NumericUpDown x:Name="ElectronicsNumeric" Minimum="0" Maximum="50" Increment="0.1" FormatString="F1" Value="1" />
+                                <NumericUpDown x:Name="ElectronicsNumeric" Minimum="0" Maximum="50" Increment="0.1"
+                                               FormatString="F1" Value="1" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -151,25 +161,32 @@
 
                                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                                     <TextBlock Grid.Column="0" Grid.Row="0" Text="水上艦探知:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="0" x:Name="CalculatedSurfaceDetectionText" Text="0.0" Margin="0,5,0,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="0" x:Name="CalculatedSurfaceDetectionText"
+                                               Text="0.0" Margin="0,5,0,5" />
 
                                     <TextBlock Grid.Column="0" Grid.Row="1" Text="空中機探知:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="CalculatedAirDetectionText" Text="0.0" Margin="0,5,0,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="CalculatedAirDetectionText"
+                                               Text="0.0" Margin="0,5,0,5" />
 
                                     <TextBlock Grid.Column="0" Grid.Row="2" Text="探知範囲:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="2" x:Name="CalculatedDetectionRangeText" Text="0.0 km" Margin="0,5,0,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="2" x:Name="CalculatedDetectionRangeText"
+                                               Text="0.0 km" Margin="0,5,0,5" />
 
                                     <TextBlock Grid.Column="0" Grid.Row="3" Text="射撃管制:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="3" x:Name="CalculatedFireControlText" Text="0.0" Margin="0,5,0,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="3" x:Name="CalculatedFireControlText"
+                                               Text="0.0" Margin="0,5,0,5" />
 
                                     <TextBlock Grid.Column="0" Grid.Row="4" Text="建造コスト:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="4" x:Name="CalculatedBuildCostText" Text="0.0" Margin="0,5,0,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="4" x:Name="CalculatedBuildCostText" Text="0.0"
+                                               Margin="0,5,0,5" />
 
                                     <TextBlock Grid.Column="0" Grid.Row="5" Text="信頼性:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CalculatedReliabilityText" Text="0.0" Margin="0,5,0,5" />
-                                    
+                                    <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CalculatedReliabilityText"
+                                               Text="0.0" Margin="0,5,0,5" />
+
                                     <TextBlock Grid.Column="0" Grid.Row="6" Text="可視度ペナルティ:" Margin="0,5,10,5" />
-                                    <TextBlock Grid.Column="1" Grid.Row="6" x:Name="CalculatedVisibilityPenaltyText" Text="0.0" Margin="0,5,0,5" />
+                                    <TextBlock Grid.Column="1" Grid.Row="6" x:Name="CalculatedVisibilityPenaltyText"
+                                               Text="0.0" Margin="0,5,0,5" />
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -178,12 +195,15 @@
                         <Border Background="#252526" Padding="15" Margin="0,0,0,20">
                             <StackPanel>
                                 <TextBlock Text="特殊機能" FontWeight="Bold" Margin="0,0,0,10" />
-                                <CheckBox x:Name="Is3DCheckBox" Content="3D探知機能" Margin="0,5,0,5" ToolTip.Tip="高度測定機能を含む" />
+                                <CheckBox x:Name="Is3DCheckBox" Content="3D探知機能" Margin="0,5,0,5"
+                                          ToolTip.Tip="高度測定機能を含む" />
                                 <CheckBox x:Name="IsDigitalCheckBox" Content="デジタル信号処理" Margin="0,5,0,5" />
-                                <CheckBox x:Name="IsDopplerCheckBox" Content="ドップラー機能" Margin="0,5,0,5" ToolTip.Tip="目標速度検出機能" />
+                                <CheckBox x:Name="IsDopplerCheckBox" Content="ドップラー機能" Margin="0,5,0,5"
+                                          ToolTip.Tip="目標速度検出機能" />
                                 <CheckBox x:Name="IsLongRangeCheckBox" Content="長距離探知" Margin="0,5,0,5" />
                                 <CheckBox x:Name="IsFireControlCheckBox" Content="射撃管制機能" Margin="0,5,0,5" />
-                                <CheckBox x:Name="IsStealthCheckBox" Content="低電波放射型" Margin="0,5,0,5" ToolTip.Tip="敵に発見されにくい" />
+                                <CheckBox x:Name="IsStealthCheckBox" Content="低電波放射型" Margin="0,5,0,5"
+                                          ToolTip.Tip="敵に発見されにくい" />
                                 <CheckBox x:Name="IsCompactCheckBox" Content="小型化設計" Margin="0,5,0,5" />
                                 <CheckBox x:Name="IsAllWeatherCheckBox" Content="全天候対応" Margin="0,5,0,5" />
                             </StackPanel>

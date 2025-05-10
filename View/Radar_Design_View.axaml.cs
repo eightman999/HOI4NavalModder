@@ -18,58 +18,58 @@ namespace HOI4NavalModder.View;
 
 public partial class Radar_Design_View : Avalonia.Controls.Window
 {
-    private readonly CheckBox _autoGenerateIdCheckBox;
-    private readonly TextBox _idTextBox;
-    private readonly TextBox _nameTextBox;
-    private readonly ComboBox _categoryComboBox;
-    private readonly ComboBox _subCategoryComboBox;
-    private readonly NumericUpDown _yearNumeric;
-    private readonly ComboBox _countryComboBox;
-
-    // レーダー特有のパラメータコントロール
-    private readonly ComboBox _frequencyBandComboBox;
-    private readonly NumericUpDown _powerOutputNumeric;
     private readonly NumericUpDown _antennaSizeNumeric;
-    private readonly NumericUpDown _prfNumeric;
-    private readonly NumericUpDown _pulseWidthNumeric;
-    private readonly NumericUpDown _weightNumeric;
-    private readonly NumericUpDown _manpowerNumeric;
-
-    // リソース関連コントロール
-    private readonly NumericUpDown _steelNumeric;
-    private readonly NumericUpDown _tungstenNumeric;
-    private readonly NumericUpDown _electronicsNumeric;
+    private readonly CheckBox _autoGenerateIdCheckBox;
+    private readonly TextBlock _calculatedAirDetectionText;
+    private readonly TextBlock _calculatedBuildCostText;
+    private readonly TextBlock _calculatedDetectionRangeText;
+    private readonly TextBlock _calculatedFireControlText;
+    private readonly TextBlock _calculatedReliabilityText;
 
     // 計算値表示用コントロール
     private readonly TextBlock _calculatedSurfaceDetectionText;
-    private readonly TextBlock _calculatedAirDetectionText;
-    private readonly TextBlock _calculatedDetectionRangeText;
-    private readonly TextBlock _calculatedFireControlText;
-    private readonly TextBlock _calculatedBuildCostText;
-    private readonly TextBlock _calculatedReliabilityText;
     private readonly TextBlock _calculatedVisibilityPenaltyText;
+
+    private readonly Dictionary<string, NavalCategory> _categories;
+    private readonly ComboBox _categoryComboBox;
+    private readonly ComboBox _countryComboBox;
+
+    private readonly TextBox _descriptionTextBox;
+    private readonly NumericUpDown _electronicsNumeric;
+
+    // レーダー特有のパラメータコントロール
+    private readonly ComboBox _frequencyBandComboBox;
+    private readonly TextBox _idTextBox;
 
     // 特殊機能チェックボックス
     private readonly CheckBox _is3DCheckBox;
+    private readonly CheckBox _isAllWeatherCheckBox;
+    private readonly CheckBox _isCompactCheckBox;
     private readonly CheckBox _isDigitalCheckBox;
     private readonly CheckBox _isDopplerCheckBox;
-    private readonly CheckBox _isLongRangeCheckBox;
     private readonly CheckBox _isFireControlCheckBox;
+    private readonly CheckBox _isLongRangeCheckBox;
     private readonly CheckBox _isStealthCheckBox;
-    private readonly CheckBox _isCompactCheckBox;
-    private readonly CheckBox _isAllWeatherCheckBox;
-
-    private readonly TextBox _descriptionTextBox;
-
-    private readonly Dictionary<string, NavalCategory> _categories;
-    private readonly Dictionary<int, string> _tierYears;
+    private readonly NumericUpDown _manpowerNumeric;
+    private readonly TextBox _nameTextBox;
     private readonly NavalEquipment _originalEquipment;
+    private readonly NumericUpDown _powerOutputNumeric;
+    private readonly NumericUpDown _prfNumeric;
+    private readonly NumericUpDown _pulseWidthNumeric;
+
+    // リソース関連コントロール
+    private readonly NumericUpDown _steelNumeric;
+    private readonly ComboBox _subCategoryComboBox;
+    private readonly Dictionary<int, string> _tierYears;
+    private readonly NumericUpDown _tungstenNumeric;
+    private readonly NumericUpDown _weightNumeric;
+    private readonly NumericUpDown _yearNumeric;
 
     private List<CountryListManager.CountryInfo> _countryInfoList;
     private CountryListManager _countryListManager;
 
     /// <summary>
-    /// 既存装備の編集用コンストラクタ
+    ///     既存装備の編集用コンストラクタ
     /// </summary>
     public Radar_Design_View(NavalEquipment equipment, Dictionary<string, NavalCategory> categories,
         Dictionary<int, string> tierYears)
@@ -201,7 +201,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
     }
 
     /// <summary>
-    /// 生データから作成するコンストラクタ
+    ///     生データから作成するコンストラクタ
     /// </summary>
     public Radar_Design_View(Dictionary<string, object> rawRadarData, Dictionary<string, NavalCategory> categories,
         Dictionary<int, string> tierYears)
@@ -401,11 +401,11 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 SetCountrySelection(_originalEquipment.Country);
             }
             // 生データから国家を設定（コンストラクタで渡された値がある場合）
-            else if (this.DataContext is Dictionary<string, object> rawData &&
+            else if (DataContext is Dictionary<string, object> rawData &&
                      rawData.ContainsKey("Country") &&
                      rawData["Country"] != null)
             {
-                string countryValue = rawData["Country"].ToString();
+                var countryValue = rawData["Country"].ToString();
                 SetCountrySelection(countryValue);
             }
 
@@ -1067,7 +1067,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
             var baseDetectionPower = Math.Sqrt(powerOutput * antennaSize) / Math.Sqrt(pulseWidth * prf / 1000);
 
             // 年代による技術補正
-            double techModifier = 1.0;
+            var techModifier = 1.0;
             if (year < 1930)
                 techModifier = 0.5;
             else if (year < 1940)
@@ -1085,7 +1085,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 techModifier *= 1.5; // デジタル信号処理ボーナス
 
             // 特殊機能による補正
-            double specialModifier = 1.0;
+            var specialModifier = 1.0;
 
             if (is3D)
                 airDetectionMultiplier *= 1.3; // 3D探知は空中目標に特に効果的
@@ -1150,7 +1150,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 buildCost *= 1.3;
 
             // 信頼性計算（0.0～1.0）
-            var reliability = 0.7 + (techModifier * 0.2);
+            var reliability = 0.7 + techModifier * 0.2;
 
             if (isDigital)
                 reliability -= 0.1; // 複雑なデジタル回路は故障しやすい
@@ -1162,7 +1162,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 reliability += 0.1; // 全天候対応は堅牢
 
             // 天候抵抗値を信頼性に加味
-            reliability *= (0.8 + weatherResistanceMultiplier * 0.2);
+            reliability *= 0.8 + weatherResistanceMultiplier * 0.2;
 
             // 最大1.0に制限
             reliability = Math.Min(reliability, 1.0);
@@ -1238,20 +1238,20 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
         if (idExists && !isEditingOriginal)
         {
             // ID衝突ダイアログを表示
-            var conflictDialog = new Window.IdConflictWindow(equipmentId);
-            var result = await conflictDialog.ShowDialog<Window.IdConflictWindow.ConflictResolution>(this);
+            var conflictDialog = new IdConflictWindow(equipmentId);
+            var result = await conflictDialog.ShowDialog<IdConflictWindow.ConflictResolution>(this);
 
             switch (result)
             {
-                case Window.IdConflictWindow.ConflictResolution.Cancel:
+                case IdConflictWindow.ConflictResolution.Cancel:
                     // キャンセル - 何もせずに戻る
                     return;
 
-                case Window.IdConflictWindow.ConflictResolution.Overwrite:
+                case IdConflictWindow.ConflictResolution.Overwrite:
                     // 上書き保存 - そのまま続行
                     break;
 
-                case Window.IdConflictWindow.ConflictResolution.SaveAsNew:
+                case IdConflictWindow.ConflictResolution.SaveAsNew:
                     // 別物として保存 - 一意のIDを生成
                     var allIds = dbManager.GetAllEquipmentIds();
                     equipmentId = UniqueIdGenerator.GenerateUniqueId(equipmentId, allIds);
@@ -1260,10 +1260,10 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
         }
 
         // Tier（開発世代）を年度から計算
-        int tier = NavalUtility.GetTierFromYear((int)_yearNumeric.Value);
+        var tier = NavalUtility.GetTierFromYear((int)_yearNumeric.Value);
 
         // レーダーの周波数帯を文字列で取得
-        string frequencyBand = _frequencyBandComboBox.SelectedItem?.ToString() ?? "L帯";
+        var frequencyBand = _frequencyBandComboBox.SelectedItem?.ToString() ?? "L帯";
 
         // レーダーデータを収集
         var radarData = new Dictionary<string, object>
@@ -1384,7 +1384,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
             var baseDetectionPower = Math.Sqrt(powerOutput * antennaSize) / Math.Sqrt(pulseWidth * prf / 1000);
 
             // 年代による技術補正
-            double techModifier = 1.0;
+            var techModifier = 1.0;
             if (year < 1930)
                 techModifier = 0.5;
             else if (year < 1940)
@@ -1402,7 +1402,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 techModifier *= 1.5; // デジタル信号処理ボーナス
 
             // 特殊機能による補正
-            double specialModifier = 1.0;
+            var specialModifier = 1.0;
 
             if (is3D)
                 airDetectionMultiplier *= 1.3; // 3D探知は空中目標に特に効果的
@@ -1467,7 +1467,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 buildCost *= 1.3;
 
             // 信頼性計算（0.0～1.0）
-            var reliability = 0.7 + (techModifier * 0.2);
+            var reliability = 0.7 + techModifier * 0.2;
 
             if (isDigital)
                 reliability -= 0.1; // 複雑なデジタル回路は故障しやすい
@@ -1479,7 +1479,7 @@ public partial class Radar_Design_View : Avalonia.Controls.Window
                 reliability += 0.1; // 全天候対応は堅牢
 
             // 天候抵抗値を信頼性に加味
-            reliability *= (0.8 + weatherResistanceMultiplier * 0.2);
+            reliability *= 0.8 + weatherResistanceMultiplier * 0.2;
 
             // 最大1.0に制限
             reliability = Math.Min(reliability, 1.0);

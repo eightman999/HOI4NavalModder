@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:local="clr-namespace:HOI4NavalModder"
              xmlns:models="clr-namespace:HOI4NavalModder.Core.Models"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="HOI4NavalModder.View.EquipmentDesignView">
@@ -25,35 +24,35 @@
 
                     <!-- カテゴリフィルタ -->
                     <TextBlock Text="カテゴリ" Foreground="White" Margin="0,5,0,2" />
-                    <ComboBox x:Name="CategoryFilterComboBox" 
-                              HorizontalAlignment="Stretch" 
+                    <ComboBox x:Name="CategoryFilterComboBox"
+                              HorizontalAlignment="Stretch"
                               Margin="0,0,0,10" />
 
                     <!-- 国家フィルタ -->
                     <TextBlock Text="開発国" Foreground="White" Margin="0,5,0,2" />
-                    <ComboBox x:Name="CountryFilterComboBox" 
-                              HorizontalAlignment="Stretch" 
+                    <ComboBox x:Name="CountryFilterComboBox"
+                              HorizontalAlignment="Stretch"
                               Margin="0,0,0,10" />
 
                     <!-- 検索ボックス -->
                     <TextBlock Text="検索" Foreground="White" Margin="0,5,0,2" />
-                    <TextBox x:Name="SearchTextBox" 
-                             Watermark="装備名またはID" 
-                             HorizontalAlignment="Stretch" 
+                    <TextBox x:Name="SearchTextBox"
+                             Watermark="装備名またはID"
+                             HorizontalAlignment="Stretch"
                              Margin="0,0,0,10" />
 
                     <!-- 表示オプション -->
-                    <CheckBox x:Name="ShowAllCheckBox" 
-                              Content="すべて表示" 
-                              IsChecked="True" 
-                              Foreground="White" 
+                    <CheckBox x:Name="ShowAllCheckBox"
+                              Content="すべて表示"
+                              IsChecked="True"
+                              Foreground="White"
                               Margin="0,5,0,10" />
 
                     <!-- フィルタクリアボタン -->
-                    <Button x:Name="ClearFilterButton" 
-                            Content="フィルタをクリア" 
-                            HorizontalAlignment="Stretch" 
-                            Margin="0,10,0,0" 
+                    <Button x:Name="ClearFilterButton"
+                            Content="フィルタをクリア"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,10,0,0"
                             Background="#0078D7" />
                 </StackPanel>
             </Border>
@@ -161,7 +160,7 @@
                                                 </TextBlock.Text>
                                             </TextBlock>
                                         </StackPanel>
-                                        
+
                                         <!-- カテゴリと特殊能力を3行目に表示 -->
                                         <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,5,0,0">
                                             <TextBlock Text="{Binding Category, Mode=OneWay}"

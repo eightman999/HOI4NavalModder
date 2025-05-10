@@ -35,7 +35,7 @@ public partial class MainWindow : Avalonia.Controls.Window
         _contentPanel = this.FindControl<Panel>("ContentPanel");
 
         // 各ページを初期化
-        _pages.Add("EquipmentDesign", new View.EquipmentDesignView());
+        _pages.Add("EquipmentDesign", new EquipmentDesignView());
         _pages.Add("EquipmentIcon", new EquipmentIconView());
         _pages.Add("ShipType", new ShipTypeView());
         _pages.Add("ShipDesign", new ShipDesignView());

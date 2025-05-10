@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
 using Avalonia.Controls;
-using System.Text.RegularExpressions;
 
 namespace HOI4NavalModder.Core.Utilities;
 
 /// <summary>
-/// UI操作のためのヘルパーメソッドを提供するクラス
+///     UI操作のためのヘルパーメソッドを提供するクラス
 /// </summary>
 public static class UiHelper
 {
     /// <summary>
-    /// ComboBoxの項目を選択するヘルパーメソッド
+    ///     ComboBoxの項目を選択するヘルパーメソッド
     /// </summary>
     /// <param name="comboBox">対象のComboBox</param>
     /// <param name="propertyName">比較するプロパティ名（nullの場合は文字列比較）</param>
@@ -54,18 +53,18 @@ public static class UiHelper
     }
 
     /// <summary>
-    /// NumericUpDownの値を安全に設定するヘルパーメソッド
+    ///     NumericUpDownの値を安全に設定するヘルパーメソッド
     /// </summary>
     /// <param name="numericUpDown">対象のNumericUpDown</param>
     /// <param name="value">設定する値</param>
     public static void SetNumericValue(NumericUpDown numericUpDown, decimal value)
     {
-        if (value >= numericUpDown.Minimum && value <= numericUpDown.Maximum) 
+        if (value >= numericUpDown.Minimum && value <= numericUpDown.Maximum)
             numericUpDown.Value = value;
     }
 
     /// <summary>
-    /// エラーメッセージを表示する（現在はコンソール出力のみ）
+    ///     エラーメッセージを表示する（現在はコンソール出力のみ）
     /// </summary>
     /// <param name="message">表示するメッセージ</param>
     public static void ShowError(string message)
@@ -73,14 +72,15 @@ public static class UiHelper
         // エラーメッセージを表示（実際の実装ではダイアログを表示する）
         Console.WriteLine($"エラー: {message}");
     }
-    
+
     /// <summary>
-    /// 国家タグや国名に基づいてコンボボックスの選択を設定
+    ///     国家タグや国名に基づいてコンボボックスの選択を設定
     /// </summary>
     /// <param name="countryComboBox">国家選択用コンボボックス</param>
     /// <param name="countryValue">国家タグ（JAP, USAなど）または国名</param>
     /// <param name="countryInfoList">国家情報リスト</param>
-    public static void SetCountrySelection(ComboBox countryComboBox, string countryValue, List<CountryListManager.CountryInfo> countryInfoList)
+    public static void SetCountrySelection(ComboBox countryComboBox, string countryValue,
+        List<CountryListManager.CountryInfo> countryInfoList)
     {
         if (string.IsNullOrEmpty(countryValue))
         {

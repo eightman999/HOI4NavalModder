@@ -51,13 +51,13 @@
             <DependentUpon>equipment_design_view.axaml</DependentUpon>
         </Compile>
         <Compile Update="View\Torpedo_Design_View.cs">
-          <DependentUpon>Torpedo_Design_View.axaml</DependentUpon>
+            <DependentUpon>Torpedo_Design_View.axaml</DependentUpon>
         </Compile>
         <Compile Update="View\Sonar_Design_View.cs">
-          <DependentUpon>Sonar_Design_View.axaml</DependentUpon>
+            <DependentUpon>Sonar_Design_View.axaml</DependentUpon>
         </Compile>
         <Compile Update="View\DC_Design_view.cs">
-          <DependentUpon>DC_Design_view.axaml</DependentUpon>
+            <DependentUpon>DC_Design_view.axaml</DependentUpon>
         </Compile>
     </ItemGroup>
 

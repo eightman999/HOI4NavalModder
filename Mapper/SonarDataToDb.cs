@@ -82,31 +82,33 @@ public static class SonarDataToDb
 
         // 加算ステータス
         moduleData.AddStats = new ModuleStats();
-        
+
         // ソナーのステータスを設定
         moduleData.AddStats.SubDetection = equipment.Defense;
         moduleData.AddStats.SubAttack = equipment.Attack;
-        
+
         // 表面探知力
         if (equipment.AdditionalProperties.ContainsKey("CalculatedSurfaceDetection"))
-            moduleData.AddStats.SurfaceDetection = Convert.ToDouble(equipment.AdditionalProperties["CalculatedSurfaceDetection"]);
-            
+            moduleData.AddStats.SurfaceDetection =
+                Convert.ToDouble(equipment.AdditionalProperties["CalculatedSurfaceDetection"]);
+
         // 探知範囲
         if (equipment.AdditionalProperties.ContainsKey("CalculatedDetectionRange"))
-            moduleData.AddStats.FireRange = Convert.ToDouble(equipment.AdditionalProperties["CalculatedDetectionRange"]);
-            
+            moduleData.AddStats.FireRange =
+                Convert.ToDouble(equipment.AdditionalProperties["CalculatedDetectionRange"]);
+
         // 建造コスト
         moduleData.AddStats.BuildCostIc = equipment.AdditionalProperties.ContainsKey("CalculatedBuildCost")
             ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"])
             : 1.0;
-            
+
         // 信頼性
         if (equipment.AdditionalProperties.ContainsKey("CalculatedReliability"))
             moduleData.AddStats.Reliability = Convert.ToDouble(equipment.AdditionalProperties["CalculatedReliability"]);
 
         // 乗算ステータスは空のオブジェクトを使用
         moduleData.MultiplyStats = new ModuleStats();
-        
+
         // 平均加算ステータスも空のオブジェクトを使用
         moduleData.AddAverageStats = new ModuleStats();
 

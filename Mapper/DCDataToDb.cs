@@ -82,20 +82,20 @@ public static class DCDataToDb
 
         // 加算ステータス
         moduleData.AddStats = new ModuleStats();
-        
+
         // 爆雷のステータスを設定
         moduleData.AddStats.SubAttack = equipment.Attack;
         moduleData.AddStats.BuildCostIc = equipment.AdditionalProperties.ContainsKey("CalculatedBuildCost")
             ? Convert.ToDouble(equipment.AdditionalProperties["CalculatedBuildCost"])
             : 1.0;
-            
+
         // 共通のステータス
         if (equipment.AdditionalProperties.ContainsKey("CalculatedReliability"))
             moduleData.AddStats.Reliability = Convert.ToDouble(equipment.AdditionalProperties["CalculatedReliability"]);
 
         // 乗算ステータスは空のオブジェクトを使用
         moduleData.MultiplyStats = new ModuleStats();
-        
+
         // 平均加算ステータスも空のオブジェクトを使用
         moduleData.AddAverageStats = new ModuleStats();
 

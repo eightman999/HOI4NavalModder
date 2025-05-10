@@ -6,6 +6,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
+using HOI4NavalModder.Window;
 
 namespace HOI4NavalModder;
 
@@ -22,7 +23,7 @@ public class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new Window.MainWindow();
+            desktop.MainWindow = new MainWindow();
 
         base.OnFrameworkInitializationCompleted();
         // アプリケーション全体でダークテーマを強制
@@ -50,7 +51,7 @@ public class App : Application
                 // フォントを登録
                 var fontUri = new Uri(tempFile);
                 var fontFamily = new FontFamily(fontUri.AbsolutePath);
-        
+
                 Console.WriteLine("フォントを正常に読み込みました");
                 Console.WriteLine($"フォントファミリー: {fontFamily.Name}");
             }

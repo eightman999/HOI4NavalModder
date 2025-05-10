@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using HOI4NavalModder.Calculators;
 
 namespace HOI4NavalModder.Core.Utilities;
 
 /// <summary>
-/// 海軍関連の共通ユーティリティ機能を提供するクラス
+///     海軍関連の共通ユーティリティ機能を提供するクラス
 /// </summary>
 public static class NavalUtility
 {
     /// <summary>
-    /// 開発年からティア（開発世代）を計算するメソッド
+    ///     開発年からティア（開発世代）を計算するメソッド
     /// </summary>
     /// <param name="year">開発年</param>
     /// <returns>対応するティア値</returns>
@@ -47,7 +45,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// 各種口径単位をmmに変換
+    ///     各種口径単位をmmに変換
     /// </summary>
     /// <param name="calibre">口径の値</param>
     /// <param name="calibreType">口径の単位（cm/inch/mm）</param>
@@ -66,9 +64,9 @@ public static class NavalUtility
                 return calibre * 10; // デフォルトはcmとして扱う
         }
     }
-    
+
     /// <summary>
-    /// 砲身長を口径倍数で計算する
+    ///     砲身長を口径倍数で計算する
     /// </summary>
     /// <param name="barrelLength">砲身の長さ (m)</param>
     /// <param name="calibre">口径 (cm, mm, inch)</param>
@@ -99,7 +97,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// JSON要素から安全にint値を取得
+    ///     JSON要素から安全にint値を取得
     /// </summary>
     /// <param name="element">JsonElement</param>
     /// <returns>int値、取得できない場合は0</returns>
@@ -110,7 +108,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// JSON要素から安全に文字列を取得
+    ///     JSON要素から安全に文字列を取得
     /// </summary>
     /// <param name="element">JsonElement</param>
     /// <returns>文字列値、取得できない場合は空文字</returns>
@@ -121,7 +119,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// Dictionary から安全に double 値を取得
+    ///     Dictionary から安全に double 値を取得
     /// </summary>
     /// <param name="data">データディクショナリ</param>
     /// <param name="key">キー</param>
@@ -150,7 +148,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// Dictionary から安全に int 値を取得
+    ///     Dictionary から安全に int 値を取得
     /// </summary>
     /// <param name="data">データディクショナリ</param>
     /// <param name="key">キー</param>
@@ -179,7 +177,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// Dictionary から安全に decimal 値を取得
+    ///     Dictionary から安全に decimal 値を取得
     /// </summary>
     /// <param name="data">データディクショナリ</param>
     /// <param name="key">キー</param>
@@ -203,7 +201,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// Dictionary から安全に String 値を取得
+    ///     Dictionary から安全に String 値を取得
     /// </summary>
     /// <param name="data">データディクショナリ</param>
     /// <param name="key">キー</param>
@@ -227,7 +225,7 @@ public static class NavalUtility
     }
 
     /// <summary>
-    /// Dictionary から安全に boolean 値を取得
+    ///     Dictionary から安全に boolean 値を取得
     /// </summary>
     /// <param name="data">データディクショナリ</param>
     /// <param name="key">キー</param>

@@ -1380,176 +1380,177 @@ public class DatabaseManager
             return new List<string>(); // エラー時は空のリストを返す
         }
     }
-/// <summary>
-/// レーダーの生データをJSONファイルから取得する
-/// </summary>
-/// <param name="equipmentId">レーダー装備のID</param>
-/// <returns>レーダーパラメータの生データ</returns>
-public Dictionary<string, object> GetRawRadarData(string equipmentId)
-{
-    try
+
+    /// <summary>
+    ///     レーダーの生データをJSONファイルから取得する
+    /// </summary>
+    /// <param name="equipmentId">レーダー装備のID</param>
+    /// <returns>レーダーパラメータの生データ</returns>
+    public Dictionary<string, object> GetRawRadarData(string equipmentId)
     {
-        // 装備のベースディレクトリを取得
-        var appDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "HOI4NavalModder");
-            
-        var equipmentsPath = Path.Combine(appDataPath, "equipments");
-        
-        // レーダーカテゴリのディレクトリを検索
-        var radarDirs = new[] { "radar/small", "radar/heavy" };
-        
-        foreach (var dir in radarDirs)
+        try
         {
-            var dirPath = Path.Combine(equipmentsPath, dir);
-            
-            if (!Directory.Exists(dirPath))
-                continue;
-            
-            // 指定されたIDと一致するJSONファイルを検索
-            var jsonFilePath = Path.Combine(dirPath, $"{equipmentId}.json");
-            
-            if (File.Exists(jsonFilePath))
+            // 装備のベースディレクトリを取得
+            var appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "HOI4NavalModder");
+
+            var equipmentsPath = Path.Combine(appDataPath, "equipments");
+
+            // レーダーカテゴリのディレクトリを検索
+            var radarDirs = new[] { "radar/small", "radar/heavy" };
+
+            foreach (var dir in radarDirs)
             {
-                var jsonContent = File.ReadAllText(jsonFilePath);
-                
-                // JSONをDictionaryに変換
-                var options = new JsonSerializerOptions
+                var dirPath = Path.Combine(equipmentsPath, dir);
+
+                if (!Directory.Exists(dirPath))
+                    continue;
+
+                // 指定されたIDと一致するJSONファイルを検索
+                var jsonFilePath = Path.Combine(dirPath, $"{equipmentId}.json");
+
+                if (File.Exists(jsonFilePath))
                 {
-                    PropertyNameCaseInsensitive = true
-                };
-                
-                var result = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent, options);
-                
-                // ファイルパスを追加情報として保存
-                result["FilePath"] = jsonFilePath;
-                
-                return result;
-            }
-        }
-        
-        // SQLiteデータベースから検索（JSONファイルが見つからない場合）
-        using (var connection = new SQLiteConnection(_connectionString))
-        {
-            connection.Open();
-            
-            // レーダーデータテーブルからデータを検索
-            using (var command = new SQLiteCommand(
-                "SELECT json_data FROM radar_raw_datas WHERE ID = @id",
-                connection))
-            {
-                command.Parameters.AddWithValue("@id", equipmentId);
-                
-                var result = command.ExecuteScalar();
-                
-                if (result != null && result != DBNull.Value)
-                {
-                    var jsonPath = result.ToString();
-                    
-                    if (File.Exists(jsonPath))
+                    var jsonContent = File.ReadAllText(jsonFilePath);
+
+                    // JSONをDictionaryに変換
+                    var options = new JsonSerializerOptions
                     {
-                        // JSONファイルから生データを読み込む
-                        var jsonContent = File.ReadAllText(jsonPath);
-                        var options = new JsonSerializerOptions
+                        PropertyNameCaseInsensitive = true
+                    };
+
+                    var result = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent, options);
+
+                    // ファイルパスを追加情報として保存
+                    result["FilePath"] = jsonFilePath;
+
+                    return result;
+                }
+            }
+
+            // SQLiteデータベースから検索（JSONファイルが見つからない場合）
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+
+                // レーダーデータテーブルからデータを検索
+                using (var command = new SQLiteCommand(
+                           "SELECT json_data FROM radar_raw_datas WHERE ID = @id",
+                           connection))
+                {
+                    command.Parameters.AddWithValue("@id", equipmentId);
+
+                    var result = command.ExecuteScalar();
+
+                    if (result != null && result != DBNull.Value)
+                    {
+                        var jsonPath = result.ToString();
+
+                        if (File.Exists(jsonPath))
                         {
-                            PropertyNameCaseInsensitive = true
-                        };
-                        return JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent, options);
+                            // JSONファイルから生データを読み込む
+                            var jsonContent = File.ReadAllText(jsonPath);
+                            var options = new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            };
+                            return JsonSerializer.Deserialize<Dictionary<string, object>>(jsonContent, options);
+                        }
                     }
                 }
             }
-        }
-        
-        // データが見つからない場合
-        Console.WriteLine($"指定されたID '{equipmentId}' のレーダーデータが見つかりませんでした");
-        return null;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"レーダーデータの取得中にエラーが発生しました: {ex.Message}");
-        Console.WriteLine($"スタックトレース: {ex.StackTrace}");
-        return null;
-    }
-}
 
-public bool SaveRawRadarData(string equipmentId, Dictionary<string, object> radarData)
-{
-    try
+            // データが見つからない場合
+            Console.WriteLine($"指定されたID '{equipmentId}' のレーダーデータが見つかりませんでした");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"レーダーデータの取得中にエラーが発生しました: {ex.Message}");
+            Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+            return null;
+        }
+    }
+
+    public bool SaveRawRadarData(string equipmentId, Dictionary<string, object> radarData)
     {
-        // カテゴリ情報の取得
-        var category = radarData.ContainsKey("Category") ? radarData["Category"].ToString() : "SMLR";
-        
-        // JSONにシリアライズ
-        var options = new JsonSerializerOptions
+        try
         {
-            WriteIndented = true
-        };
-        var jsonData = JsonSerializer.Serialize(radarData, options);
-        
-        // 装備のベースディレクトリを作成
-        var appDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "HOI4NavalModder");
-            
-        var equipmentsPath = Path.Combine(appDataPath, "equipments");
-        
-        if (!Directory.Exists(equipmentsPath))
-            Directory.CreateDirectory(equipmentsPath);
-            
-        // カテゴリディレクトリを決定
-        var categoryDir = "radar/small";
-        if (category == "SMHR")
-            categoryDir = "radar/heavy";
-            
-        var categoryPath = Path.Combine(equipmentsPath, categoryDir);
-        
-        // ディレクトリが存在しない場合は作成
-        if (!Directory.Exists(categoryPath))
-            Directory.CreateDirectory(categoryPath);
-            
-        // JSONファイルに保存
-        var jsonFilePath = Path.Combine(categoryPath, $"{equipmentId}.json");
-        File.WriteAllText(jsonFilePath, jsonData);
-        
-        // SQLiteデータベースにも保存
-        using (var connection = new SQLiteConnection(_connectionString))
-        {
-            connection.Open();
-            
-            // レーダーデータテーブルの作成（存在しない場合）
-            using (var command = new SQLiteCommand(
-                @"CREATE TABLE IF NOT EXISTS radar_raw_datas (
+            // カテゴリ情報の取得
+            var category = radarData.ContainsKey("Category") ? radarData["Category"].ToString() : "SMLR";
+
+            // JSONにシリアライズ
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            var jsonData = JsonSerializer.Serialize(radarData, options);
+
+            // 装備のベースディレクトリを作成
+            var appDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "HOI4NavalModder");
+
+            var equipmentsPath = Path.Combine(appDataPath, "equipments");
+
+            if (!Directory.Exists(equipmentsPath))
+                Directory.CreateDirectory(equipmentsPath);
+
+            // カテゴリディレクトリを決定
+            var categoryDir = "radar/small";
+            if (category == "SMHR")
+                categoryDir = "radar/heavy";
+
+            var categoryPath = Path.Combine(equipmentsPath, categoryDir);
+
+            // ディレクトリが存在しない場合は作成
+            if (!Directory.Exists(categoryPath))
+                Directory.CreateDirectory(categoryPath);
+
+            // JSONファイルに保存
+            var jsonFilePath = Path.Combine(categoryPath, $"{equipmentId}.json");
+            File.WriteAllText(jsonFilePath, jsonData);
+
+            // SQLiteデータベースにも保存
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+
+                // レーダーデータテーブルの作成（存在しない場合）
+                using (var command = new SQLiteCommand(
+                           @"CREATE TABLE IF NOT EXISTS radar_raw_datas (
                     ID TEXT PRIMARY KEY,
                     json_data TEXT NOT NULL
                 )",
-                connection))
-            {
-                command.ExecuteNonQuery();
-            }
-            
-            // JSONファイルパスを保存
-            using (var command = new SQLiteCommand(
-                @"INSERT OR REPLACE INTO radar_raw_datas (ID, json_data)
+                           connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+
+                // JSONファイルパスを保存
+                using (var command = new SQLiteCommand(
+                           @"INSERT OR REPLACE INTO radar_raw_datas (ID, json_data)
                   VALUES (@id, @json_data)",
-                connection))
-            {
-                command.Parameters.AddWithValue("@id", equipmentId);
-                command.Parameters.AddWithValue("@json_data", jsonFilePath);
-                
-                command.ExecuteNonQuery();
+                           connection))
+                {
+                    command.Parameters.AddWithValue("@id", equipmentId);
+                    command.Parameters.AddWithValue("@json_data", jsonFilePath);
+
+                    command.ExecuteNonQuery();
+                }
             }
+
+            Console.WriteLine($"レーダーデータ {equipmentId} を保存しました");
+            return true;
         }
-        
-        Console.WriteLine($"レーダーデータ {equipmentId} を保存しました");
-        return true;
+        catch (Exception ex)
+        {
+            Console.WriteLine($"レーダーデータの保存中にエラーが発生しました: {ex.Message}");
+            Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+            return false;
+        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"レーダーデータの保存中にエラーが発生しました: {ex.Message}");
-        Console.WriteLine($"スタックトレース: {ex.StackTrace}");
-        return false;
-    }
-}
 }
 
 // モジュール基本情報クラス

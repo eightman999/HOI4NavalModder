@@ -27,7 +27,7 @@ public static class NavalTorpedoIdGenerator
         // ID形式: category_tag_year_diametermm
         // 直径の最後にmmを追加（すでにあれば追加しない）
         var formattedDiameter = diameter.EndsWith("mm") ? diameter : $"{diameter}mm";
-        
+
         return $"{category.ToLower()}_{tagPart}{year}_{formattedDiameter}".ToLower();
     }
 
@@ -40,7 +40,8 @@ public static class NavalTorpedoIdGenerator
     /// <param name="year">抽出される開発年</param>
     /// <param name="diameter">抽出される直径</param>
     /// <returns>パラメータの抽出に成功したかどうか</returns>
-    public static bool TryParseTorpedoId(string id, out string category, out string countryTag, out int year, out string diameter)
+    public static bool TryParseTorpedoId(string id, out string category, out string countryTag, out int year,
+        out string diameter)
     {
         category = string.Empty;
         countryTag = string.Empty;
@@ -55,7 +56,7 @@ public static class NavalTorpedoIdGenerator
             // すべて小文字に統一して処理
             id = id.ToLower();
             var parts = id.Split('_');
-            
+
             // 新フォーマット: category_tag_year_diameter
             // 旧フォーマット: category_year_diameter
             // 部品数に基づいてパターンを判断
@@ -64,25 +65,25 @@ public static class NavalTorpedoIdGenerator
 
             // カテゴリ（大文字に戻す）
             category = parts[0].ToUpper();
-            
-            int yearIndex = 1;
-            
+
+            var yearIndex = 1;
+
             // 国家タグが存在するかチェック (parts[1]が数字でなければタグとみなす)
             if (!int.TryParse(parts[1], out year) && IsLikelyCountryTag(parts[1]))
             {
                 countryTag = parts[1].ToUpper();
                 yearIndex = 2;
-                
+
                 // 次の部分を年として解析
                 if (parts.Length <= yearIndex || !int.TryParse(parts[yearIndex], out year))
                     return false;
             }
 
             // 直径（年の次の部分）
-            int diameterIndex = yearIndex + 1;
+            var diameterIndex = yearIndex + 1;
             if (parts.Length <= diameterIndex)
                 return false;
-                
+
             diameter = parts[diameterIndex];
 
             return true;
@@ -92,7 +93,7 @@ public static class NavalTorpedoIdGenerator
             return false;
         }
     }
-    
+
     /// <summary>
     ///     文字列が国家タグのパターンに一致するか判定する
     /// </summary>
@@ -102,15 +103,15 @@ public static class NavalTorpedoIdGenerator
     {
         if (string.IsNullOrEmpty(str))
             return false;
-            
+
         // 国家タグは通常3～4文字のアルファベット
         if (str.Length < 2 || str.Length > 5)
             return false;
-            
+
         // 数字だけの場合はタグではない（年の可能性）
         if (int.TryParse(str, out _))
             return false;
-            
+
         // アルファベットか確認（一部の特殊文字も許容）
         return Regex.IsMatch(str, @"^[A-Za-z0-9_-]+$");
     }

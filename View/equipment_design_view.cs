@@ -17,21 +17,30 @@ using HOI4NavalModder.Core;
 using HOI4NavalModder.Core.Models;
 using HOI4NavalModder.Core.Services;
 using HOI4NavalModder.Mapper;
+using HOI4NavalModder.Window;
 
 namespace HOI4NavalModder.View;
 
 public partial class EquipmentDesignView : UserControl
 {
     private readonly Dictionary<string, NavalCategory> _categories = new();
+
+    // カテゴリと国家のリスト（フィルタ用）
+    private readonly List<string> _countryList = new();
     private readonly DatabaseManager _dbManager;
     private readonly ObservableCollection<NavalEquipment> _equipmentList = new();
+
+
+    // フィルタリングされたリスト（表示用）
+    private readonly ObservableCollection<NavalEquipment> _filteredEquipmentList = new();
     private readonly Dictionary<int, string> _tierYears = new();
-    private ListBox _equipmentListBox;
     private ComboBox _categoryFilterComboBox;
-    private ComboBox _countryFilterComboBox;
-    private TextBox _searchTextBox;
     private Button _clearFilterButton;
+    private ComboBox _countryFilterComboBox;
+    private ListBox _equipmentListBox;
+    private TextBox _searchTextBox;
     private CheckBox _showAllCheckBox;
+
     public EquipmentDesignView()
     {
         // EditCommandの初期化
@@ -77,202 +86,178 @@ public partial class EquipmentDesignView : UserControl
         }
     }
 
-        
-        // フィルタリングされたリスト（表示用）
-        private ObservableCollection<NavalEquipment> _filteredEquipmentList = new();
-        
-        // カテゴリと国家のリスト（フィルタ用）
-        private List<string> _countryList = new();
-        
-        // フィルタコントロールの初期化メソッド
-        private void InitializeFilterControls()
-        {
-            // 各フィルタコントロールの取得
-            _categoryFilterComboBox = this.FindControl<ComboBox>("CategoryFilterComboBox");
-            _countryFilterComboBox = this.FindControl<ComboBox>("CountryFilterComboBox");
-            _searchTextBox = this.FindControl<TextBox>("SearchTextBox");
-            _clearFilterButton = this.FindControl<Button>("ClearFilterButton");
-            _showAllCheckBox = this.FindControl<CheckBox>("ShowAllCheckBox");
-            
-            // イベントハンドラの設定
-            if (_categoryFilterComboBox != null)
-                _categoryFilterComboBox.SelectionChanged += FilterSelectionChanged;
-                
-            if (_countryFilterComboBox != null)
-                _countryFilterComboBox.SelectionChanged += FilterSelectionChanged;
-                
-            if (_searchTextBox != null)
-                _searchTextBox.TextChanged += SearchTextChanged;
-                
-            if (_clearFilterButton != null)
-                _clearFilterButton.Click += ClearFilterClick;
-                
-            if (_showAllCheckBox != null)
-                _showAllCheckBox.IsCheckedChanged += ShowAllCheckedChanged;
-            
-            // カテゴリフィルタの初期化
-            if (_categoryFilterComboBox != null)
-            {
-                _categoryFilterComboBox.Items.Add(new CategoryFilterItem { Id = "", DisplayName = "すべてのカテゴリ" });
-                
-                foreach (var category in _categories)
-                {
-                    _categoryFilterComboBox.Items.Add(new CategoryFilterItem 
-                    { 
-                        Id = category.Key, 
-                        DisplayName = $"{category.Value.Name} ({category.Key})" 
-                    });
-                }
-                
-                // 最初の項目（すべて）を選択
-                _categoryFilterComboBox.SelectedIndex = 0;
-            }
-            
-            // 国家フィルタは装備データの読み込み後に初期化
-        }
-        
-        // 国家フィルタの初期化（装備データの読み込み後に呼び出す）
-        private void InitializeCountryFilter()
-        {
-            if (_countryFilterComboBox == null) return;
-            
-            // 現在の選択を保持
-            var currentSelection = _countryFilterComboBox.SelectedItem;
-            
-            // リストをクリア
-            _countryFilterComboBox.Items.Clear();
-            _countryList.Clear();
-            
-            // 「すべての国家」オプションを追加
-            _countryFilterComboBox.Items.Add(new CountryFilterItem { Id = "", DisplayName = "すべての国家" });
-            
-            // 装備リストから国家を収集
-            foreach (var equipment in _equipmentList)
-            {
-                if (!string.IsNullOrEmpty(equipment.Country) && !_countryList.Contains(equipment.Country))
-                {
-                    _countryList.Add(equipment.Country);
-                }
-            }
-            
-            // 国家リストをソート
-            _countryList.Sort();
-            
-            // コンボボックスに追加
-            foreach (var country in _countryList)
-            {
-                _countryFilterComboBox.Items.Add(new CountryFilterItem { Id = country, DisplayName = country });
-            }
-            
-            // 以前の選択を復元するか、最初の項目を選択
-            if (currentSelection != null && _countryFilterComboBox.Items.Contains(currentSelection))
-            {
-                _countryFilterComboBox.SelectedItem = currentSelection;
-            }
-            else
-            {
-                _countryFilterComboBox.SelectedIndex = 0;
-            }
-        }
-        
-        // フィルタ適用メソッド
-        private void ApplyFilter()
-        {
-            // リストクリア
-            _filteredEquipmentList.Clear();
-            
-            // フィルタ条件の取得
-            string categoryFilter = "";
-            string countryFilter = "";
-            string searchText = "";
-            bool showAll = true;
-            
-            if (_categoryFilterComboBox?.SelectedItem is CategoryFilterItem categoryItem)
-                categoryFilter = categoryItem.Id;
-                
-            if (_countryFilterComboBox?.SelectedItem is CountryFilterItem countryItem)
-                countryFilter = countryItem.Id;
-                
-            if (_searchTextBox != null)
-                searchText = _searchTextBox.Text?.ToLower() ?? "";
-                
-            if (_showAllCheckBox != null)
-                showAll = _showAllCheckBox.IsChecked ?? true;
-            
-            // フィルタ適用
-            var filteredList = _equipmentList.Where(equipment => 
-            {
-                // カテゴリフィルタ
-                if (!string.IsNullOrEmpty(categoryFilter) && equipment.Category != categoryFilter)
-                    return false;
-                    
-                // 国家フィルタ
-                if (!string.IsNullOrEmpty(countryFilter) && equipment.Country != countryFilter)
-                    return false;
-                    
-                // テキスト検索
-                if (!string.IsNullOrEmpty(searchText))
-                {
-                    bool matchFound = equipment.Name?.ToLower().Contains(searchText) == true ||
-                                     equipment.Id?.ToLower().Contains(searchText) == true;
-                                     
-                    if (!matchFound)
-                        return false;
-                }
-                
-                return true;
-            });
-            
-            // 結果をリストに追加
-            foreach (var equipment in filteredList)
-            {
-                _filteredEquipmentList.Add(equipment);
-            }
-            
-            // リストボックスのアイテムソースを更新
-            if (_equipmentListBox != null)
-            {
-                _equipmentListBox.ItemsSource = _filteredEquipmentList;
-            }
-            
-            Console.WriteLine($"フィルタ適用: {_filteredEquipmentList.Count}件の装備が表示されています");
-        }
-        
-        // イベントハンドラ
-        private void FilterSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ApplyFilter();
-        }
-        
-        private void SearchTextChanged(object sender, TextChangedEventArgs e)
-        {
-            ApplyFilter();
-        }
-        
-        private void ClearFilterClick(object sender, RoutedEventArgs e)
-        {
-            // フィルタをリセット
-            if (_categoryFilterComboBox != null)
-                _categoryFilterComboBox.SelectedIndex = 0;
-                
-            if (_countryFilterComboBox != null)
-                _countryFilterComboBox.SelectedIndex = 0;
-                
-            if (_searchTextBox != null)
-                _searchTextBox.Text = "";
-                
-            if (_showAllCheckBox != null)
-                _showAllCheckBox.IsChecked = true;
-                
-            ApplyFilter();
-        }
-        
-        private void ShowAllCheckedChanged(object sender, RoutedEventArgs e)
-        {
-            ApplyFilter();
-        }
     // 編集コマンドの追加
     public ICommand EditCommand { get; }
+
+    // フィルタコントロールの初期化メソッド
+    private void InitializeFilterControls()
+    {
+        // 各フィルタコントロールの取得
+        _categoryFilterComboBox = this.FindControl<ComboBox>("CategoryFilterComboBox");
+        _countryFilterComboBox = this.FindControl<ComboBox>("CountryFilterComboBox");
+        _searchTextBox = this.FindControl<TextBox>("SearchTextBox");
+        _clearFilterButton = this.FindControl<Button>("ClearFilterButton");
+        _showAllCheckBox = this.FindControl<CheckBox>("ShowAllCheckBox");
+
+        // イベントハンドラの設定
+        if (_categoryFilterComboBox != null)
+            _categoryFilterComboBox.SelectionChanged += FilterSelectionChanged;
+
+        if (_countryFilterComboBox != null)
+            _countryFilterComboBox.SelectionChanged += FilterSelectionChanged;
+
+        if (_searchTextBox != null)
+            _searchTextBox.TextChanged += SearchTextChanged;
+
+        if (_clearFilterButton != null)
+            _clearFilterButton.Click += ClearFilterClick;
+
+        if (_showAllCheckBox != null)
+            _showAllCheckBox.IsCheckedChanged += ShowAllCheckedChanged;
+
+        // カテゴリフィルタの初期化
+        if (_categoryFilterComboBox != null)
+        {
+            _categoryFilterComboBox.Items.Add(new CategoryFilterItem { Id = "", DisplayName = "すべてのカテゴリ" });
+
+            foreach (var category in _categories)
+                _categoryFilterComboBox.Items.Add(new CategoryFilterItem
+                {
+                    Id = category.Key,
+                    DisplayName = $"{category.Value.Name} ({category.Key})"
+                });
+
+            // 最初の項目（すべて）を選択
+            _categoryFilterComboBox.SelectedIndex = 0;
+        }
+
+        // 国家フィルタは装備データの読み込み後に初期化
+    }
+
+    // 国家フィルタの初期化（装備データの読み込み後に呼び出す）
+    private void InitializeCountryFilter()
+    {
+        if (_countryFilterComboBox == null) return;
+
+        // 現在の選択を保持
+        var currentSelection = _countryFilterComboBox.SelectedItem;
+
+        // リストをクリア
+        _countryFilterComboBox.Items.Clear();
+        _countryList.Clear();
+
+        // 「すべての国家」オプションを追加
+        _countryFilterComboBox.Items.Add(new CountryFilterItem { Id = "", DisplayName = "すべての国家" });
+
+        // 装備リストから国家を収集
+        foreach (var equipment in _equipmentList)
+            if (!string.IsNullOrEmpty(equipment.Country) && !_countryList.Contains(equipment.Country))
+                _countryList.Add(equipment.Country);
+
+        // 国家リストをソート
+        _countryList.Sort();
+
+        // コンボボックスに追加
+        foreach (var country in _countryList)
+            _countryFilterComboBox.Items.Add(new CountryFilterItem { Id = country, DisplayName = country });
+
+        // 以前の選択を復元するか、最初の項目を選択
+        if (currentSelection != null && _countryFilterComboBox.Items.Contains(currentSelection))
+            _countryFilterComboBox.SelectedItem = currentSelection;
+        else
+            _countryFilterComboBox.SelectedIndex = 0;
+    }
+
+    // フィルタ適用メソッド
+    private void ApplyFilter()
+    {
+        // リストクリア
+        _filteredEquipmentList.Clear();
+
+        // フィルタ条件の取得
+        var categoryFilter = "";
+        var countryFilter = "";
+        var searchText = "";
+        var showAll = true;
+
+        if (_categoryFilterComboBox?.SelectedItem is CategoryFilterItem categoryItem)
+            categoryFilter = categoryItem.Id;
+
+        if (_countryFilterComboBox?.SelectedItem is CountryFilterItem countryItem)
+            countryFilter = countryItem.Id;
+
+        if (_searchTextBox != null)
+            searchText = _searchTextBox.Text?.ToLower() ?? "";
+
+        if (_showAllCheckBox != null)
+            showAll = _showAllCheckBox.IsChecked ?? true;
+
+        // フィルタ適用
+        var filteredList = _equipmentList.Where(equipment =>
+        {
+            // カテゴリフィルタ
+            if (!string.IsNullOrEmpty(categoryFilter) && equipment.Category != categoryFilter)
+                return false;
+
+            // 国家フィルタ
+            if (!string.IsNullOrEmpty(countryFilter) && equipment.Country != countryFilter)
+                return false;
+
+            // テキスト検索
+            if (!string.IsNullOrEmpty(searchText))
+            {
+                var matchFound = equipment.Name?.ToLower().Contains(searchText) == true ||
+                                 equipment.Id?.ToLower().Contains(searchText) == true;
+
+                if (!matchFound)
+                    return false;
+            }
+
+            return true;
+        });
+
+        // 結果をリストに追加
+        foreach (var equipment in filteredList) _filteredEquipmentList.Add(equipment);
+
+        // リストボックスのアイテムソースを更新
+        if (_equipmentListBox != null) _equipmentListBox.ItemsSource = _filteredEquipmentList;
+
+        Console.WriteLine($"フィルタ適用: {_filteredEquipmentList.Count}件の装備が表示されています");
+    }
+
+    // イベントハンドラ
+    private void FilterSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        ApplyFilter();
+    }
+
+    private void SearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        ApplyFilter();
+    }
+
+    private void ClearFilterClick(object sender, RoutedEventArgs e)
+    {
+        // フィルタをリセット
+        if (_categoryFilterComboBox != null)
+            _categoryFilterComboBox.SelectedIndex = 0;
+
+        if (_countryFilterComboBox != null)
+            _countryFilterComboBox.SelectedIndex = 0;
+
+        if (_searchTextBox != null)
+            _searchTextBox.Text = "";
+
+        if (_showAllCheckBox != null)
+            _showAllCheckBox.IsChecked = true;
+
+        ApplyFilter();
+    }
+
+    private void ShowAllCheckedChanged(object sender, RoutedEventArgs e)
+    {
+        ApplyFilter();
+    }
 
     private void CreateEquipmentListBoxProgrammatically()
     {
@@ -489,16 +474,13 @@ public partial class EquipmentDesignView : UserControl
             }
 
             Console.WriteLine($"リスト内の装備数: {_equipmentList.Count}件");
-                
+
             // 国家フィルタの初期化
             InitializeCountryFilter();
-                
+
             // リストボックスのアイテムソースを更新（フィルタリングされたリストを使用）
-            if (_equipmentListBox != null)
-            {
-                _equipmentListBox.ItemsSource = _filteredEquipmentList;
-            }
-                
+            if (_equipmentListBox != null) _equipmentListBox.ItemsSource = _filteredEquipmentList;
+
             // 初期フィルタ適用
             ApplyFilter();
         }
@@ -705,10 +687,11 @@ public partial class EquipmentDesignView : UserControl
     private async void ShowCategorySelectionWindow()
     {
         // カテゴリ選択ウィンドウを表示
-        var categoryWindow = new Window.CategorySelectionWindow(_categories, _tierYears);
+        var categoryWindow = new CategorySelectionWindow(_categories, _tierYears);
 
         // 結果の処理
-        var result = await categoryWindow.ShowDialog<CategorySelectionResult>(this.GetVisualRoot() as Avalonia.Controls.Window);
+        var result =
+            await categoryWindow.ShowDialog<CategorySelectionResult>(this.GetVisualRoot() as Avalonia.Controls.Window);
         if (result != null)
         {
             // 選択されたカテゴリとティアに基づいて、適切なエディタを開く
@@ -817,7 +800,7 @@ public partial class EquipmentDesignView : UserControl
             case "SMLSP": // 大型飛行艇
                 //editorWindow = new SMSP_Design_View(equipment, _categories, _tierYears);
                 break;
-            
+
             case "SMSO": // ソナー
             case "SMLSO": // 大型ソナー
                 Dictionary<string, object> rawSonarData = null;
@@ -850,7 +833,7 @@ public partial class EquipmentDesignView : UserControl
                 else
                     editorWindow = new Sonar_Design_View(equipment, _categories, _tierYears);
                 break;
-                
+
             case "SMDC": // 爆雷
             case "SMDCL": // 爆雷投射機
                 Dictionary<string, object> rawDCData = null;
@@ -955,16 +938,13 @@ public partial class EquipmentDesignView : UserControl
             case "SMHNG": // 格納庫
                 //editorWindow = new SMHNG_Design_View(equipment, _categories, _tierYears);
                 break;
-            default:
-                //
-                
-                break;
         }
 
         // エディタウィンドウを表示
         if (editorWindow != null)
         {
-            var result = await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Avalonia.Controls.Window);
+            var result =
+                await editorWindow.ShowDialog<NavalEquipment>(this.GetVisualRoot() as Avalonia.Controls.Window);
             if (result != null)
             {
                 // 既存の装備を編集した場合
@@ -981,22 +961,23 @@ public partial class EquipmentDesignView : UserControl
             }
         }
     }
+
     public class CategoryFilterItem
     {
         public string Id { get; set; }
         public string DisplayName { get; set; }
-        
+
         public override string ToString()
         {
             return DisplayName;
         }
     }
-    
+
     public class CountryFilterItem
     {
         public string Id { get; set; }
         public string DisplayName { get; set; }
-        
+
         public override string ToString()
         {
             return DisplayName;
