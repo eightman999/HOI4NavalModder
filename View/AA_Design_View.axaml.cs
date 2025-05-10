@@ -64,7 +64,8 @@ namespace HOI4NavalModder.View
         private string _vanillaPath;
 
         // 装備から開く場合のコンストラクタ
-        public AADesignView(NavalEquipment equipment, Dictionary<string, NavalCategory> categories, Dictionary<int, string> tierYears)
+        public AADesignView(NavalEquipment equipment, Dictionary<string, NavalCategory> categories,
+            Dictionary<int, string> tierYears)
         {
             InitializeComponent();
 
@@ -114,40 +115,6 @@ namespace HOI4NavalModder.View
             _hasStabilizedMountCheckBox = this.FindControl<CheckBox>("HasStabilizedMountCheckBox");
             _hasRemoteControlCheckBox = this.FindControl<CheckBox>("HasRemoteControlCheckBox");
 
-            // UI項目の選択肢を初期化
-            InitializeUiOptions();
-            
-            // 生データから値を設定
-            if (rawAAData != null)
-            {
-                PopulateFromRawData(rawAAData);
-
-                // 既存IDから砲身長を抽出して設定
-                var id = rawAAData["Id"].ToString();
-                string countrytag;
-                if (AAGunIdGenerator.TryParseGunId(id, out _, out countrytag, out _, out _, out _, out var barrelLength))
-                    _barrelLengthNumeric.Value = barrelLength;
-                else if (rawAAData.ContainsKey("BarrelLength"))
-                    // 生データに砲身長がある場合
-                    _barrelLengthNumeric.Value = GetDecimalValue(rawAAData, "BarrelLength");
-                else
-                    // デフォルト値
-                    _barrelLengthNumeric.Value = 45;
-
-                // 編集モードでは自動生成をオフに
-                _autoGenerateIdCheckBox.IsChecked = false;
-                _idTextBox.IsEnabled = true;
-            }
-
-            InitializeCountryList();>("BarrelLengthNumeric");
-            _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
-            _isAswCheckBox = this.FindControl<CheckBox>("IsAswCheckBox");
-            _hasAutoAimingCheckBox = this.FindControl<CheckBox>("HasAutoAimingCheckBox");
-            _hasProximityFuzeCheckBox = this.FindControl<CheckBox>("HasProximityFuzeCheckBox");
-            _hasRadarGuidanceCheckBox = this.FindControl<CheckBox>("HasRadarGuidanceCheckBox");
-            _hasStabilizedMountCheckBox = this.FindControl<CheckBox>("HasStabilizedMountCheckBox");
-            _hasRemoteControlCheckBox = this.FindControl<CheckBox>("HasRemoteControlCheckBox");
-
             // カテゴリの設定（対空砲関連のもののみフィルタリング）
             var filteredCategories = new Dictionary<string, NavalCategory>();
             if (_categories.ContainsKey("SMAA")) filteredCategories.Add("SMAA", _categories["SMAA"]);
@@ -180,256 +147,6 @@ namespace HOI4NavalModder.View
             _barrelCountComboBox.Items.Add("4");
             _barrelCountComboBox.Items.Add("6");
             _barrelCountComboBox.Items.Add("8");
-
-            // 自動ID生成の初期設定とイベントハンドラ
-            if (_originalEquipment != null && !string.IsNullOrEmpty(_originalEquipment.Id))
-            {
-                // 既存装備を編集する場合
-                // 装備データを読み込み
-                LoadEquipmentData();
-
-                // 既存IDから砲身長を抽出して設定
-                string countrytag;
-                if (AAGunIdGenerator.TryParseGunId(_originalEquipment.Id, out _, out countrytag, out _, out _, out _, out var barrelLength))
-                    _barrelLengthNumeric.Value = barrelLength;
-                else
-                    // IDがパターンに合わない場合、デフォルト値を使用
-                    _barrelLengthNumeric.Value = 45; // デフォルト値
-
-                // 編集モードでは自動生成をオフに
-                _autoGenerateIdCheckBox.IsChecked = false;
-                _idTextBox.IsEnabled = true;
-            }
-            else
-            {
-                // 新規作成の場合は自動生成をオン
-                _autoGenerateIdCheckBox.IsChecked = true;
-                _idTextBox.IsEnabled = false;
-
-                // デフォルト値設定
-                if (_categoryComboBox.Items.Count > 0)
-                    _categoryComboBox.SelectedIndex = 0;
-
-                if (_subCategoryComboBox.Items.Count > 0)
-                    _subCategoryComboBox.SelectedIndex = 0;
-
-                // デフォルトの開発年を設定
-                _yearNumeric.Value = 1936;
-
-                if (_countryComboBox.Items.Count > 0)
-                    _countryComboBox.SelectedIndex = 0;
-
-                if (_barrelCountComboBox.Items.Count > 0)
-                    _barrelCountComboBox.SelectedIndex = 0;
-
-                // 初期値を設定
-                _barrelLengthNumeric.Value = 45;
-                _maxAltitudeNumeric.Value = 5000;
-
-                // カテゴリに応じたデフォルト値を設定
-                SetDefaultValuesByCategory();
-            }
-
-            // イベントハンドラの設定
-            _categoryComboBox.SelectionChanged += OnCategoryChanged;
-            _subCategoryComboBox.SelectionChanged += OnSubCategoryChanged;
-
-            // 自動ID生成のためのイベントハンドラ
-            _autoGenerateIdCheckBox.IsCheckedChanged += OnAutoGenerateIdChanged;
-            _categoryComboBox.SelectionChanged += UpdateAutoGeneratedId;
-            _yearNumeric.ValueChanged += UpdateAutoGeneratedId;
-            _calibreNumeric.ValueChanged += UpdateAutoGeneratedId;
-            _calibreTypeComboBox.SelectionChanged += UpdateAutoGeneratedId;
-            _barrelLengthNumeric.ValueChanged += UpdateAutoGeneratedId;
-
-            // 性能値計算のためのイベントハンドラ
-            _shellWeightNumeric.ValueChanged += UpdateCalculatedValues;
-            _muzzleVelocityNumeric.ValueChanged += UpdateCalculatedValues;
-            _rpmNumeric.ValueChanged += UpdateCalculatedValues;
-            _calibreNumeric.ValueChanged += UpdateCalculatedValues;
-            _calibreTypeComboBox.SelectionChanged += UpdateCalculatedValues;
-            _barrelCountComboBox.SelectionChanged += UpdateCalculatedValues;
-            _barrelLengthNumeric.ValueChanged += UpdateCalculatedValues;
-            _elevationAngleNumeric.ValueChanged += UpdateCalculatedValues;
-            _maxAltitudeNumeric.ValueChanged += UpdateCalculatedValues;
-            _turretWeightNumeric.ValueChanged += UpdateCalculatedValues;
-            _yearNumeric.ValueChanged += UpdateCalculatedValues;
-            _isAswCheckBox.IsCheckedChanged += UpdateCalculatedValues;
-            _hasAutoAimingCheckBox.IsCheckedChanged += UpdateCalculatedValues;
-            _hasProximityFuzeCheckBox.IsCheckedChanged += UpdateCalculatedValues;
-            _hasRadarGuidanceCheckBox.IsCheckedChanged += UpdateCalculatedValues;
-            _hasStabilizedMountCheckBox.IsCheckedChanged += UpdateCalculatedValues;
-            _hasRemoteControlCheckBox.IsCheckedChanged += UpdateCalculatedValues;
-        }
-
-            // 初期ID生成（自動生成がオンの場合）
-            if (_autoGenerateIdCheckBox.IsChecked == true) UpdateAutoGeneratedId(null, EventArgs.Empty);
-        }
-
-        // 生データから開く場合のコンストラクタ
-        public AADesignView(Dictionary<string, object> rawAAData, Dictionary<string, NavalCategory> categories, Dictionary<int, string> tierYears)
-        {
-            InitializeComponent();
-
-            _categories = categories;
-            _tierYears = tierYears;
-
-            // UI要素の取得
-            _idTextBox = this.FindControl<TextBox>("IdTextBox");
-            _nameTextBox = this.FindControl<TextBox>("NameTextBox");
-            _categoryComboBox = this.FindControl<ComboBox>("CategoryComboBox");
-            _subCategoryComboBox = this.FindControl<ComboBox>("SubCategoryComboBox");
-            _yearNumeric = this.FindControl<NumericUpDown>("YearNumeric");
-            _countryComboBox = this.FindControl<ComboBox>("CountryComboBox");
-
-            _shellWeightNumeric = this.FindControl<NumericUpDown>("ShellWeightNumeric");
-            _muzzleVelocityNumeric = this.FindControl<NumericUpDown>("MuzzleVelocityNumeric");
-            _rpmNumeric = this.FindControl<NumericUpDown>("RPMNumeric");
-            _calibreNumeric = this.FindControl<NumericUpDown>("CalibreNumeric");
-            _calibreTypeComboBox = this.FindControl<ComboBox>("CalibreTypeComboBox");
-            _barrelCountComboBox = this.FindControl<ComboBox>("BarrelCountComboBox");
-            _elevationAngleNumeric = this.FindControl<NumericUpDown>("ElevationAngleNumeric");
-            _maxAltitudeNumeric = this.FindControl<NumericUpDown>("MaxAltitudeNumeric");
-            _turretWeightNumeric = this.FindControl<NumericUpDown>("TurretWeightNumeric");
-            _manpowerNumeric = this.FindControl<NumericUpDown>("ManpowerNumeric");
-
-            _steelNumeric = this.FindControl<NumericUpDown>("SteelNumeric");
-            _chromiumNumeric = this.FindControl<NumericUpDown>("ChromiumNumeric");
-            _tungstenNumeric = this.FindControl<NumericUpDown>("TungstenNumeric");
-
-            _calculatedAntiAirText = this.FindControl<TextBlock>("CalculatedAntiAirText");
-            _calculatedRangeText = this.FindControl<TextBlock>("CalculatedRangeText");
-            _calculatedArmorPiercingText = this.FindControl<TextBlock>("CalculatedArmorPiercingText");
-            _calculatedBuildCostText = this.FindControl<TextBlock>("CalculatedBuildCostText");
-            _calculatedLgAttackText = this.FindControl<TextBlock>("CalculatedLgAttackText");
-            _calculatedTrackingText = this.FindControl<TextBlock>("CalculatedTrackingText");
-            _calculatedEffectiveAltitudeText = this.FindControl<TextBlock>("CalculatedEffectiveAltitudeText");
-            _calculatedSubAttackText = this.FindControl<TextBlock>("CalculatedSubAttackText");
-            _descriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
-            _barrelLengthNumeric = this.FindControl<NumericUpDown>("BarrelLengthNumeric");
-         // 国家タグに基づいてコンボボックスの選択を設定
-        private void SetCountrySelection(string countryValue)
-        {
-            if (string.IsNullOrEmpty(countryValue))
-            {
-                // 値が空の場合は「未設定」を選択
-                _countryComboBox.SelectedIndex = 0;
-                return;
-            }
-
-            Console.WriteLine($"国家選択: {countryValue}");
-
-            // 1. 完全一致（タグが括弧内にある場合）
-            for (var i = 0; i < _countryComboBox.Items.Count; i++)
-            {
-                var item = _countryComboBox.Items[i].ToString();
-                if (item.EndsWith($"({countryValue})"))
-                {
-                    _countryComboBox.SelectedIndex = i;
-                    Console.WriteLine($"タグの完全一致で選択: {item}");
-                    return;
-                }
-            }
-
-            // 2. 国家タグが直接マッチする場合
-            foreach (var country in _countryInfoList)
-                if (country.Tag.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
-                    for (var i = 0; i < _countryComboBox.Items.Count; i++)
-                    {
-                        var item = _countryComboBox.Items[i].ToString();
-                        if (item.Contains($"({country.Tag})"))
-                        {
-                            _countryComboBox.SelectedIndex = i;
-                            Console.WriteLine($"タグの直接マッチで選択: {item}");
-                            return;
-                        }
-                    }
-
-            // 3. 国名が直接マッチする場合
-            foreach (var country in _countryInfoList)
-                if (country.Name.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
-                    for (var i = 0; i < _countryComboBox.Items.Count; i++)
-                    {
-                        var item = _countryComboBox.Items[i].ToString();
-                        if (item.StartsWith(country.Name))
-                        {
-                            _countryComboBox.SelectedIndex = i;
-                            Console.WriteLine($"国名の直接マッチで選択: {item}");
-                            return;
-                        }
-                    }
-
-            // 4. 部分一致を試みる
-            for (var i = 0; i < _countryComboBox.Items.Count; i++)
-            {
-                var item = _countryComboBox.Items[i].ToString();
-                if (item.Contains(countryValue, StringComparison.OrdinalIgnoreCase))
-                {
-                    _countryComboBox.SelectedIndex = i;
-                    Console.WriteLine($"部分一致で選択: {item}");
-                    return;
-                }
-            }
-
-            // 5. 一致するものがなかった場合、mainとか一般的な接頭辞か判定
-            var lowerValue = countryValue.ToLower();
-            if (lowerValue == "main" || lowerValue == "generic" || lowerValue == "default")
-            {
-                // 未設定（デフォルト）を選択
-                _countryComboBox.SelectedIndex = 0;
-                Console.WriteLine("一般的な値のため「未設定」を選択");
-                return;
-            }
-
-            // それでも見つからない場合は「その他」を探す
-            for (var i = 0; i < _countryComboBox.Items.Count; i++)
-            {
-                var item = _countryComboBox.Items[i].ToString();
-                if (item.Contains("その他") || item.Contains("(OTH)"))
-                {
-                    _countryComboBox.SelectedIndex = i;
-                    Console.WriteLine("一致しないため「その他」を選択");
-                    return;
-                }
-            }
-
-            // 最後の手段として最初の項目を選択
-            Console.WriteLine($"一致する国家が見つからないため「未設定」を選択: {countryValue}");
-            _countryComboBox.SelectedIndex = 0;
-        }
-
-        private void InitializeUiOptions()
-        {
-            // カテゴリの設定（対空砲関連のもののみフィルタリング）
-            var filteredCategories = new Dictionary<string, NavalCategory>();
-            if (_categories.ContainsKey("SMAA")) filteredCategories.Add("SMAA", _categories["SMAA"]);
-            if (_categories.ContainsKey("SMHAA")) filteredCategories.Add("SMHAA", _categories["SMHAA"]);
-
-            foreach (var category in filteredCategories)
-                _categoryComboBox.Items.Add(new NavalCategoryItem
-                    { Id = category.Key, DisplayName = $"{category.Value.Name} ({category.Key})" });
-
-            // サブカテゴリの設定
-            _subCategoryComboBox.Items.Add("単装砲");
-            _subCategoryComboBox.Items.Add("連装砲");
-            _subCategoryComboBox.Items.Add("三連装砲");
-            _subCategoryComboBox.Items.Add("四連装砲");
-            _subCategoryComboBox.Items.Add("六連装砲");
-            _subCategoryComboBox.Items.Add("八連装砲");
-
-            // 口径種類の設定
-            _calibreTypeComboBox.Items.Add("cm");
-            _calibreTypeComboBox.Items.Add("inch");
-            _calibreTypeComboBox.Items.Add("mm");
-            _calibreTypeComboBox.SelectedIndex = 0; // cmをデフォルトに
-
-            // 砲身数の設定
-            _barrelCountComboBox.Items.Add("1");
-            _barrelCountComboBox.Items.Add("2");
-            _barrelCountComboBox.Items.Add("3");
-            _barrelCountComboBox.Items.Add("4");
-            _barrelCountComboBox.Items.Add("6");
-            _barrelCountComboBox.Items.Add("8");
         }
 
         // 生データからフォームに値を設定するメソッド
@@ -447,13 +164,13 @@ namespace HOI4NavalModder.View
             // ComboBoxの選択
             SelectComboBoxItem(_categoryComboBox, "Id", categoryId);
             SelectComboBoxItem(_subCategoryComboBox, null, rawAAData["SubCategory"].ToString());
-        
+
             // 開発年を設定
             if (rawAAData.ContainsKey("Year"))
                 _yearNumeric.Value = GetDecimalValue(rawAAData, "Year");
             else
                 _yearNumeric.Value = 1936; // デフォルト値
-            
+
             SelectComboBoxItem(_countryComboBox, null, rawAAData["Country"].ToString());
 
             // 数値の設定
@@ -481,19 +198,19 @@ namespace HOI4NavalModder.View
             // 特殊機能設定
             if (rawAAData.ContainsKey("IsAsw"))
                 _isAswCheckBox.IsChecked = GetBooleanValue(rawAAData, "IsAsw");
-            
+
             if (rawAAData.ContainsKey("HasAutoAiming"))
                 _hasAutoAimingCheckBox.IsChecked = GetBooleanValue(rawAAData, "HasAutoAiming");
-                
+
             if (rawAAData.ContainsKey("HasProximityFuze"))
                 _hasProximityFuzeCheckBox.IsChecked = GetBooleanValue(rawAAData, "HasProximityFuze");
-                
+
             if (rawAAData.ContainsKey("HasRadarGuidance"))
                 _hasRadarGuidanceCheckBox.IsChecked = GetBooleanValue(rawAAData, "HasRadarGuidance");
-                
+
             if (rawAAData.ContainsKey("HasStabilizedMount"))
                 _hasStabilizedMountCheckBox.IsChecked = GetBooleanValue(rawAAData, "HasStabilizedMount");
-                
+
             if (rawAAData.ContainsKey("HasRemoteControl"))
                 _hasRemoteControlCheckBox.IsChecked = GetBooleanValue(rawAAData, "HasRemoteControl");
 
@@ -509,24 +226,24 @@ namespace HOI4NavalModder.View
 
             if (rawAAData.ContainsKey("CalculatedBuildCost"))
                 _calculatedBuildCostText.Text = rawAAData["CalculatedBuildCost"].ToString();
-                
+
             if (rawAAData.ContainsKey("CalculatedLgAttack"))
                 _calculatedLgAttackText.Text = rawAAData["CalculatedLgAttack"].ToString();
-                
+
             if (rawAAData.ContainsKey("CalculatedTracking"))
                 _calculatedTrackingText.Text = rawAAData["CalculatedTracking"].ToString();
-                
+
             if (rawAAData.ContainsKey("CalculatedEffectiveAltitude"))
                 _calculatedEffectiveAltitudeText.Text = rawAAData["CalculatedEffectiveAltitude"] + " m";
-                
+
             if (rawAAData.ContainsKey("CalculatedSubAttack"))
                 _calculatedSubAttackText.Text = rawAAData["CalculatedSubAttack"].ToString();
-            
+
             // 備考欄の設定
             if (rawAAData.ContainsKey("Description"))
                 _descriptionTextBox.Text = GetStringValue(rawAAData, "Description");
         }
-        
+
         private static bool GetBooleanValue(Dictionary<string, object> data, string key)
         {
             if (!data.ContainsKey(key)) return false;
@@ -551,7 +268,7 @@ namespace HOI4NavalModder.View
                 return false;
             }
         }
-        
+
         // ヘルパーメソッド: ComboBoxの項目を選択
         private void SelectComboBoxItem(ComboBox comboBox, string propertyName, object value)
         {
@@ -682,6 +399,152 @@ namespace HOI4NavalModder.View
             }
         }
 
+        private void LoadEquipmentData()
+        {
+            if (_originalEquipment == null) return;
+
+            // 基本値の設定
+            _idTextBox.Text = _originalEquipment.Id;
+            _nameTextBox.Text = _originalEquipment.Name;
+
+            // カテゴリの選択
+            for (var i = 0; i < _categoryComboBox.Items.Count; i++)
+            {
+                var item = _categoryComboBox.Items[i] as NavalCategoryItem;
+                if (item != null && item.Id == _originalEquipment.Category)
+                {
+                    _categoryComboBox.SelectedIndex = i;
+                    break;
+                }
+            }
+
+            // サブカテゴリの選択
+            if (!string.IsNullOrEmpty(_originalEquipment.SubCategory))
+            {
+                var subCategoryIndex = _subCategoryComboBox.Items.IndexOf(_originalEquipment.SubCategory);
+                if (subCategoryIndex >= 0) _subCategoryComboBox.SelectedIndex = subCategoryIndex;
+            }
+
+            // 開発年を設定
+            if (_originalEquipment.Year > 0)
+                _yearNumeric.Value = _originalEquipment.Year;
+            else
+                _yearNumeric.Value = 1936; // デフォルト値
+
+            // 開発国の選択
+            if (!string.IsNullOrEmpty(_originalEquipment.Country)) SetCountrySelection(_originalEquipment.Country);
+
+            // 装備の詳細パラメータを設定
+            if (_originalEquipment.AdditionalProperties.ContainsKey("ShellWeight"))
+                _shellWeightNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["ShellWeight"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("MuzzleVelocity"))
+                _muzzleVelocityNumeric.Value =
+                    Convert.ToDecimal(_originalEquipment.AdditionalProperties["MuzzleVelocity"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("RPM"))
+                _rpmNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["RPM"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("Calibre"))
+                _calibreNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["Calibre"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalibreType"))
+            {
+                var calibreType = _originalEquipment.AdditionalProperties["CalibreType"].ToString();
+                var calibreTypeIndex = _calibreTypeComboBox.Items.IndexOf(calibreType);
+                if (calibreTypeIndex >= 0) _calibreTypeComboBox.SelectedIndex = calibreTypeIndex;
+            }
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("BarrelCount"))
+            {
+                var barrelCount = _originalEquipment.AdditionalProperties["BarrelCount"].ToString();
+                var barrelCountIndex = _barrelCountComboBox.Items.IndexOf(barrelCount);
+                if (barrelCountIndex >= 0) _barrelCountComboBox.SelectedIndex = barrelCountIndex;
+            }
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("ElevationAngle"))
+                _elevationAngleNumeric.Value =
+                    Convert.ToDecimal(_originalEquipment.AdditionalProperties["ElevationAngle"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("MaxAltitude"))
+                _maxAltitudeNumeric.Value =
+                    Convert.ToDecimal(_originalEquipment.AdditionalProperties["MaxAltitude"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("TurretWeight"))
+                _turretWeightNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["TurretWeight"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("Manpower"))
+                _manpowerNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["Manpower"]);
+
+            // リソース
+            if (_originalEquipment.AdditionalProperties.ContainsKey("Steel"))
+                _steelNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["Steel"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("Chromium"))
+                _chromiumNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["Chromium"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("Tungsten"))
+                _tungstenNumeric.Value = Convert.ToDecimal(_originalEquipment.AdditionalProperties["Tungsten"]);
+
+            // 特殊機能の設定
+            if (_originalEquipment.AdditionalProperties.ContainsKey("IsAsw"))
+                _isAswCheckBox.IsChecked = Convert.ToBoolean(_originalEquipment.AdditionalProperties["IsAsw"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("HasAutoAiming"))
+                _hasAutoAimingCheckBox.IsChecked =
+                    Convert.ToBoolean(_originalEquipment.AdditionalProperties["HasAutoAiming"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("HasProximityFuze"))
+                _hasProximityFuzeCheckBox.IsChecked =
+                    Convert.ToBoolean(_originalEquipment.AdditionalProperties["HasProximityFuze"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("HasRadarGuidance"))
+                _hasRadarGuidanceCheckBox.IsChecked =
+                    Convert.ToBoolean(_originalEquipment.AdditionalProperties["HasRadarGuidance"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("HasStabilizedMount"))
+                _hasStabilizedMountCheckBox.IsChecked =
+                    Convert.ToBoolean(_originalEquipment.AdditionalProperties["HasStabilizedMount"]);
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("HasRemoteControl"))
+                _hasRemoteControlCheckBox.IsChecked =
+                    Convert.ToBoolean(_originalEquipment.AdditionalProperties["HasRemoteControl"]);
+
+            // 既存の計算値がある場合は表示
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedAntiAirAttack"))
+                _calculatedAntiAirText.Text =
+                    _originalEquipment.AdditionalProperties["CalculatedAntiAirAttack"].ToString();
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedRange"))
+                _calculatedRangeText.Text = _originalEquipment.AdditionalProperties["CalculatedRange"] + " km";
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedArmorPiercing"))
+                _calculatedArmorPiercingText.Text =
+                    _originalEquipment.AdditionalProperties["CalculatedArmorPiercing"].ToString();
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedBuildCost"))
+                _calculatedBuildCostText.Text =
+                    _originalEquipment.AdditionalProperties["CalculatedBuildCost"].ToString();
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedLgAttack"))
+                _calculatedLgAttackText.Text = _originalEquipment.AdditionalProperties["CalculatedLgAttack"].ToString();
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedTracking"))
+                _calculatedTrackingText.Text = _originalEquipment.AdditionalProperties["CalculatedTracking"].ToString();
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedEffectiveAltitude"))
+                _calculatedEffectiveAltitudeText.Text =
+                    _originalEquipment.AdditionalProperties["CalculatedEffectiveAltitude"] + " m";
+
+            if (_originalEquipment.AdditionalProperties.ContainsKey("CalculatedSubAttack"))
+                _calculatedSubAttackText.Text =
+                    _originalEquipment.AdditionalProperties["CalculatedSubAttack"].ToString();
+
+            // 備考欄を設定
+            if (_originalEquipment.AdditionalProperties.ContainsKey("Description"))
+                _descriptionTextBox.Text = _originalEquipment.AdditionalProperties["Description"].ToString();
+        }
+
         private string GetSelectedCountryValue()
         {
             if (_countryComboBox.SelectedIndex <= 0 || _countryComboBox.SelectedItem == null)
@@ -766,18 +629,6 @@ namespace HOI4NavalModder.View
             }
         }
 
-        // 自動生成チェックボックスの状態変更時の処理
-        private void OnAutoGenerateIdChanged(object sender, RoutedEventArgs e)
-        {
-            var autoGenerate = _autoGenerateIdCheckBox.IsChecked ?? false;
-
-            // 自動生成がオンならテキストボックスを無効化
-            _idTextBox.IsEnabled = !autoGenerate;
-
-            if (autoGenerate)
-                // チェックされたら即座にID生成
-                UpdateAutoGeneratedId(null, null);
-        }
 
         // ID自動生成メソッド
         private void UpdateAutoGeneratedId(object sender, EventArgs e)
@@ -796,7 +647,7 @@ namespace HOI4NavalModder.View
                 var calibre = (double)(_calibreNumeric.Value ?? 0);
                 var calibreType = _calibreTypeComboBox.SelectedItem.ToString();
                 var barrelLength = (double)(_barrelLengthNumeric.Value ?? 45);
-            
+
                 // 国家タグを取得
                 var countryTag = GetSelectedCountryTag();
 
@@ -831,8 +682,364 @@ namespace HOI4NavalModder.View
             // タグが見つからない場合は空文字を返す
             return "";
         }
+        
 
-        // 性能値の計算と表示を更新するメソッド
+        // 生データから開く場合のコンストラクタ
+        public AADesignView(Dictionary<string, object> rawAAData, Dictionary<string, NavalCategory> categories,
+            Dictionary<int, string> tierYears)
+        {
+            InitializeComponent();
+
+            _categories = categories;
+            _tierYears = tierYears;
+
+            // UI要素の取得
+            _idTextBox = this.FindControl<TextBox>("IdTextBox");
+            _nameTextBox = this.FindControl<TextBox>("NameTextBox");
+            _categoryComboBox = this.FindControl<ComboBox>("CategoryComboBox");
+            _subCategoryComboBox = this.FindControl<ComboBox>("SubCategoryComboBox");
+            _yearNumeric = this.FindControl<NumericUpDown>("YearNumeric");
+            _countryComboBox = this.FindControl<ComboBox>("CountryComboBox");
+
+            _shellWeightNumeric = this.FindControl<NumericUpDown>("ShellWeightNumeric");
+            _muzzleVelocityNumeric = this.FindControl<NumericUpDown>("MuzzleVelocityNumeric");
+            _rpmNumeric = this.FindControl<NumericUpDown>("RPMNumeric");
+            _calibreNumeric = this.FindControl<NumericUpDown>("CalibreNumeric");
+            _calibreTypeComboBox = this.FindControl<ComboBox>("CalibreTypeComboBox");
+            _barrelCountComboBox = this.FindControl<ComboBox>("BarrelCountComboBox");
+            _elevationAngleNumeric = this.FindControl<NumericUpDown>("ElevationAngleNumeric");
+            _maxAltitudeNumeric = this.FindControl<NumericUpDown>("MaxAltitudeNumeric");
+            _turretWeightNumeric = this.FindControl<NumericUpDown>("TurretWeightNumeric");
+            _manpowerNumeric = this.FindControl<NumericUpDown>("ManpowerNumeric");
+
+            _steelNumeric = this.FindControl<NumericUpDown>("SteelNumeric");
+            _chromiumNumeric = this.FindControl<NumericUpDown>("ChromiumNumeric");
+            _tungstenNumeric = this.FindControl<NumericUpDown>("TungstenNumeric");
+
+            _calculatedAntiAirText = this.FindControl<TextBlock>("CalculatedAntiAirText");
+            _calculatedRangeText = this.FindControl<TextBlock>("CalculatedRangeText");
+            _calculatedArmorPiercingText = this.FindControl<TextBlock>("CalculatedArmorPiercingText");
+            _calculatedBuildCostText = this.FindControl<TextBlock>("CalculatedBuildCostText");
+            _calculatedLgAttackText = this.FindControl<TextBlock>("CalculatedLgAttackText");
+            _calculatedTrackingText = this.FindControl<TextBlock>("CalculatedTrackingText");
+            _calculatedEffectiveAltitudeText = this.FindControl<TextBlock>("CalculatedEffectiveAltitudeText");
+            _calculatedSubAttackText = this.FindControl<TextBlock>("CalculatedSubAttackText");
+            _descriptionTextBox = this.FindControl<TextBox>("DescriptionTextBox");
+            _barrelLengthNumeric = this.FindControl<NumericUpDown>("BarrelLengthNumeric");
+            _autoGenerateIdCheckBox = this.FindControl<CheckBox>("AutoGenerateIdCheckBox");
+            _isAswCheckBox = this.FindControl<CheckBox>("IsAswCheckBox");
+            _hasAutoAimingCheckBox = this.FindControl<CheckBox>("HasAutoAimingCheckBox");
+            _hasProximityFuzeCheckBox = this.FindControl<CheckBox>("HasProximityFuzeCheckBox");
+            _hasRadarGuidanceCheckBox = this.FindControl<CheckBox>("HasRadarGuidanceCheckBox");
+            _hasStabilizedMountCheckBox = this.FindControl<CheckBox>("HasStabilizedMountCheckBox");
+            _hasRemoteControlCheckBox = this.FindControl<CheckBox>("HasRemoteControlCheckBox");
+
+            // UI項目の選択肢を初期化
+            InitializeUiOptions();
+
+            // 生データから値を設定
+            if (rawAAData != null)
+            {
+                PopulateFromRawData(rawAAData);
+
+                // 既存IDから砲身長を抽出して設定
+                var id = rawAAData["Id"].ToString();
+                string countrytag;
+                if (AAGunIdGenerator.TryParseGunId(id, out _, out countrytag, out _, out _, out _,
+                        out var barrelLength))
+                    _barrelLengthNumeric.Value = barrelLength;
+                else if (rawAAData.ContainsKey("BarrelLength"))
+                    // 生データに砲身長がある場合
+                    _barrelLengthNumeric.Value = GetDecimalValue(rawAAData, "BarrelLength");
+                else
+                    // デフォルト値
+                    _barrelLengthNumeric.Value = 45;
+
+                // 編集モードでは自動生成をオフに
+                _autoGenerateIdCheckBox.IsChecked = false;
+                _idTextBox.IsEnabled = true;
+            }
+
+            InitializeCountryList();
+
+            // イベントハンドラの設定
+            _categoryComboBox.SelectionChanged += OnCategoryChanged;
+            _subCategoryComboBox.SelectionChanged += OnSubCategoryChanged;
+
+            // 自動ID生成のためのイベントハンドラ
+            _autoGenerateIdCheckBox.IsCheckedChanged += OnAutoGenerateIdChanged;
+            _categoryComboBox.SelectionChanged += UpdateAutoGeneratedId;
+            _yearNumeric.ValueChanged += UpdateAutoGeneratedId;
+            _calibreNumeric.ValueChanged += UpdateAutoGeneratedId;
+            _calibreTypeComboBox.SelectionChanged += UpdateAutoGeneratedId;
+            _barrelLengthNumeric.ValueChanged += UpdateAutoGeneratedId;
+
+            // 性能値計算のためのイベントハンドラ
+            _shellWeightNumeric.ValueChanged += UpdateCalculatedValues;
+            _muzzleVelocityNumeric.ValueChanged += UpdateCalculatedValues;
+            _rpmNumeric.ValueChanged += UpdateCalculatedValues;
+            _calibreNumeric.ValueChanged += UpdateCalculatedValues;
+            _calibreTypeComboBox.SelectionChanged += UpdateCalculatedValues;
+            _barrelCountComboBox.SelectionChanged += UpdateCalculatedValues;
+            _barrelLengthNumeric.ValueChanged += UpdateCalculatedValues;
+            _elevationAngleNumeric.ValueChanged += UpdateCalculatedValues;
+            _maxAltitudeNumeric.ValueChanged += UpdateCalculatedValues;
+            _turretWeightNumeric.ValueChanged += UpdateCalculatedValues;
+            _yearNumeric.ValueChanged += UpdateCalculatedValues;
+            _isAswCheckBox.IsCheckedChanged += UpdateCalculatedValues;
+            _hasAutoAimingCheckBox.IsCheckedChanged += UpdateCalculatedValues;
+            _hasProximityFuzeCheckBox.IsCheckedChanged += UpdateCalculatedValues;
+            _hasRadarGuidanceCheckBox.IsCheckedChanged += UpdateCalculatedValues;
+            _hasStabilizedMountCheckBox.IsCheckedChanged += UpdateCalculatedValues;
+            _hasRemoteControlCheckBox.IsCheckedChanged += UpdateCalculatedValues;
+
+            // 初期ID生成（自動生成がオンの場合）
+            if (_autoGenerateIdCheckBox.IsChecked == true) UpdateAutoGeneratedId(null, EventArgs.Empty);
+        }
+
+        private void InitializeComponent()
+        {
+            AvaloniaXamlLoader.Load(this);
+        }
+
+        private async void InitializeCountryList()
+        {
+            try
+            {
+                // 設定からパスを取得（空文字を渡しても内部で自動的に探索する）
+                var appDataPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "HOI4NavalModder");
+
+                var settingsPath = Path.Combine(appDataPath, "modpaths.json");
+
+                // 設定ファイルからパスを直接読み込む（CountryListManagerでも行われるが明示的に行う）
+                var modPath = string.Empty;
+                var gamePath = string.Empty;
+
+                if (File.Exists(settingsPath))
+                    try
+                    {
+                        var settingsJson = File.ReadAllText(settingsPath);
+                        var settings = JsonSerializer.Deserialize<ModConfig>(settingsJson);
+                        if (settings != null)
+                        {
+                            var activeMod = settings.Mods?.FirstOrDefault(m => m.IsActive);
+                            if (activeMod != null)
+                            {
+                                Console.WriteLine($"アクティブMOD: {activeMod.Name}");
+                                modPath = activeMod.Path;
+                            }
+                            else
+                            {
+                                Console.WriteLine("設定のMODパスが存在しません");
+                            }
+
+                            gamePath = settings.VanillaGamePath ?? string.Empty;
+                            Console.WriteLine($"設定から読み込んだパス - MOD: {modPath}, ゲーム: {gamePath}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"設定ファイル読み込みエラー: {ex.Message}");
+                    }
+
+                // CountryListManagerは明示的にパスを指定
+                _countryListManager = new CountryListManager(modPath, gamePath);
+
+                // 国家リストを非同期で取得（showAllCountries=trueは全国家表示）
+                _countryInfoList = await _countryListManager.GetCountriesAsync(true);
+
+                // ComboBoxをクリア
+                _countryComboBox.Items.Clear();
+
+                // まず「未設定」を追加
+                _countryComboBox.Items.Add("未設定");
+
+                // 国家リストをComboBoxに追加
+                foreach (var country in _countryInfoList)
+                {
+                    // 国名とタグを組み合わせた表示名を作成
+                    var displayName = $"{country.Name} ({country.Tag})";
+                    _countryComboBox.Items.Add(displayName);
+                }
+
+                // デフォルトで「未設定」を選択
+                _countryComboBox.SelectedIndex = 0;
+
+                // 装備データがある場合は適切な国家を選択
+                if (_originalEquipment != null && !string.IsNullOrEmpty(_originalEquipment.Country))
+                    SetCountrySelection(_originalEquipment.Country);
+
+                Console.WriteLine($"国家リスト初期化完了: {_countryComboBox.Items.Count - 1}件");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"国家リスト初期化エラー: {ex.Message}");
+                Console.WriteLine($"スタックトレース: {ex.StackTrace}");
+
+                // エラー時は既存の国家リストを使用
+                _countryComboBox.Items.Clear();
+                string[] defaultCountries =
+                {
+                    "未設定", "日本 (JAP)", "アメリカ (USA)", "イギリス (ENG)",
+                    "ドイツ (GER)", "ソ連 (SOV)", "イタリア (ITA)", "フランス (FRA)", "その他 (OTH)"
+                };
+                foreach (var country in defaultCountries) _countryComboBox.Items.Add(country);
+                _countryComboBox.SelectedIndex = 0;
+
+                // 空のリストを初期化しておく
+                _countryInfoList = new List<CountryListManager.CountryInfo>();
+            }
+        }
+
+        // 国家タグに基づいてコンボボックスの選択を設定
+        private void SetCountrySelection(string countryValue)
+        {
+            if (string.IsNullOrEmpty(countryValue))
+            {
+                // 値が空の場合は「未設定」を選択
+                _countryComboBox.SelectedIndex = 0;
+                return;
+            }
+
+            Console.WriteLine($"国家選択: {countryValue}");
+
+            // 1. 完全一致（タグが括弧内にある場合）
+            for (var i = 0; i < _countryComboBox.Items.Count; i++)
+            {
+                var item = _countryComboBox.Items[i].ToString();
+                if (item.EndsWith($"({countryValue})"))
+                {
+                    _countryComboBox.SelectedIndex = i;
+                    Console.WriteLine($"タグの完全一致で選択: {item}");
+                    return;
+                }
+            }
+
+            // 2. 国家タグが直接マッチする場合
+            foreach (var country in _countryInfoList)
+                if (country.Tag.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
+                    for (var i = 0; i < _countryComboBox.Items.Count; i++)
+                    {
+                        var item = _countryComboBox.Items[i].ToString();
+                        if (item.Contains($"({country.Tag})"))
+                        {
+                            _countryComboBox.SelectedIndex = i;
+                            Console.WriteLine($"タグの直接マッチで選択: {item}");
+                            return;
+                        }
+                    }
+
+            // 3. 国名が直接マッチする場合
+            foreach (var country in _countryInfoList)
+                if (country.Name.Equals(countryValue, StringComparison.OrdinalIgnoreCase))
+                    for (var i = 0; i < _countryComboBox.Items.Count; i++)
+                    {
+                        var item = _countryComboBox.Items[i].ToString();
+                        if (item.StartsWith(country.Name))
+                        {
+                            _countryComboBox.SelectedIndex = i;
+                            Console.WriteLine($"国名の直接マッチで選択: {item}");
+                            return;
+                        }
+                    }
+
+            // 4. 部分一致を試みる
+            for (var i = 0; i < _countryComboBox.Items.Count; i++)
+            {
+                var item = _countryComboBox.Items[i].ToString();
+                if (item.Contains(countryValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    _countryComboBox.SelectedIndex = i;
+                    Console.WriteLine($"部分一致で選択: {item}");
+                    return;
+                }
+            }
+
+            // 5. 一致するものがなかった場合、mainとか一般的な接頭辞か判定
+            var lowerValue = countryValue.ToLower();
+            if (lowerValue == "main" || lowerValue == "generic" || lowerValue == "default")
+            {
+                // 未設定（デフォルト）を選択
+                _countryComboBox.SelectedIndex = 0;
+                Console.WriteLine("一般的な値のため「未設定」を選択");
+                return;
+            }
+
+            // それでも見つからない場合は「その他」を探す
+            for (var i = 0; i < _countryComboBox.Items.Count; i++)
+            {
+                var item = _countryComboBox.Items[i].ToString();
+                if (item.Contains("その他") || item.Contains("(OTH)"))
+                {
+                    _countryComboBox.SelectedIndex = i;
+                    Console.WriteLine("一致しないため「その他」を選択");
+                    return;
+                }
+            }
+
+            // 最後の手段として最初の項目を選択
+            Console.WriteLine($"一致する国家が見つからないため「未設定」を選択: {countryValue}");
+            _countryComboBox.SelectedIndex = 0;
+        }
+
+        private void InitializeUiOptions()
+        {
+            // カテゴリの設定（対空砲関連のもののみフィルタリング）
+            var filteredCategories = new Dictionary<string, NavalCategory>();
+            if (_categories.ContainsKey("SMAA")) filteredCategories.Add("SMAA", _categories["SMAA"]);
+            if (_categories.ContainsKey("SMHAA")) filteredCategories.Add("SMHAA", _categories["SMHAA"]);
+
+            foreach (var category in filteredCategories)
+                _categoryComboBox.Items.Add(new NavalCategoryItem
+                    { Id = category.Key, DisplayName = $"{category.Value.Name} ({category.Key})" });
+
+            // サブカテゴリの設定
+            _subCategoryComboBox.Items.Add("単装砲");
+            _subCategoryComboBox.Items.Add("連装砲");
+            _subCategoryComboBox.Items.Add("三連装砲");
+            _subCategoryComboBox.Items.Add("四連装砲");
+            _subCategoryComboBox.Items.Add("六連装砲");
+            _subCategoryComboBox.Items.Add("八連装砲");
+
+            // 口径種類の設定
+            _calibreTypeComboBox.Items.Add("cm");
+            _calibreTypeComboBox.Items.Add("inch");
+            _calibreTypeComboBox.Items.Add("mm");
+            _calibreTypeComboBox.SelectedIndex = 0; // cmをデフォルトに
+
+            // 砲身数の設定
+            _barrelCountComboBox.Items.Add("1");
+            _barrelCountComboBox.Items.Add("2");
+            _barrelCountComboBox.Items.Add("3");
+            _barrelCountComboBox.Items.Add("4");
+            _barrelCountComboBox.Items.Add("6");
+            _barrelCountComboBox.Items.Add("8");
+        }
+
+
+
+
+      
+
+
+// 自動生成チェックボックスの状態変更時の処理
+        private void OnAutoGenerateIdChanged(object sender, RoutedEventArgs e)
+        {
+            var autoGenerate = _autoGenerateIdCheckBox.IsChecked ?? false;
+
+            // 自動生成がオンならテキストボックスを無効化
+            _idTextBox.IsEnabled = !autoGenerate;
+
+            if (autoGenerate)
+                // チェックされたら即座にID生成
+                UpdateAutoGeneratedId(null, null);
+        }
+
+
+
+// 性能値の計算と表示を更新するメソッド
         private void UpdateCalculatedValues(object sender, EventArgs e)
         {
             try
@@ -897,8 +1104,8 @@ namespace HOI4NavalModder.View
                 var rangeValue = (calibreInMm * barrelLength * muzzleVelocity * elevationAngle) / 100000;
 
                 // 対潜攻撃力計算
-                var subAttackValue = isAsw ? 
-                    (rpm / 60) * (shellWeight / 20) * barrelCount * 1.5 * techLevelMultiplier : 0;
+                var subAttackValue =
+                    isAsw ? (rpm / 60) * (shellWeight / 20) * barrelCount * 1.5 * techLevelMultiplier : 0;
 
                 // 建造コスト計算
                 var buildCostBase = (calibreInMm / 20) + (rpm / 100) + (turretWeight / 5);
@@ -908,7 +1115,7 @@ namespace HOI4NavalModder.View
                 if (hasRadarGuidance) buildCostSpecialMultiplier *= 1.25;
                 if (hasStabilizedMount) buildCostSpecialMultiplier *= 1.1;
                 if (hasRemoteControl) buildCostSpecialMultiplier *= 1.2;
-                
+
                 var buildCostValue = buildCostBase * buildCostSpecialMultiplier * barrelCount * 0.25;
 
                 // 計算結果をUIに表示（小数点第2位まで表示するフォーマット）
@@ -927,7 +1134,7 @@ namespace HOI4NavalModder.View
             }
         }
 
-        // 年代による技術レベル補正を取得
+// 年代による技術レベル補正を取得
         private double GetTechLevelMultiplier(int year)
         {
             if (year < 1900) return 0.7;
@@ -942,7 +1149,7 @@ namespace HOI4NavalModder.View
             return 1.6; // 1990年以降
         }
 
-        // 各種口径単位をmmに変換
+// 各種口径単位をmmに変換
         private static double ConvertCalibreToMm(double calibre, string calibreType)
         {
             switch (calibreType.ToLower())
@@ -1012,7 +1219,7 @@ namespace HOI4NavalModder.View
             }
         }
 
-        // 保存ボタンのイベントハンドラ
+// 保存ボタンのイベントハンドラ
         public async void On_Save_Click(object sender, RoutedEventArgs e)
         {
             // 入力バリデーション
@@ -1051,7 +1258,7 @@ namespace HOI4NavalModder.View
                                     _originalEquipment.Id == equipmentId;
 
             var countryValue = GetSelectedCountryValue();
-            
+
             if (idExists && !isEditingOriginal)
             {
                 // ID衝突ダイアログを表示
@@ -1078,7 +1285,7 @@ namespace HOI4NavalModder.View
 
             // Tier（開発世代）を年度から計算
             int tier = NavalUtility.GetTierFromYear((int)_yearNumeric.Value);
-            
+
             // 全てのパラメータを格納するデータ辞書を作成
             var aaData = new Dictionary<string, object>
             {
@@ -1111,7 +1318,7 @@ namespace HOI4NavalModder.View
                 { "HasStabilizedMount", _hasStabilizedMountCheckBox.IsChecked ?? false },
                 { "HasRemoteControl", _hasRemoteControlCheckBox.IsChecked ?? false }
             };
-            
+
             // AAGunCalculatorを使って処理
             var processedEquipment = AAGunCalculator.AA_Processing(aaData);
 
@@ -1122,22 +1329,11 @@ namespace HOI4NavalModder.View
             Close(processedEquipment);
         }
 
-        // キャンセルボタンのイベントハンドラ
+// キャンセルボタンのイベントハンドラ
         public void On_Cancel_Click(object sender, RoutedEventArgs e)
         {
             // キャンセル
             Close();
-        }
-    }
-
-    public class NavalCategoryItem
-    {
-        public string Id { get; set; }
-        public string DisplayName { get; set; }
-
-        public override string ToString()
-        {
-            return DisplayName;
         }
     }
 }
