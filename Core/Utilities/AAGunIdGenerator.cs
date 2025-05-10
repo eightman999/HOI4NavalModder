@@ -1,117 +1,130 @@
 ﻿using System;
-using System.Globalization;
 using System.Text.RegularExpressions;
-using Math = System.Math;
-using Regex = System.Text.RegularExpressions.Regex;
 
 namespace HOI4NavalModder.Core.Utilities
 {
     /// <summary>
-    /// 対空砲のID生成を行うユーティリティクラス
+    /// 対空砲のID自動生成ユーティリティクラス
     /// </summary>
     public static class AAGunIdGenerator
     {
         /// <summary>
         /// 対空砲のIDを生成する
         /// </summary>
-        /// <param name="category">カテゴリ（SMAA/SMHAA）</param>
-        /// <param name="countryTag">国家タグ（JAPなど）</param>
+        /// <param name="categoryId">カテゴリID（SMAA、SMHAAなど）</param>
+        /// <param name="countryTag">国家タグ（JAP、USA、GERなど）</param>
         /// <param name="year">開発年</param>
         /// <param name="calibre">口径</param>
-        /// <param name="calibreType">口径単位（mm/cm/inch）</param>
-        /// <param name="barrelLength">砲身長（口径比L）</param>
+        /// <param name="calibreType">口径の単位（mm, cm, inch）</param>
+        /// <param name="barrelLength">砲身長（L/口径）</param>
         /// <returns>生成されたID</returns>
-        public static string GenerateGunId(string category, string countryTag, int year, double calibre, string calibreType, double barrelLength)
+        public static string GenerateGunId(string categoryId, string countryTag, int year, double calibre, string calibreType, double barrelLength)
         {
-            // カテゴリをチェック（デフォルトはSMAA）
-            string cat = string.IsNullOrEmpty(category) ? "smaa" : category.ToLower();
+            // カテゴリIDを小文字に変換
+            var category = categoryId.ToLower();
             
-            // 国家タグ処理（空の場合は非表示、それ以外は小文字化）
-            string country = string.IsNullOrEmpty(countryTag) ? "" : "_" + countryTag.ToLower();
-            
-            // 口径をmmに変換して整数化
-            int calibreMm;
+            // 口径を標準化（mm単位に変換）
+            double calibreInMm = calibre;
             switch (calibreType.ToLower())
             {
                 case "cm":
-                    calibreMm = (int)Math.Round(calibre * 10);
+                    calibreInMm = calibre * 10;
                     break;
                 case "inch":
-                    calibreMm = (int)Math.Round(calibre * 25.4);
-                    break;
-                default: // mm
-                    calibreMm = (int)Math.Round(calibre);
+                    calibreInMm = calibre * 25.4;
                     break;
             }
             
-            // 砲身長を整数化
-            int barrelLengthInt = (int)Math.Round(barrelLength);
+            // 口径文字列を作成（整数部分のみ）
+            var calibreStr = ((int)Math.Round(calibreInMm)).ToString();
             
-            // 最終的なID形式: smaa_countryTag_50mm_l60
-            return $"{cat}{country}_{calibreMm}mm_l{barrelLengthInt}";
+            // 国家タグ部分（存在する場合のみ追加）
+            var countryPart = string.IsNullOrEmpty(countryTag) ? "" : "_" + countryTag.ToLower();
+            
+            // 年部分（下2桁のみ使用）
+            var yearStr = (year % 100).ToString("D2");
+            
+            // 砲身長部分（整数部分のみ）
+            var barrelLengthStr = ((int)Math.Round(barrelLength)).ToString();
+            
+            // 最終的なID形式: [category]_[calibre]mm_l[barrelLength]_[country]_[year]
+            return $"{category}_{calibreStr}mm_l{barrelLengthStr}{countryPart}_{yearStr}";
         }
         
         /// <summary>
-        /// 対空砲IDを解析し、各コンポーネントを取得する
+        /// 対空砲IDをパースして各パラメータを取得する
         /// </summary>
-        /// <param name="id">解析するID</param>
-        /// <param name="category">カテゴリ</param>
-        /// <param name="countryTag">国家タグ</param>
-        /// <param name="year">開発年</param>
-        /// <param name="calibre">口径</param>
-        /// <param name="calibreType">口径単位</param>
-        /// <param name="barrelLength">砲身長</param>
-        /// <returns>解析に成功したかどうか</returns>
-        public static bool TryParseGunId(string id, out string category, out string countryTag, 
-            out int year, out double calibre, out string calibreType, out int barrelLength)
+        /// <param name="gunId">対空砲ID</param>
+        /// <param name="categoryId">出力：カテゴリID</param>
+        /// <param name="countryTag">出力：国家タグ</param>
+        /// <param name="year">出力：開発年</param>
+        /// <param name="calibre">出力：口径</param>
+        /// <param name="calibreType">出力：口径単位</param>
+        /// <param name="barrelLength">出力：砲身長</param>
+        /// <returns>パース成功したかどうか</returns>
+        public static bool TryParseGunId(string gunId, out string categoryId, out string countryTag, out int year, 
+            out double calibre, out string calibreType, out double barrelLength)
         {
-            // デフォルト値を設定
-            category = "SMAA";
+            // デフォルト値の設定
+            categoryId = "";
             countryTag = "";
             year = 1936;
-            calibre = 40;
+            calibre = 0;
             calibreType = "mm";
             barrelLength = 45;
             
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(gunId))
                 return false;
-                
+            
             try
             {
-                // IDを小文字に変換
-                string lowerId = id.ToLower();
+                // 基本的なパターン: [category]_[calibre]mm_l[barrelLength]_[country]_[year]
+                var parts = gunId.Split('_');
                 
-                // カテゴリ部分を取得
-                if (lowerId.StartsWith("smaa"))
-                    category = "SMAA";
-                else if (lowerId.StartsWith("smhaa"))
-                    category = "SMHAA";
-                else
-                    return false; // サポートされていないカテゴリ
+                if (parts.Length < 2)
+                    return false;
                 
-                // 国家タグを抽出 (例: smaa_jap_40mm_l60)
-                var countryMatch = Regex.Match(lowerId, @"^sm[h]?aa_([a-z]{3})_");
-                if (countryMatch.Success)
-                    countryTag = countryMatch.Groups[1].Value.ToUpper();
+                // カテゴリの抽出
+                categoryId = parts[0].ToUpper();
                 
-                // 口径を抽出 (例: 40mm)
-                var calibreMatch = Regex.Match(lowerId, @"_(\d+)(mm|cm|inch)");
-                if (calibreMatch.Success)
+                // 口径の抽出
+                var calibrePart = parts[1];
+                if (calibrePart.EndsWith("mm"))
                 {
-                    calibre = double.Parse(calibreMatch.Groups[1].Value);
-                    calibreType = calibreMatch.Groups[2].Value;
-                    
-                    // 単位に基づいて値を変換
-                    if (calibreType == "cm")
-                        calibre /= 10; // mmをcmに変換
-                    else if (calibreType == "inch")
-                        calibre /= 25.4; // mmをインチに変換
+                    // mm単位の場合
+                    calibreType = "mm";
+                    if (double.TryParse(calibrePart.Substring(0, calibrePart.Length - 2), out double parsedCalibre))
+                        calibre = parsedCalibre;
                 }
                 
-                // 砲身長を抽出 (例: l60)
-                var barrelLengthMatch = Regex.Match(lowerId, @"_l(\d+)");
-                if (barrelLengthMatch.Success)
-                    barrelLength = int.Parse(barrelLengthMatch.Groups[1].Value);
+                // 砲身長の抽出
+                if (parts.Length >= 3 && parts[2].StartsWith("l"))
+                {
+                    var barrelPart = parts[2].Substring(1);
+                    if (double.TryParse(barrelPart, out double parsedBarrelLength))
+                        barrelLength = parsedBarrelLength;
+                }
+                
+                // 国家タグの抽出（存在する場合）
+                if (parts.Length >= 4)
+                {
+                    // 3番目に国家タグがあるか、4番目に年があるかで判断
+                    if (parts[3].Length == 2 && int.TryParse(parts[3], out _))
+                    {
+                        // 国家タグがなく、年が3番目にある場合
+                        if (int.TryParse(parts[3], out int parsedYear))
+                            year = 1900 + parsedYear;
+                    }
+                    else
+                    {
+                        // 国家タグが3番目にある場合
+                        countryTag = parts[3].ToUpper();
+                        
+                        // 年の抽出（存在する場合）
+                        if (parts.Length >= 5 && parts[4].Length == 2 && int.TryParse(parts[4], out int parsedYear))
+                            year = 1900 + parsedYear;
+                    }
+                }
                 
                 return true;
             }

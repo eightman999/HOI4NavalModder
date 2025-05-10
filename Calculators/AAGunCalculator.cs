@@ -34,9 +34,9 @@ namespace HOI4NavalModder.Calculators
                 var calibre = Convert.ToDouble(rawAAData["Calibre"]);
                 var calibreType = rawAAData["CalibreType"].ToString();
                 var barrelCount = Convert.ToInt32(rawAAData["BarrelCount"]);
-                var barrelLength = Convert.ToDouble(rawAAData["BarrelLength"]);
                 var elevationAngle = Convert.ToDouble(rawAAData["ElevationAngle"]);
                 var maxAltitude = Convert.ToDouble(rawAAData["MaxAltitude"]);
+                var barrelLength = Convert.ToDouble(rawAAData["BarrelLength"]);
                 var turretWeight = Convert.ToDouble(rawAAData["TurretWeight"]);
                 var manpower = Convert.ToInt32(rawAAData["Manpower"]);
                 
@@ -53,9 +53,17 @@ namespace HOI4NavalModder.Calculators
                 var hasStabilizedMount = rawAAData.ContainsKey("HasStabilizedMount") && Convert.ToBoolean(rawAAData["HasStabilizedMount"]);
                 var hasRemoteControl = rawAAData.ContainsKey("HasRemoteControl") && Convert.ToBoolean(rawAAData["HasRemoteControl"]);
                 
-                // 性能計算
                 // 口径をmmに変換
-                var calibreInMm = ConvertCalibreToMm(calibre, calibreType);
+                double calibreInMm = calibre;
+                switch (calibreType.ToLower())
+                {
+                    case "cm":
+                        calibreInMm = calibre * 10;
+                        break;
+                    case "inch":
+                        calibreInMm = calibre * 25.4;
+                        break;
+                }
                 
                 // 技術レベル補正（年代による）
                 var techLevelMultiplier = GetTechLevelMultiplier(year);
@@ -91,8 +99,7 @@ namespace HOI4NavalModder.Calculators
                 var rangeValue = (calibreInMm * barrelLength * muzzleVelocity * elevationAngle) / 100000;
                 
                 // 対潜攻撃力計算
-                var subAttackValue = isAsw ? 
-                    (rpm / 60) * (shellWeight / 20) * barrelCount * 1.5 * techLevelMultiplier : 0;
+                var subAttackValue = isAsw ? (rpm / 60) * (shellWeight / 20) * barrelCount * 1.5 * techLevelMultiplier : 0;
                 
                 // 建造コスト計算
                 var buildCostBase = (calibreInMm / 20) + (rpm / 100) + (turretWeight / 5);
@@ -107,13 +114,13 @@ namespace HOI4NavalModder.Calculators
                 
                 // 計算結果をデータに追加
                 rawAAData["CalculatedAntiAir"] = antiAirValue;
-                rawAAData["CalculatedRange"] = rangeValue;
-                rawAAData["CalculatedArmorPiercing"] = armorPiercingValue;
-                rawAAData["CalculatedBuildCost"] = buildCostValue;
                 rawAAData["CalculatedLgAttack"] = lgAttackValue;
+                rawAAData["CalculatedArmorPiercing"] = armorPiercingValue;
+                rawAAData["CalculatedRange"] = rangeValue;
                 rawAAData["CalculatedTracking"] = trackingValue;
                 rawAAData["CalculatedEffectiveAltitude"] = effectiveAltitudeValue;
                 rawAAData["CalculatedSubAttack"] = subAttackValue;
+                rawAAData["CalculatedBuildCost"] = buildCostValue;
                 
                 // NavalEquipmentオブジェクトを作成
                 var equipment = new NavalEquipment
@@ -125,36 +132,37 @@ namespace HOI4NavalModder.Calculators
                     Year = year,
                     Tier = tier,
                     Country = country,
-                    Attack = antiAirValue,  // 対空攻撃力を攻撃値として設定
-                    Defense = trackingValue,  // 追尾精度を防御値として設定
+                    // 対空攻撃力を攻撃値として設定
+                    Attack = antiAirValue,
+                    // 対空射程を防御値として設定
+                    Defense = rangeValue,
+                    // パラメータとデータをそのままコピー
                     AdditionalProperties = new Dictionary<string, object>(rawAAData)
                 };
                 
                 // 特殊能力の設定
-                if (isAsw || hasAutoAiming || hasProximityFuze || hasRadarGuidance || hasStabilizedMount || hasRemoteControl)
-                {
-                    var specialAbilities = new List<string>();
+                var specialAbilities = new List<string>();
+                
+                if (isAsw)
+                    specialAbilities.Add("対潜攻撃可能");
                     
-                    if (isAsw)
-                        specialAbilities.Add("対潜攻撃");
-                        
-                    if (hasAutoAiming)
-                        specialAbilities.Add("自動照準");
-                        
-                    if (hasProximityFuze)
-                        specialAbilities.Add("近接信管");
-                        
-                    if (hasRadarGuidance)
-                        specialAbilities.Add("レーダー誘導");
-                        
-                    if (hasStabilizedMount)
-                        specialAbilities.Add("安定化マウント");
-                        
-                    if (hasRemoteControl)
-                        specialAbilities.Add("遠隔操作");
-                        
+                if (hasAutoAiming)
+                    specialAbilities.Add("自動照準");
+                    
+                if (hasProximityFuze)
+                    specialAbilities.Add("近接信管");
+                    
+                if (hasRadarGuidance)
+                    specialAbilities.Add("レーダー誘導");
+                    
+                if (hasStabilizedMount)
+                    specialAbilities.Add("安定化マウント");
+                    
+                if (hasRemoteControl)
+                    specialAbilities.Add("遠隔操作");
+                
+                if (specialAbilities.Count > 0)
                     equipment.SpecialAbility = string.Join(", ", specialAbilities);
-                }
                 
                 return equipment;
             }
@@ -190,22 +198,6 @@ namespace HOI4NavalModder.Calculators
             if (year < 1980) return 1.4;
             if (year < 1990) return 1.5;
             return 1.6; // 1990年以降
-        }
-        
-        // 各種口径単位をmmに変換
-        private static double ConvertCalibreToMm(double calibre, string calibreType)
-        {
-            switch (calibreType.ToLower())
-            {
-                case "cm":
-                    return calibre * 10;
-                case "inch":
-                    return calibre * 25.4;
-                case "mm":
-                    return calibre;
-                default:
-                    return calibre * 10; // デフォルトはcmとして扱う
-            }
         }
     }
 }

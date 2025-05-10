@@ -747,7 +747,7 @@ namespace HOI4NavalModder.View
                 string countrytag;
                 if (AAGunIdGenerator.TryParseGunId(id, out _, out countrytag, out _, out _, out _,
                         out var barrelLength))
-                    _barrelLengthNumeric.Value = barrelLength;
+                    _barrelLengthNumeric.Value = (decimal?)barrelLength;
                 else if (rawAAData.ContainsKey("BarrelLength"))
                     // 生データに砲身長がある場合
                     _barrelLengthNumeric.Value = GetDecimalValue(rawAAData, "BarrelLength");
